@@ -1,134 +1,116 @@
-<script>
+<script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import LoginBox from '../components/LoginBox.svelte';
+  import RegisterBox from '../components/RegisterBox.svelte';
+  import { emailLogin, usernameLogin, passwordLogin, errorLogin, successLogin } from '../stores/loginStore';
+  import { emailRegister, usernameRegister, passwordRegister, errorRegister, successRegister } from '../stores/registerStore';
+  import { loginUser, validateLoginFields, loginWithToken } from '../services/loginService';
+  import { registerUser, validateRegisterFields } from '../services/registerService';
+  import { user } from '../stores/userStore';
 
   onMount(async () => {
     const accessToken = localStorage.getItem('access_token');
     if (accessToken) {
-      goto("/world");
+      try {
+        const result = await loginWithToken(accessToken);
+      if (result.success) {
+          user.set(result.user);
+          goto("/world");
       return;
+      } else {
+          localStorage.removeItem('access_token');
+      }
+    } catch (err) {
+        localStorage.removeItem('access_token');
+        console.error('Error during token login:', err);
     }
+  }
   });
-  let useEmailForLogin = false;
-  
-  const BACKEND_URL_LOGIN = "http://localhost:5000/api/v1.0/login";
-  let usernameLogin = '';
-  let emailLogin = '';
-  let passwordLogin = '';
-  let errorLogin = '';
-  let successLogin = '';
 
   async function handleLogin() {
-    if (!passwordLogin) {
-      errorLogin = 'Please fill in all fields.';
+    const emailValue = $emailLogin;
+    const usernameValue = $usernameLogin;
+    const passwordValue = $passwordLogin;
+
+    const validationResult = validateLoginFields(passwordValue, emailValue, usernameValue, false);
+    if (!validationResult.success) {
+      errorLogin.set(validationResult.message || 'An error occurred during validation');
       return;
     }
-    if (useEmailForLogin) {
-      if (!emailLogin) {
-        errorLogin = 'Please fill in all fields';
-        return;
-      }
-    } else {
-      if (!usernameLogin) {
-        errorLogin = 'Please fill in all fields';
-        return;
-      }
-    }
-    errorLogin = '';
+    errorLogin.set('');
     try {
-      if (useEmailForLogin) {
-        usernameLogin = "";
+      const result = await loginUser(emailValue, usernameValue, passwordValue);
+      if (result.success) {
+        successLogin.set(result.message);
+        setTimeout(() => { window.location.href = '/world'; }, 1500);
       } else {
-        emailLogin = "";
+        throw new Error(result.message);
       }
-      const response = await fetch(BACKEND_URL_LOGIN, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', },
-        body: JSON.stringify({ email: emailLogin, username: usernameLogin, password: passwordLogin })
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed.');
-      }
-      const data = await response.json();
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      successLogin = data.message || 'Account created successfully! Redirecting...';
-      setTimeout(() => { window.location.href = '/world'; }, 1500);
     } catch (err) {
-      errorLogin = err.message || 'An error occurred during login.';
+      errorLogin.set((err as Error).message || 'An error occurred during login.');
     }
   }
-
-  const BACKEND_URL_REGISTER = "http://localhost:5000/api/v1.0/register";
-  let emailRegister = '';
-  let usernameRegister = '';
-  let passwordRegister = '';
-  let errorRegister = '';
-  let successRegister = '';
 
   async function handleRegister() {
-    errorRegister = '';
-    successRegister = '';
-    if (!emailRegister || !usernameRegister || !passwordRegister) {
-      errorRegister = 'Please fill in all fields.';
+    const emailValue = $emailRegister;
+    const usernameValue = $usernameRegister;
+    const passwordValue = $passwordRegister;
+
+    const validationResult = validateRegisterFields(emailValue, usernameValue, passwordValue);
+    if (!validationResult.success) {
+      errorRegister.set(validationResult.message || 'An error occurred during validation');
       return;
     }
+    errorRegister.set('');
     try {
-      const response = await fetch(BACKEND_URL_REGISTER, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', },
-        body: JSON.stringify({ email: emailRegister, username: usernameRegister, password: passwordRegister })
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed.');
+      const result = await registerUser(emailValue, usernameValue, passwordValue);
+      if (result.success) {
+        successRegister.set(result.message);
+        setTimeout(() => { window.location.href = '/world'; }, 1500);
+      } else {
+        throw new Error(result.message);
       }
-      const data = await response.json();
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      successRegister = data.message || 'Account created successfully! Redirecting...';
-      window.location.href = '/world';
     } catch (err) {
-      errorRegister = err.message || 'An error occurred during registration.';
+      errorRegister.set((err as Error).message || 'An error occurred during registration.');
     }
   }
+
+  let activeTab = 'login';
 </script>
 
 <div class="fullscreen-image-container">
   <img src="/gradient.png" alt="Fullscreen" class="fullscreen-image">
-  <div class="overlay-box"></div>
+  <div class="overlay-box">
+    <div class="tab-container">
+      <button class="tab-button" on:click={() => activeTab = 'login'} class:active={activeTab === 'login'}>Login</button>
+      <button class="tab-button" on:click={() => activeTab = 'register'} class:active={activeTab === 'register'}>Register</button>
+    </div>
+    {#if activeTab === 'login'}
+      <LoginBox
+        usernameLogin={usernameLogin}
+        passwordLogin={passwordLogin}
+        errorLogin={errorLogin}
+        successLogin={successLogin}
+        handleLogin={handleLogin}
+      />
+    {:else}
+      <RegisterBox
+        emailRegister={emailRegister}
+        usernameRegister={usernameRegister}
+        passwordRegister={passwordRegister}
+        errorRegister={errorRegister}
+        successRegister={successRegister}
+        handleRegister={handleRegister}
+      />
+    {/if}
+  </div>
 </div>
-
 
 <div class="content-below-image">
   <div style="width: 100px; height: 200px; background-color: red;"></div>
 </div>
 
 <style>
-  .fullscreen-image-container {
-    width: 100%;
-    height: 100vh;
-    overflow: hidden;
-  }
-  .fullscreen-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .overlay-box {
-    position: absolute;
-    width: 100px;
-    height: 200px;
-    background-color: red;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-  .content-below-image {
-    padding: 2rem;
-    background: white;
-  }
+  @import './+styles.css';
 </style>
