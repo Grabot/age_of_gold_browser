@@ -1,8 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { handleTokenLogin } from '../../utils/tokenUtils';
+	import { logoutUser } from '../../services/logoutService';
 
   const logout = () => {
+    logoutUser();
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
@@ -10,41 +13,8 @@
   };
 
   onMount(async () => {
-    const accessToken = localStorage.getItem('access_token');
-    if (!accessToken) {
-      goto('/');
-      return;
-    }
-    try {
-      const TOKEN_URL = "http://localhost:5000/api/v1.0/login/token";
-      const response = await fetch(TOKEN_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      if (!response.ok) {
-        // Token is invalid or expired
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        goto('/');
-        return;
-      }
-      // Token is valid; optionally update the tokens if the endpoint returns new ones
-      const data = await response.json();
-      if (data.access_token) {
-        localStorage.setItem('access_token', data.access_token);
-      }
-      if (data.refresh_token) {
-        localStorage.setItem('refresh_token', data.refresh_token);
-      }
-    } catch (err) {
-      console.error('Token validation failed:', err);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
+    const isLoggedIn = await handleTokenLogin();
+    if (!isLoggedIn) {
       goto('/');
     }
   });
@@ -72,5 +42,5 @@
 </button>
 
 <main>
-  <!-- Your game content will go here -->
+  <!-- game content -->
 </main>

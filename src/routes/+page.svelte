@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import LoginBox from '../components/LoginBox.svelte';
   import RegisterBox from '../components/RegisterBox.svelte';
@@ -8,24 +7,12 @@
   import { loginUser, validateLoginFields, loginWithToken } from '../services/loginService';
   import { registerUser, validateRegisterFields } from '../services/registerService';
   import { user } from '../stores/userStore';
+  import { goto } from '$app/navigation';
+  import { handleTokenLogin } from '../utils/tokenUtils';
 
   onMount(async () => {
-    const accessToken = localStorage.getItem('access_token');
-    if (accessToken) {
-      try {
-        const result = await loginWithToken(accessToken);
-      if (result.success) {
-          user.set(result.user);
-          goto("/world");
-      return;
-      } else {
-          localStorage.removeItem('access_token');
-      }
-    } catch (err) {
-        localStorage.removeItem('access_token');
-        console.error('Error during token login:', err);
-    }
-  }
+    // If this function fails we won't see the user information but the login form
+    await handleTokenLogin();
   });
 
   async function handleLogin() {
@@ -76,37 +63,53 @@
     }
   }
 
+  function handleLogout() {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+    user.set(null);
+  }
+
   let activeTab = 'login';
 </script>
 
 <div class="fullscreen-image-container">
   <img src="/gradient.png" alt="Fullscreen" class="fullscreen-image">
   <div class="overlay-box">
-    <div class="tab-container">
-      <button class="tab-button" on:click={() => activeTab = 'login'} class:active={activeTab === 'login'}>Login</button>
-      <button class="tab-button" on:click={() => activeTab = 'register'} class:active={activeTab === 'register'}>Register</button>
-    </div>
-    {#if activeTab === 'login'}
-      <LoginBox
-        usernameLogin={usernameLogin}
-        passwordLogin={passwordLogin}
-        errorLogin={errorLogin}
-        successLogin={successLogin}
-        handleLogin={handleLogin}
-      />
+    {#if $user}
+      <div class="logged-in-message">
+        <p>Logged in as: {$user.username}</p>
+        <div class="button-container">
+          <button class="play-button" on:click={() => goto('/world')}>Play</button>
+          <button class="logout-button" on:click={handleLogout}>Logout</button>
+        </div>
+      </div>
     {:else}
-      <RegisterBox
-        emailRegister={emailRegister}
-        usernameRegister={usernameRegister}
-        passwordRegister={passwordRegister}
-        errorRegister={errorRegister}
-        successRegister={successRegister}
-        handleRegister={handleRegister}
-      />
+      <div class="tab-container">
+        <button class="tab-button" on:click={() => activeTab = 'login'} class:active={activeTab === 'login'}>Login</button>
+        <button class="tab-button" on:click={() => activeTab = 'register'} class:active={activeTab === 'register'}>Register</button>
+      </div>
+      {#if activeTab === 'login'}
+        <LoginBox
+          usernameLogin={usernameLogin}
+          passwordLogin={passwordLogin}
+          errorLogin={errorLogin}
+          successLogin={successLogin}
+          handleLogin={handleLogin}
+        />
+      {:else}
+        <RegisterBox
+          emailRegister={emailRegister}
+          usernameRegister={usernameRegister}
+          passwordRegister={passwordRegister}
+          errorRegister={errorRegister}
+          successRegister={successRegister}
+          handleRegister={handleRegister}
+        />
+      {/if}
     {/if}
   </div>
+  <img src="/age_of_gold_promo.png" alt="promo" class="promo-image">
 </div>
-
 <div class="content-below-image">
   <div style="width: 100px; height: 200px; background-color: red;"></div>
 </div>
