@@ -1,46 +1,25 @@
 <script lang="ts">
+  import { auth } from "../../stores/auth";
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { handleTokenLogin } from '../../utils/tokenUtils';
-	import { logoutUser } from '../../services/logoutService';
-
-  const logout = () => {
-    logoutUser();
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    goto('/');
-  };
-
-  onMount(async () => {
-    const isLoggedIn = await handleTokenLogin();
-    if (!isLoggedIn) {
-      goto('/');
-    }
+  
+  onMount(() => {
+    const unsubscribe = auth.subscribe((state) => {
+      if (!state.isAuthenticated && !state.loading) {
+        goto('/');
+      }
+    });
+    return () => unsubscribe();
   });
+  
 </script>
 
-<style>
-  .logout-button {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    padding: 0.5rem 1rem;
-    background-color: #ff3e00;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .logout-button:hover {
-    background-color: #e63a00;
-  }
-</style>
-
-<button class="logout-button" on:click={logout}>
-  Logout
-</button>
-
-<main>
-  <!-- game content -->
-</main>
+{#if $auth.isAuthenticated}
+  <h1>Page 1 (Protected)</h1>
+  <p>Welcome! You are authenticated.</p>
+  <button on:click={() => auth.logout()}>
+    Logout
+  </button>
+{:else if !$auth.loading}
+  <p>Connecting...</p>
+{/if}

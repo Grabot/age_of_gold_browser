@@ -1,5 +1,6 @@
 import type { User } from "../types/user";
-import { user } from '../stores/userStore';
+import { shouldValidate } from "../stores/validation";
+import { accessTokenValue } from "../stores/auth";
 
 const BACKEND_URL_REGISTER = "http://localhost:5000/api/v1.0/register";
 
@@ -19,14 +20,18 @@ export async function registerUser(email: string, username: string, password: st
       throw new Error(errorData.message || 'Registration failed.');
     }
     const data = await response.json();
-    localStorage.setItem('access_token', data.access_token);
-    localStorage.setItem('refresh_token', data.refresh_token);
+    // TODO: check keys in dict?
+    localStorage.setItem('accessToken', data.access_token);
+    localStorage.setItem('refreshToken', data.refresh_token);
+    accessTokenValue.set(data.access_token);
     const user_register: User = {
       id: data.user.id,
       username: data.user.username,
     };
-    user.set(user_register)
+    // TODO: Set user details
+    // user.set(user_register)
     localStorage.setItem('user', JSON.stringify(data.user));
+	  shouldValidate.set(false);
     return { success: true, message: data.message || 'Account created successfully! Redirecting...' };
   } catch (err) {
     return { success: false, message: (err as Error).message || 'An error occurred during registration.' };

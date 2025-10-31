@@ -4,16 +4,10 @@
   import RegisterBox from '../components/RegisterBox.svelte';
   import { emailLogin, usernameLogin, passwordLogin, errorLogin, successLogin } from '../stores/loginStore';
   import { emailRegister, usernameRegister, passwordRegister, errorRegister, successRegister } from '../stores/registerStore';
-  import { loginUser, validateLoginFields, loginWithToken } from '../services/loginService';
+  import { loginUser, validateLoginFields } from '../services/loginService';
   import { registerUser, validateRegisterFields } from '../services/registerService';
-  import { user } from '../stores/userStore';
-  import { goto } from '$app/navigation';
-  import { handleTokenLogin } from '../utils/tokenUtils';
-
-  onMount(async () => {
-    // If this function fails we won't see the user information but the login form
-    await handleTokenLogin();
-  });
+	import { auth } from '../stores/auth';
+	import UserBox from '../components/UserBox.svelte';
 
   async function handleLogin() {
     const emailValue = $emailLogin;
@@ -64,9 +58,8 @@
   }
 
   function handleLogout() {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
-    user.set(null);
+    console.log("logging out!");
+    // TODO: logout
   }
 
   let activeTab = 'login';
@@ -75,15 +68,12 @@
 <div class="fullscreen-image-container">
   <img src="/gradient.png" alt="Fullscreen" class="fullscreen-image">
   <div class="overlay-box">
-    {#if $user}
-      <div class="logged-in-message">
-        <p>Logged in as: {$user.username}</p>
-        <div class="button-container">
-          <button class="play-button" on:click={() => goto('/world')}>Play</button>
-          <button class="logout-button" on:click={handleLogout}>Logout</button>
-        </div>
-      </div>
+    {#if $auth.isAuthenticated}
+      <UserBox
+        handleLogout={handleLogout}
+      />
     {:else}
+    test
       <div class="tab-container">
         <button class="tab-button" on:click={() => activeTab = 'login'} class:active={activeTab === 'login'}>Login</button>
         <button class="tab-button" on:click={() => activeTab = 'register'} class:active={activeTab === 'register'}>Register</button>

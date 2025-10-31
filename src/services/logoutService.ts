@@ -2,10 +2,9 @@
 const LOGOUT_URL = "http://localhost:5000/api/v1.0/logout";
 
 
-export async function logoutUser() {
-  const accessToken = localStorage.getItem('access_token');
+export async function handleLogoutUser(accessToken: string): Promise<{ success: boolean; message?: string; }> {
   try {
-    // TODO: Change to get? no variables
+    // TODO: Change to get? no variables?
     const response = await fetch(LOGOUT_URL, {
       method: 'POST',
       headers: {
@@ -14,13 +13,10 @@ export async function logoutUser() {
       },
     });
     if (response.ok) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
       return {success: true}
     } else {
-      const refreshToken = localStorage.getItem('refresh_token');
-      // TODO: Add failed retry with refresh.
+      const refreshToken = localStorage.getItem('refreshToken');
+      // TODO: Add failed retry with refresh?
       return { success: false, message: 'Logout failed.' };
     }
   } catch (err) {

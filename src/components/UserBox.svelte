@@ -1,12 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { user } from '../stores/userStore';
 
   export let handleLogout: () => void;
 </script>
 
 <div class="logged-in-message">
-  <p>Logged in as: {$user.username}</p>
+  <p>Logged in as: TODO</p>
   <div class="button-container">
     <button class="play-button" on:click={() => goto('/world')}>Play</button>
     <button class="logout-button" on:click={handleLogout}>Logout</button>
