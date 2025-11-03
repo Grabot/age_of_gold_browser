@@ -1,6 +1,6 @@
 import type { User } from "../types/user";
-import { shouldValidate } from "../stores/validation";
-import { accessTokenValue } from "../stores/auth";
+import { accessTokenValue, refreshTokenValue, shouldValidate, userDetail } from "../stores/auth";
+import { get } from "svelte/store";
 
 const LOGIN_URL = "http://localhost:5000/api/v1.0/login";
 const TOKEN_URL = "http://localhost:5000/api/v1.0/login/token";
@@ -21,10 +21,9 @@ export async function loginUser(email: string, username: string, password: strin
     const data = await response.json();
     if (data.access_token) {
       accessTokenValue.set(data.access_token);
-      localStorage.setItem('accessToken', data.access_token);
     }
     if (data.refresh_token) {
-      localStorage.setItem('refreshToken', data.refresh_token);
+      refreshTokenValue.set(data.refresh_token);
     }
     const user_login: User = {
       id: data.user.id,
@@ -32,6 +31,7 @@ export async function loginUser(email: string, username: string, password: strin
     };
     // TODO: set user details
     // user.set(user_login);
+    userDetail.set(user_login);
     localStorage.setItem('user', JSON.stringify(user_login));
 	  shouldValidate.set(false);
     return { success: true, accessToken: data.access_token, refreshToken: data.refresh_token};
@@ -44,8 +44,6 @@ export async function loginUser(email: string, username: string, password: strin
 }
 
 export async function loginWithToken(token: string): Promise<{ success: boolean; message?: string; accessToken?: string; refreshToken?: string; }> {
-  console.log("logging in with token");
-  console.log(token);
   try {
     const response = await fetch(TOKEN_URL, {
       method: 'POST',
@@ -57,17 +55,10 @@ export async function loginWithToken(token: string): Promise<{ success: boolean;
 
     if (response.status === 401) {
       // Access token was not valid, check a refresh.
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = get(refreshTokenValue);
 
       if (refreshToken) {
-        console.log("logging in with refreshtoken");
-        console.log(token);
-        console.log(refreshToken);
-        // TODO: put back return refreshtoken after debug validation.
-        const refreshTokenResult = await refreshTokenLogin(token, refreshToken);
-        console.log("refreshTokenResult");
-        console.log(refreshTokenResult);
-        return refreshTokenResult;
+        return await refreshTokenLogin(token, refreshToken);
       } else {
         throw new Error('Unauthorized access. Please login again.');
       }
@@ -82,8 +73,8 @@ export async function loginWithToken(token: string): Promise<{ success: boolean;
       return {success: false, message: 'Login failed'};
     }
 
-    localStorage.setItem('accessToken', data.access_token);
-    localStorage.setItem('refreshToken', data.refresh_token);
+    accessTokenValue.set(data.access_token);
+    refreshTokenValue.set(data.refresh_token);
 
     return { success: true, accessToken: data.access_token, refreshToken: data.refresh_token };
   } catch (err) {
@@ -110,7 +101,7 @@ export function validateLoginFields(password: string, email: string, username: s
   return { success: true };
 }
 
-export async function refreshTokenLogin(accessToken: string, refreshToken: string): Promise<{ success: boolean; message?: string; }> {
+export async function refreshTokenLogin(accessToken: string, refreshToken: string): Promise<{ success: boolean; message?: string; accessToken?: string; refreshToken?: string; }> {
   try {
     const response = await fetch(REFRESH_URL, {
       method: 'POST',
@@ -129,14 +120,14 @@ export async function refreshTokenLogin(accessToken: string, refreshToken: strin
     }
 
     const data = await response.json();
-    if (!data.result || !data.access_token || !data.refresh_oken) {
+    if (!data.result || !data.access_token || !data.refresh_token) {
       return {success: false, message: 'Login failed'};
     }
 
-    localStorage.setItem('accessToken', data.access_token);
-    localStorage.setItem('refreshToken', data.refresh_token);
+    accessTokenValue.set(data.access_token);
+    refreshTokenValue.set(data.refresh_token);
 
-    return { success: true };
+    return { success: true, accessToken: data.access_token, refreshToken: data.refresh_token };
   } catch (err) {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');

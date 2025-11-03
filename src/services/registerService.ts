@@ -1,6 +1,5 @@
 import type { User } from "../types/user";
-import { shouldValidate } from "../stores/validation";
-import { accessTokenValue } from "../stores/auth";
+import { accessTokenValue, refreshTokenValue, shouldValidate } from "../stores/auth";
 
 const BACKEND_URL_REGISTER = "http://localhost:5000/api/v1.0/register";
 
@@ -21,9 +20,8 @@ export async function registerUser(email: string, username: string, password: st
     }
     const data = await response.json();
     // TODO: check keys in dict?
-    localStorage.setItem('accessToken', data.access_token);
-    localStorage.setItem('refreshToken', data.refresh_token);
     accessTokenValue.set(data.access_token);
+    refreshTokenValue.set(data.refresh_token);
     const user_register: User = {
       id: data.user.id,
       username: data.user.username,

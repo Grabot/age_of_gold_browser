@@ -1,30 +1,46 @@
 import { get, writable, type Writable } from 'svelte/store';
 import { loginWithToken, loginUser } from '../services/loginService';
 import { handleLogoutUser } from '../services/logoutService';
-import { shouldValidate } from './validation';
 
 
 const STORAGE_KEY_ACCESS_TOKEN = 'accessToken';
 const STORAGE_KEY_REFRESH_TOKEN = 'refreshToken';
+const STORAGE_KEY_USER_DETAIL = 'userDetail';
+const STORAGE_KEY_SHOULD_VALIDATE = 'shouldValidateFlag';
 
 const storedValueAccessToken = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_ACCESS_TOKEN) : "";
 const initialValueAccessToken = storedValueAccessToken ? storedValueAccessToken : "";
 const storedValueRefreshToken = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_REFRESH_TOKEN) : "";
 const initialValueRefreshToken = storedValueRefreshToken ? storedValueRefreshToken : "";
+const storedValueShouldValidate = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_SHOULD_VALIDATE) : 'true';
+const initialValueShouldValidate = storedValueShouldValidate ? JSON.parse(storedValueShouldValidate) : true;
+const storedValueUserDetail = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_USER_DETAIL) : '{}';
+const initialValueUserDetail = storedValueUserDetail ? JSON.parse(storedValueUserDetail) : {};
+
 
 export const accessTokenValue = writable(initialValueAccessToken);
 export const refreshTokenValue = writable(initialValueRefreshToken);
+export const shouldValidate = writable(initialValueShouldValidate);
+export const userDetail = writable(initialValueUserDetail);
 
 accessTokenValue.subscribe((value) => {
 	if (typeof window !== 'undefined') {
-    console.log("setting access token");
-    console.log(value);
 		localStorage.setItem(STORAGE_KEY_ACCESS_TOKEN, value);
 	}
 });
 refreshTokenValue.subscribe((value) => {
 	if (typeof window !== 'undefined') {
 		localStorage.setItem(STORAGE_KEY_REFRESH_TOKEN, value);
+	}
+});
+shouldValidate.subscribe((value) => {
+	if (typeof window !== 'undefined') {
+		localStorage.setItem(STORAGE_KEY_SHOULD_VALIDATE, JSON.stringify(value));
+	}
+});
+userDetail.subscribe((value) => {
+	if (typeof window !== 'undefined') {
+		localStorage.setItem(STORAGE_KEY_USER_DETAIL, JSON.stringify(value));
 	}
 });
 
@@ -91,11 +107,7 @@ function createAuthStore() {
     validateToken: async (): Promise<void> => {
       set({ ...initialState, loading: true });
       try {
-        console.log("access token validation");
-        // const accessToken = localStorage.getItem('accessToken');
-        const accessToken = get(accessTokenValue)
-        console.log(accessToken);
-        console.log(accessToken == "");
+        const accessToken = get(accessTokenValue);
         if (accessToken == "") {
           set({ ...initialState, loading: false });
           return;
@@ -123,11 +135,9 @@ function createAuthStore() {
       }
     },
     logout: async (): Promise<void> => {
-        console.log("logging out!");
-        const accessToken = localStorage.getItem('accessToken');
+        const accessToken = get(accessTokenValue)
         if (!accessToken) {
           set({ ...initialState, loading: false });
-          console.log("no token so basiccally like logged out");
           return;
         }
         await handleLogoutUser(accessToken);

@@ -1,15 +1,15 @@
-import { writable } from 'svelte/store';
+// import { writable } from 'svelte/store';
 
-const STORAGE_KEY = 'shouldValidateFlag';
+// const STORAGE_KEY = 'shouldValidateFlag';
 
-const storedValue = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : 'true';
-const initialValue = storedValue ? JSON.parse(storedValue) : true;
+// const storedValue = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : 'true';
+// const initialValue = storedValue ? JSON.parse(storedValue) : true;
 
-export const shouldValidate = writable(initialValue);
+// export const shouldValidate = writable(initialValue);
 
 
-shouldValidate.subscribe((value) => {
-	if (typeof window !== 'undefined') {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-	}
-});
+// shouldValidate.subscribe((value) => {
+// 	if (typeof window !== 'undefined') {
+// 		localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+// 	}
+// });

@@ -57,11 +57,6 @@
     }
   }
 
-  function handleLogout() {
-    console.log("logging out!");
-    // TODO: logout
-  }
-
   let activeTab = 'login';
 </script>
 
@@ -70,7 +65,6 @@
   <div class="overlay-box">
     {#if $auth.isAuthenticated}
       <UserBox
-        handleLogout={handleLogout}
       />
     {:else}
     test

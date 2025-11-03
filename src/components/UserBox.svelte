@@ -1,13 +1,22 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+	import { get } from 'svelte/store';
+	import { auth, shouldValidate, userDetail } from '../stores/auth';
 
-  export let handleLogout: () => void;
+  
+  function handleLogout() {
+    auth.logout();
+  }
+
+  function goToWorld() {
+    goto('/world')
+  }
 </script>
 
 <div class="logged-in-message">
-  <p>Logged in as: TODO</p>
+  <p>Logged in as: {get(userDetail).username}</p>
   <div class="button-container">
-    <button class="play-button" on:click={() => goto('/world')}>Play</button>
+    <button class="play-button" on:click={goToWorld}>Play</button>
     <button class="logout-button" on:click={handleLogout}>Logout</button>
   </div>
 </div>
@@ -36,12 +45,12 @@
   }
 
   .play-button {
-    background-color: #4CAF50; /* Green */
+    background-color: #4CAF50;
     color: white;
   }
 
   .logout-button {
-    background-color: #f44336; /* Red */
+    background-color: #f44336;
     color: white;
   }
 </style>
