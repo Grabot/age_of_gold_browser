@@ -1,38 +1,56 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+	import { toast } from '@zerodevx/svelte-toast';
   import LoginBox from '../components/LoginBox.svelte';
   import RegisterBox from '../components/RegisterBox.svelte';
-  import { emailLogin, usernameLogin, passwordLogin, errorLogin, successLogin } from '../stores/loginStore';
-  import { emailRegister, usernameRegister, passwordRegister, errorRegister, successRegister } from '../stores/registerStore';
-  import { loginUser, validateLoginFields } from '../services/loginService';
-  import { registerUser, validateRegisterFields } from '../services/registerService';
-	import { auth } from '../stores/auth';
-	import UserBox from '../components/UserBox.svelte';
+  import UserBox from '../components/UserBox.svelte';
+  import { authStore } from '../stores/authStore';
+  import { writable } from 'svelte/store';
 
+  const usernameOrEmailLogin = writable('');
+  const passwordLogin = writable('');
+
+  const emailRegister = writable('');
+  const usernameRegister = writable('');
+  const passwordRegister = writable('');
+
+  function validateLoginFields(password: string, usernameOrEmail: string) {
+    if (!password || !usernameOrEmail) {
+      return { success: false, message: 'Please fill in all fields.' };
+    }
+    return { success: true };
+  }
   async function handleLogin() {
-    const emailValue = $emailLogin;
-    const usernameValue = $usernameLogin;
+    const usernameOrEmailValue = $usernameOrEmailLogin;
     const passwordValue = $passwordLogin;
 
-    const validationResult = validateLoginFields(passwordValue, emailValue, usernameValue, false);
+    const validationResult = validateLoginFields(passwordValue, usernameOrEmailValue);
     if (!validationResult.success) {
-      errorLogin.set(validationResult.message || 'An error occurred during validation');
+      toast.push(validationResult.message || 'An error occurred during validation', {
+        theme: {
+          '--toastColor': '#000000',
+          '--toastBackground': '#EE4B2B',
+          '--toastBarBackground': '#4A0404'
+        }
+      });
       return;
     }
-    errorLogin.set('');
-    try {
-      const result = await loginUser(emailValue, usernameValue, passwordValue);
-      if (result.success) {
-        successLogin.set(result.message);
-        setTimeout(() => { window.location.href = '/world'; }, 1500);
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (err) {
-      errorLogin.set((err as Error).message || 'An error occurred during login.');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmail = emailRegex.test(usernameOrEmailValue);
+    const emailValue = isEmail ? usernameOrEmailValue : null;
+    const usernameValue = isEmail ? null : usernameOrEmailValue;
+    
+    const loginResult = await authStore.login(emailValue, usernameValue, passwordValue);
+    if (loginResult) {
+      window.location.href = '/world';
     }
   }
 
+  function validateRegisterFields(email: string, username: string, password: string) {
+    if (!email || !username || !password) {
+      return { success: false, message: 'Please fill in all fields.' };
+    }
+    return { success: true };
+  }
   async function handleRegister() {
     const emailValue = $emailRegister;
     const usernameValue = $usernameRegister;
@@ -40,20 +58,18 @@
 
     const validationResult = validateRegisterFields(emailValue, usernameValue, passwordValue);
     if (!validationResult.success) {
-      errorRegister.set(validationResult.message || 'An error occurred during validation');
+      toast.push(validationResult.message || 'An error occurred during validation', {
+        theme: {
+          '--toastColor': '#000000',
+          '--toastBackground': '#EE4B2B',
+          '--toastBarBackground': '#4A0404'
+        }
+      });
       return;
     }
-    errorRegister.set('');
-    try {
-      const result = await registerUser(emailValue, usernameValue, passwordValue);
-      if (result.success) {
-        successRegister.set(result.message);
-        setTimeout(() => { window.location.href = '/world'; }, 1500);
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (err) {
-      errorRegister.set((err as Error).message || 'An error occurred during registration.');
+    const registerResult = await authStore.register(emailValue, usernameValue, passwordValue);
+    if (registerResult) {
+      setTimeout(() => { window.location.href = '/world'; }, 1500);
     }
   }
 
@@ -63,30 +79,25 @@
 <div class="fullscreen-image-container">
   <img src="/gradient.png" alt="Fullscreen" class="fullscreen-image">
   <div class="overlay-box">
-    {#if $auth.isAuthenticated}
-      <UserBox
-      />
+    {#if $authStore.isAuthenticated}
+      <UserBox />
     {:else}
-    test
       <div class="tab-container">
         <button class="tab-button" on:click={() => activeTab = 'login'} class:active={activeTab === 'login'}>Login</button>
         <button class="tab-button" on:click={() => activeTab = 'register'} class:active={activeTab === 'register'}>Register</button>
       </div>
       {#if activeTab === 'login'}
         <LoginBox
-          usernameLogin={usernameLogin}
+          usernameOrEmailLogin={usernameOrEmailLogin}
           passwordLogin={passwordLogin}
-          errorLogin={errorLogin}
-          successLogin={successLogin}
           handleLogin={handleLogin}
         />
+        <span>You are not signed in</span>
       {:else}
         <RegisterBox
           emailRegister={emailRegister}
           usernameRegister={usernameRegister}
           passwordRegister={passwordRegister}
-          errorRegister={errorRegister}
-          successRegister={successRegister}
           handleRegister={handleRegister}
         />
       {/if}

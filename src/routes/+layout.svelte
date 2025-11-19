@@ -1,19 +1,24 @@
 <script lang="ts">
+  	import { SvelteToast } from '@zerodevx/svelte-toast'
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
-	import { auth, shouldValidate } from '../stores/auth';
 	import { get } from 'svelte/store';
+	import { authStore, shouldValidate } from '../stores/authStore';
 	
 	onMount(() => {
+    console.log("mount layout");
 		if (get(shouldValidate)) {
-			auth.validateToken();
+			authStore.validateToken();
 		} else {
-			auth.authorized();
+			authStore.authorized();
 		}
 	});
-	
+
 	let { children } = $props();
+	const options = {
+		
+	}
 </script>
 
 <svelte:head>
@@ -21,3 +26,5 @@
 </svelte:head>
 
 {@render children?.()}
+
+<SvelteToast {options} />

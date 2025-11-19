@@ -4,21 +4,16 @@
   export let emailRegister;
   export let usernameRegister;
   export let passwordRegister;
-  export let errorRegister = writable('');
-  export let successRegister = writable('');
   export let handleRegister;
 
-  // Create writable stores for the input values
   const localEmailRegister = writable('');
   const localUsernameRegister = writable('');
   const localPasswordRegister = writable('');
 
-  // Subscribe to the stores to update the local values
   $: $localEmailRegister = $emailRegister;
   $: $localUsernameRegister = $usernameRegister;
   $: $localPasswordRegister = $passwordRegister;
 
-  // Update the stores when the local values change
   $: emailRegister.set($localEmailRegister);
   $: usernameRegister.set($localUsernameRegister);
   $: passwordRegister.set($localPasswordRegister);
@@ -30,12 +25,6 @@
   <input type="text" placeholder="Username" bind:value={$localUsernameRegister} />
   <input type="password" placeholder="Password" bind:value={$localPasswordRegister} />
   <button on:click={handleRegister}>Register</button>
-  {#if $errorRegister}
-    <p class="error">{$errorRegister}</p>
-  {/if}
-  {#if $successRegister}
-    <p class="success">{$successRegister}</p>
-  {/if}
 </div>
 
 <style>

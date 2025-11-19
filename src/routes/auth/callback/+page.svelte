@@ -1,0 +1,72 @@
+<script>
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { getTokenFromUrl } from '$lib/authLib';
+	import { accessTokenValue, authStore, shouldValidate } from '../../../stores/authStore';
+
+	let loading = true;
+	let error = null;
+
+	console.log("page 1");
+	onMount(async () => {
+		console.log("page 2");
+		try {
+			const currentUrl = new URL(window.location.href);
+			const token = getTokenFromUrl(currentUrl);
+
+			if (token) {
+				accessTokenValue.set(token);
+				shouldValidate.set(false);
+				if (await authStore.validateToken(token, true)) {
+					// The layout onMount is called after this page (it's child) is mounted.
+					// So this validation function is called before the layout validation function.
+					// If this succeeds we should have stored the new information 
+					// and we don't immediatly want to do another validation
+					// So we set the `shouldValidate` to false
+
+					setTimeout(() => {
+						goto('/world');
+					}, 1000);
+				} else {
+					error = 'There was an issue with the token validation, apologies for the inconvenience. \nPlease try again or contact support if the issue persists.';
+				}
+			} else {
+				error = 'Authentication token not found.';
+			}
+		} catch (err) {
+			error = 'An error occurred during authentication.';
+			console.error('Exception occurred during authentication callback:', err);
+		} finally {
+			loading = false;
+		}
+	});
+</script>
+
+<div class="flex h-screen w-full flex-col items-center justify-center bg-gray-800">
+	<div class="rounded-lg bg-gray-900 p-8 shadow-lg">
+		{#if loading}
+			<div class="flex flex-col items-center">
+				<div class="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+				<p class="mt-4 text-lg text-white">Processing authentication...</p>
+			</div>
+		{:else if error}
+			<div class="flex flex-col items-center text-red-500">
+				<svg class="h-12 w-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+				</svg>
+				<p class="mt-4 text-lg text-white">{error}</p>
+				<button class="mt-4 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600" on:click={() => goto('/')}>
+					Return to home page
+				</button>
+			</div>
+		{:else}
+			<div class="flex flex-col items-center text-green-500">
+				<svg class="h-12 w-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+				</svg>
+				<p class="mt-4 text-lg text-white">Login successful! Redirecting shortly.</p>
+			</div>
+		{/if}
+	</div>
+</div>
+

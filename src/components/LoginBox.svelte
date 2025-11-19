@@ -1,33 +1,27 @@
 <script>
   import { writable } from 'svelte/store';
+  import OAuthButtons from './OAuthButtons.svelte';
 
-  export let usernameLogin;
+  export let usernameOrEmailLogin;
   export let passwordLogin;
-  export let errorLogin;
-  export let successLogin;
   export let handleLogin;
 
-  const localUsernameLogin = writable('');
+  const localUsernameOrEmailLogin = writable('');
   const localPasswordLogin = writable('');
 
-  $: $localUsernameLogin = $usernameLogin;
+  $: $localUsernameOrEmailLogin = $usernameOrEmailLogin;
   $: $localPasswordLogin = $passwordLogin;
 
-  $: usernameLogin.set($localUsernameLogin);
+  $: usernameOrEmailLogin.set($localUsernameOrEmailLogin);
   $: passwordLogin.set($localPasswordLogin);
 </script>
 
 <div class="login-box">
   <h2>Login</h2>
-  <input type="text" placeholder="Username or Email" bind:value={$localUsernameLogin} />
+  <input type="text" placeholder="Username or Email" bind:value={$localUsernameOrEmailLogin} />
   <input type="password" placeholder="Password" bind:value={$localPasswordLogin} />
   <button on:click={handleLogin}>Login</button>
-  {#if $errorLogin}
-    <p class="error">{$errorLogin}</p>
-  {/if}
-  {#if $successLogin}
-    <p class="success">{$successLogin}</p>
-  {/if}
+  <OAuthButtons />
 </div>
 
 <style>
@@ -38,12 +32,10 @@
     justify-content: center;
     height: 100%;
   }
-
   .login-box h2 {
     margin-bottom: 20px;
     color: #5a3e2a;
   }
-
   .login-box input {
     width: 100%;
     padding: 10px;
@@ -53,7 +45,6 @@
     background-color: #f5e7c1;
     color: #5a3e2a;
   }
-
   .login-box button {
     width: 100%;
     padding: 10px;
@@ -63,18 +54,7 @@
     border-radius: 5px;
     cursor: pointer;
   }
-
   .login-box button:hover {
     background-color: #b39a7d;
-  }
-
-  .error {
-    color: #a83232;
-    margin-top: 10px;
-  }
-
-  .success {
-    color: #3a7d3a;
-    margin-top: 10px;
   }
 </style>

@@ -1,11 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
 	import { get } from 'svelte/store';
-	import { auth, shouldValidate, userDetail } from '../stores/auth';
+	import { authStore, userDetail } from '../stores/authStore';
 
   
   function handleLogout() {
-    auth.logout();
+    authStore.logout();
   }
 
   function goToWorld() {
@@ -14,11 +14,13 @@
 </script>
 
 <div class="logged-in-message">
-  <p>Logged in as: {get(userDetail).username}</p>
-  <div class="button-container">
-    <button class="play-button" on:click={goToWorld}>Play</button>
-    <button class="logout-button" on:click={handleLogout}>Logout</button>
-  </div>
+  {#if get(userDetail)}
+    <p>Logged in as: {get(userDetail).username}</p>
+    <div class="button-container">
+      <button class="play-button" on:click={goToWorld}>Play</button>
+      <button class="logout-button" on:click={handleLogout}>Logout</button>
+    </div>
+  {/if}
 </div>
 
 <style>
