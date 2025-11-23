@@ -3,39 +3,68 @@
   import { signInWithGithub } from '$lib/authLib/githubAuth';
   import { signInWithReddit } from '$lib/authLib/redditAuth';
   import { signInWithApple } from '$lib/authLib/appleAuth';
+  import { toast } from '@zerodevx/svelte-toast';
+
+
   async function handleGoogleLogin() {
     try {
       await signInWithGoogle();
     } catch (err) {
       console.error('Error during Google login:', err);
-      error = 'An error occurred during Google login.';
+      toast.push('An error occurred during Google login.', {
+        theme: {
+          '--toastColor': '#000000',
+          '--toastBackground': '#EE4B2B',
+          '--toastBarBackground': '#4A0404'
+        }
+      });
     }
   }
+
   async function handleGitHubLogin() {
     try {
       await signInWithGithub();
     } catch (err) {
       console.error('Error during GitHub login:', err);
-      error = 'An error occurred during GitHub login.';
+      toast.push('An error occurred during GitHub login.', {
+        theme: {
+          '--toastColor': '#000000',
+          '--toastBackground': '#EE4B2B',
+          '--toastBarBackground': '#4A0404'
+        }
+      });
     }
   }
+
   async function handleRedditLogin() {
     try {
       await signInWithReddit();
     } catch (err) {
       console.error('Error during Reddit login:', err);
-      error = 'An error occurred during Reddit login.';
+      toast.push('An error occurred during Reddit login.', {
+        theme: {
+          '--toastColor': '#000000',
+          '--toastBackground': '#EE4B2B',
+          '--toastBarBackground': '#4A0404'
+        }
+      });
     }
   }
+
   async function handleAppleLogin() {
     try {
       await signInWithApple();
     } catch (err) {
       console.error('Error during Apple login:', err);
-      error = 'An error occurred during Apple login.';
+      toast.push('An error occurred during Apple login.', {
+        theme: {
+          '--toastColor': '#000000',
+          '--toastBackground': '#EE4B2B',
+          '--toastBarBackground': '#4A0404'
+        }
+      });
     }
   }
-  let error: string;
 </script>
 
 <div class="oauth-buttons">
@@ -51,23 +80,16 @@
   <button class="oauth-button apple" on:click={handleAppleLogin}>
     <img src="/oAuthButtons/apple_button.png" alt="Apple" class="oauth-img" />
   </button>
-  {#if error}
-    <p class="error">{error}</p>
-  {/if}
 </div>
 
 <style>
   .oauth-buttons {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
     gap: 10px;
-    margin-top: 20px;
     width: 100%;
-    max-width: 200px;
-    margin-left: auto;
-    margin-right: auto;
   }
+
   .oauth-button {
     display: flex;
     align-items: center;
@@ -76,22 +98,22 @@
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 1em;
     background-color: transparent;
     aspect-ratio: 1;
+    height: 10vh;
   }
+
   .oauth-button:hover {
     opacity: 0.9;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
   }
+
   .oauth-img {
     width: 100%;
     height: 100%;
     object-fit: contain;
     border-radius: 5px;
   }
-  .error {
-    color: #a83232;
-    margin-top: 10px;
-    grid-column: 1 / -1;
-  }
+
 </style>

@@ -124,7 +124,9 @@ function createAuthStore() {
     if (get(profileVersionValue) != loginResult.profile_version) {
       const newUserDetail = await getUserDetail(loginResult.access_token);
       loginResultUser = newUserDetail.user;
-      userDetail.set(newUserDetail.user);
+      console.log("user detail");
+      console.log(loginResultUser);
+      userDetail.set(loginResultUser);
     } else {
       loginResultUser = get(userDetail); 
     }
@@ -207,8 +209,10 @@ function createAuthStore() {
     validateToken: async (): Promise<boolean> => {
       set({ ...initialState, loading: true });
       try {
-        const validateResult: LoginResponse = await validateToken(get(accessTokenValue));
-        await handleLoginResponse(validateResult);
+        if (get(accessTokenValue)) {
+          const validateResult: LoginResponse = await validateToken(get(accessTokenValue));
+          await handleLoginResponse(validateResult);
+        }
         return true;
       } catch (err) {
         clearLoginStorage();
@@ -216,7 +220,6 @@ function createAuthStore() {
           ...initialState,
           loading: false,
         });
-          // error: err instanceof Error ? err.message : 'Unknown error',
         return false;
       }
     },

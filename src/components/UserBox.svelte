@@ -14,8 +14,8 @@
 </script>
 
 <div class="logged-in-message">
-  {#if get(userDetail)}
-    <p>Logged in as: {get(userDetail).username}</p>
+  {#if $authStore.isAuthenticated && !$authStore.loading}
+    <p>Logged in as: {$userDetail.username}</p>
     <div class="button-container">
       <button class="play-button" on:click={goToWorld}>Play</button>
       <button class="logout-button" on:click={handleLogout}>Logout</button>
