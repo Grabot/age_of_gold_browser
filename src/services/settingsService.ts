@@ -39,7 +39,6 @@ export async function handleChangeAvatar(accessToken: string, newAvatar: File, d
       throw new Error('Issue converting avatar.');
     }
     userAvatar.set(avatarBase64);
-    console.log("Avatar changed successfully.");
     return { success: true };
   } catch (err) {
     return {
@@ -52,7 +51,7 @@ export async function handleChangeAvatar(accessToken: string, newAvatar: File, d
 export async function handleGetAvatar(accessToken: string, get_default: boolean = false): Promise<{ success: boolean; message?: string; avatar?: string }> {
   try {
     const response = await getAvatar(accessToken, get_default);
-    
+
     if (response.success) {
       const avatarBase64 = await new Promise<string>((resolve) => {
         if (!response.data) {
@@ -68,9 +67,9 @@ export async function handleGetAvatar(accessToken: string, get_default: boolean 
       if (!avatarBase64) {
         throw new Error('Issue converting avatar.');
       }
-      return { success: true, avatar: avatarBase64};
+      return { success: true, avatar: avatarBase64 };
     } else {
-        return { success: false, message: 'Get avatar failed.' };
+      return { success: false, message: 'Get avatar failed.' };
     }
   } catch (err) {
     return { success: false, message: (err as Error).message || 'Getting avatar failed' };

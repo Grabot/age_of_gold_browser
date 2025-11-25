@@ -9,7 +9,7 @@ export const STORAGE_KEY_REFRESH_TOKEN = 'refreshToken';
 export const STORAGE_KEY_PROFILE_VERSION = 'profileVersion';
 export const STORAGE_KEY_AVATAR_VERSION = 'avatarVersion';
 export const STORAGE_KEY_SHOULD_UPDATE_AVATAR = 'shouldUpdateAvatarFlag';
-export const STORAGE_KEY_SHOULD_VALIDATE = 'shouldValidateFlag';
+export const STORAGE_KEY_LAST_VALIDATION_TIME = 'lastValidationTimeFlag';
 export const STORAGE_KEY_USER_DETAIL = 'userDetail';
 export const STORAGE_KEY_USER_AVATAR = 'userAvatar';
 
@@ -21,11 +21,11 @@ const storedValueRefreshToken = typeof window !== 'undefined' ? localStorage.get
 const initialValueRefreshToken = storedValueRefreshToken ? storedValueRefreshToken : "";
 export const refreshTokenValue = writable(initialValueRefreshToken);
 
-const storedValueProfileVersion = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_PROFILE_VERSION) : null;
+const storedValueProfileVersion = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_PROFILE_VERSION) : 0;
 const initialValueProfileVersion = storedValueProfileVersion ? Number(storedValueProfileVersion) : 0;
 export const profileVersionValue = writable(initialValueProfileVersion);
 
-const storedValueAvatarVersion = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_AVATAR_VERSION) : null;
+const storedValueAvatarVersion = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_AVATAR_VERSION) : 0;
 const initialValueAvatarVersion = storedValueAvatarVersion ? Number(storedValueAvatarVersion) : 0;
 export const avatarVersionValue = writable(initialValueAvatarVersion);
 
@@ -33,9 +33,9 @@ const storedValueShouldUpdateAvatar = typeof window !== 'undefined' ? localStora
 const initialValueShouldUpdateAvatar = storedValueShouldUpdateAvatar ? JSON.parse(storedValueShouldUpdateAvatar) : true;
 export const shouldUpdateAvatar = writable(initialValueShouldUpdateAvatar);
 
-const storedValueShouldValidate = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_SHOULD_VALIDATE) : "true";
-const initialValueShouldValidate = storedValueShouldValidate ? JSON.parse(storedValueShouldValidate) : true;
-export const shouldValidate = writable(initialValueShouldValidate);
+const storedValueLastValidationTime = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_LAST_VALIDATION_TIME) : null;
+const initialValueLastValidationTime = storedValueLastValidationTime ? Number(storedValueLastValidationTime) : 0;
+export const lastValidationTime = writable(initialValueLastValidationTime);
 
 const storedValueUserDetail = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_USER_DETAIL) : "{}";
 const initialValueUserDetail = storedValueUserDetail ? JSON.parse(storedValueUserDetail) : {};
@@ -69,9 +69,9 @@ avatarVersionValue.subscribe((value) => {
   }
 });
 
-shouldValidate.subscribe((value) => {
+lastValidationTime.subscribe((value) => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY_SHOULD_VALIDATE, JSON.stringify(value));
+    localStorage.setItem(STORAGE_KEY_LAST_VALIDATION_TIME, value.toString());
   }
 });
 
@@ -93,7 +93,6 @@ userAvatar.subscribe((value) => {
   }
 });
 
-// TODO: Use this to get the accessToken.
 interface AuthState {
   isAuthenticated: boolean;
   accessToken: string | null;
@@ -124,17 +123,16 @@ function createAuthStore() {
     if (get(profileVersionValue) != loginResult.profile_version) {
       const newUserDetail = await getUserDetail(loginResult.access_token);
       loginResultUser = newUserDetail.user;
-      console.log("user detail");
-      console.log(loginResultUser);
       userDetail.set(loginResultUser);
     } else {
-      loginResultUser = get(userDetail); 
+      loginResultUser = get(userDetail);
     }
     if (get(avatarVersionValue) != loginResult.avatar_version) {
       shouldUpdateAvatar.set(true);
     }
     profileVersionValue.set(loginResult.profile_version);
     avatarVersionValue.set(loginResult.avatar_version);
+    authStore.updateValidationTimestamp();
     set({
       isAuthenticated: true,
       accessToken: loginResult.access_token,
@@ -147,6 +145,13 @@ function createAuthStore() {
   }
 
   function clearLoginStorage() {
+    accessTokenValue.set("")
+    refreshTokenValue.set("");
+    profileVersionValue.set(0);
+    avatarVersionValue.set(0);
+    userDetail.set({});
+    userAvatar.set("");
+    lastValidationTime.set(0);
     localStorage.removeItem(STORAGE_KEY_ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEY_REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEY_PROFILE_VERSION);
@@ -157,18 +162,17 @@ function createAuthStore() {
 
   return {
     subscribe,
-    validateLoginResponse: async (loginResponse: LoginResponse):  Promise<boolean> => {
+    validateLoginResponse: async (loginResponse: LoginResponse): Promise<boolean> => {
       await handleLoginResponse(loginResponse);
       return true;
     },
-    login: async (email: string | null, username: string | null, password: string):  Promise<boolean> => {
+    login: async (email: string | null, username: string | null, password: string): Promise<boolean> => {
       set({ ...initialState, loading: true });
       try {
         const loginResult: LoginResponse = await loginUser(email, username, password);
         await handleLoginResponse(loginResult);
         return true;
       } catch (err) {
-        // TODO: Manage logout in some localized place?
         clearLoginStorage();
         set({
           ...initialState,
@@ -237,17 +241,25 @@ function createAuthStore() {
       }
     },
     authorized: async (): Promise<void> => {
-      shouldValidate.set(true);
       set({
-          isAuthenticated: true,
-          accessToken: get(accessTokenValue),
-          refreshToken: get(refreshTokenValue),
-          profileVersion: get(profileVersionValue),
-          avatarVersion: get(avatarVersionValue),
-          user: get(userDetail),
-          loading: false,
-        });
+        isAuthenticated: true,
+        accessToken: get(accessTokenValue),
+        refreshToken: get(refreshTokenValue),
+        profileVersion: get(profileVersionValue),
+        avatarVersion: get(avatarVersionValue),
+        user: get(userDetail),
+        loading: false,
+      });
     },
+    isValidationNeeded() {
+      const lastValidation = get(lastValidationTime);
+      const now = Date.now();
+      const oneMinute = 60 * 1000;
+      return now - lastValidation > oneMinute;
+    },
+    updateValidationTimestamp() {
+      lastValidationTime.set(Date.now());
+    }
   };
 }
 

@@ -1,103 +1,103 @@
 <script>
-  import { writable } from 'svelte/store';
-  import OAuthButtons from './OAuthButtons.svelte';
-  export let usernameOrEmailLogin;
-  export let passwordLogin;
-  export let handleLogin;
-  const localUsernameOrEmailLogin = writable('');
-  const localPasswordLogin = writable('');
-  $: $localUsernameOrEmailLogin = $usernameOrEmailLogin;
-  $: $localPasswordLogin = $passwordLogin;
-  $: usernameOrEmailLogin.set($localUsernameOrEmailLogin);
-  $: passwordLogin.set($localPasswordLogin);
+	import { writable } from 'svelte/store';
+	import OAuthButtons from './OAuthButtons.svelte';
+	export let usernameOrEmailLogin;
+	export let passwordLogin;
+	export let handleLogin;
+	const localUsernameOrEmailLogin = writable('');
+	const localPasswordLogin = writable('');
+	$: $localUsernameOrEmailLogin = $usernameOrEmailLogin;
+	$: $localPasswordLogin = $passwordLogin;
+	$: usernameOrEmailLogin.set($localUsernameOrEmailLogin);
+	$: passwordLogin.set($localPasswordLogin);
 </script>
 
 <div class="login-box">
-  <h2>Login</h2>
-  <input type="text" placeholder="Username or Email" bind:value={$localUsernameOrEmailLogin} />
-  <input type="password" placeholder="Password" bind:value={$localPasswordLogin} />
-  <button on:click={handleLogin}>Login</button>
+	<h2>Login</h2>
+	<input type="text" placeholder="Username or Email" bind:value={$localUsernameOrEmailLogin} />
+	<input type="password" placeholder="Password" bind:value={$localPasswordLogin} />
+	<button on:click={handleLogin}>Login</button>
 
-  <div class="oauth-container">
-    <p class="oauth-divider">or login with</p>
-    <OAuthButtons />
-  </div>
+	<div class="oauth-container">
+		<p class="oauth-divider">or login with</p>
+		<OAuthButtons />
+	</div>
 </div>
 
 <style>
-  .login-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    max-width: 350px;
-    padding: 20px;
-    gap: 15px;
-  }
+	.login-box {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		max-width: 350px;
+		padding: 20px;
+		gap: 15px;
+	}
 
-  .login-box h2 {
-    margin-bottom: 20px;
-    color: #5a3e2a;
-    font-size: 1.5rem;
-  }
+	.login-box h2 {
+		margin-bottom: 20px;
+		color: #5a3e2a;
+		font-size: 1.5rem;
+	}
 
-  .login-box input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 10px;
-    border: 1px solid #d4b18c;
-    border-radius: 5px;
-    background-color: #f5e7c1;
-    color: #5a3e2a;
-    font-size: 1rem;
-  }
+	.login-box input {
+		width: 100%;
+		padding: 12px;
+		margin-bottom: 10px;
+		border: 1px solid #d4b18c;
+		border-radius: 5px;
+		background-color: #f5e7c1;
+		color: #5a3e2a;
+		font-size: 1rem;
+	}
 
-  .login-box button {
-    width: 100%;
-    padding: 12px;
-    background-color: #d4b18c;
-    color: #5a3e2a;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 500;
-    margin-bottom: 10px;
-  }
+	.login-box button {
+		width: 100%;
+		padding: 12px;
+		background-color: #d4b18c;
+		color: #5a3e2a;
+		border: none;
+		border-radius: 5px;
+		cursor: pointer;
+		font-size: 1rem;
+		font-weight: 500;
+		margin-bottom: 10px;
+	}
 
-  .login-box button:hover {
-    background-color: #b39a7d;
-  }
+	.login-box button:hover {
+		background-color: #b39a7d;
+	}
 
-  .oauth-container {
-    width: 100%;
-    margin-top: 10px;
-  }
+	.oauth-container {
+		width: 100%;
+		margin-top: 10px;
+	}
 
-  .oauth-divider {
-    text-align: center;
-    margin: 10px 0;
-    color: #5a3e2a;
-    font-size: 0.9rem;
-    position: relative;
-  }
+	.oauth-divider {
+		text-align: center;
+		margin: 10px 0;
+		color: #5a3e2a;
+		font-size: 0.9rem;
+		position: relative;
+	}
 
-  .oauth-divider::before,
-  .oauth-divider::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    width: 45%;
-    height: 1px;
-    background-color: #d4b18c;
-  }
+	.oauth-divider::before,
+	.oauth-divider::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		width: 45%;
+		height: 1px;
+		background-color: #d4b18c;
+	}
 
-  .oauth-divider::before {
-    left: 0;
-  }
+	.oauth-divider::before {
+		left: 0;
+	}
 
-  .oauth-divider::after {
-    right: 0;
-  }
+	.oauth-divider::after {
+		right: 0;
+	}
 </style>

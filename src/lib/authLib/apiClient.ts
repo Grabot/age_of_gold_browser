@@ -129,7 +129,7 @@ async function refreshTokenAndRetry(
   refreshToken: string
 ): Promise<Response> {
   const newTokensResponse = await refreshTokenRequest(accessToken, refreshToken);
-  authStore.validateLoginResponse(newTokensResponse);
+  await authStore.validateLoginResponse(newTokensResponse);
   fetchOptions.headers = {
     ...fetchOptions.headers,
     'Authorization': `Bearer ${get(accessTokenValue)}`,

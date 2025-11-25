@@ -1,24 +1,66 @@
 <script lang="ts">
-  	import { SvelteToast } from '@zerodevx/svelte-toast'
+	import { SvelteToast, toast } from '@zerodevx/svelte-toast';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
-	import { authStore, shouldValidate } from '../stores/authStore';
-	
+	import { onMount, onDestroy } from 'svelte';
+	import { authStore } from '../stores/authStore';
+	import {
+		connectSocket,
+		disconnectSocket,
+		joinRoom,
+		leaveRoom,
+		onMessageEvent,
+		offMessageEvent
+	} from '$lib/socket';
+	import type { Socket } from 'socket.io-client';
+
+	let { children } = $props();
+	const options = {};
+
+	let socket: Socket | null = null;
+	let userId: number | null = null;
+
+	function handleMessageEvent(message: string) {
+		console.log('socket message:', message);
+	}
+
 	onMount(() => {
-    console.log("mount layout");
-		if (get(shouldValidate)) {
+		if (authStore.isValidationNeeded()) {
 			authStore.validateToken();
 		} else {
 			authStore.authorized();
 		}
-	});
 
-	let { children } = $props();
-	const options = {
-		
-	}
+		const unsubscribe = authStore.subscribe((state) => {
+			if (state.isAuthenticated && state.user) {
+				userId = state.user.id;
+				if (userId) {
+					socket = connectSocket(userId);
+					joinRoom(userId);
+					onMessageEvent(handleMessageEvent);
+				}
+			} else {
+				if (socket) {
+					if (userId != null) {
+						leaveRoom(userId);
+						disconnectSocket();
+					}
+					socket = null;
+				}
+			}
+		});
+
+		onDestroy(() => {
+			unsubscribe();
+			if (socket) {
+				if (userId != null) {
+					leaveRoom(userId);
+					disconnectSocket();
+				}
+			}
+			offMessageEvent();
+		});
+	});
 </script>
 
 <svelte:head>

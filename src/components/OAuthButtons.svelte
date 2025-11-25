@@ -1,8 +1,5 @@
 <script lang="ts">
-  import { signInWithGoogle } from '$lib/authLib/googleAuth';
-  import { signInWithGithub } from '$lib/authLib/githubAuth';
-  import { signInWithReddit } from '$lib/authLib/redditAuth';
-  import { signInWithApple } from '$lib/authLib/appleAuth';
+	import { signInWithApple, signInWithGithub, signInWithGoogle, signInWithReddit } from '$lib/authLib/oauth2';
   import { toast } from '@zerodevx/svelte-toast';
 
 
