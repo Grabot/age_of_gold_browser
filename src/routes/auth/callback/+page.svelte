@@ -16,7 +16,6 @@
 			if (token) {
 				accessTokenValue.set(token);
 				if (await authStore.validateToken()) {
-					authStore.updateValidationTimestamp();
 
 					setTimeout(() => {
 						goto('/world');

@@ -168,8 +168,10 @@ export async function refreshTokenRequest(
   const refreshTokenLogin = await makeRequest<LoginResponse>({
     method: 'POST',
     endpoint: API.endpoints.tokenRefresh,
-    accessToken: accessToken,
-    body: { refresh_token: refreshToken },
+    body: {
+      refresh_token: refreshToken,
+      access_token: accessToken
+    },
   });
   return LoginResponseSchema.parse(refreshTokenLogin.data);
 }

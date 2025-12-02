@@ -17,14 +17,14 @@
 </script>
 
 <div class="register-box">
-	<h2>Register</h2>
+	<h2>Sign up</h2>
 	<input type="email" placeholder="Email" bind:value={$localEmailRegister} />
 	<input type="text" placeholder="Username" bind:value={$localUsernameRegister} />
 	<input type="password" placeholder="Password" bind:value={$localPasswordRegister} />
-	<button on:click={handleRegister}>Register</button>
+	<button on:click={handleRegister}>Sign up</button>
 
 	<div class="oauth-container">
-		<p class="oauth-divider">or register with</p>
+		<p class="oauth-divider">or sign up with</p>
 		<OAuthButtons />
 	</div>
 </div>

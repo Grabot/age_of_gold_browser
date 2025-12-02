@@ -13,13 +13,13 @@
 </script>
 
 <div class="login-box">
-	<h2>Login</h2>
+	<h2>Sign in</h2>
 	<input type="text" placeholder="Username or Email" bind:value={$localUsernameOrEmailLogin} />
 	<input type="password" placeholder="Password" bind:value={$localPasswordLogin} />
-	<button on:click={handleLogin}>Login</button>
+	<button on:click={handleLogin}>Sign in</button>
 
 	<div class="oauth-container">
-		<p class="oauth-divider">or login with</p>
+		<p class="oauth-divider">or sign in with</p>
 		<OAuthButtons />
 	</div>
 </div>

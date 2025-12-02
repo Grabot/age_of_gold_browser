@@ -77,7 +77,7 @@
 		}
 	}
 
-	let activeTab = 'login';
+	let activeTab = 'Sign in';
 
 	let isMobile = false;
 
@@ -107,16 +107,16 @@
 					<div class="tab-container">
 						<button
 							class="tab-button"
-							on:click={() => (activeTab = 'login')}
-							class:active={activeTab === 'login'}>Login</button
+							on:click={() => (activeTab = 'signIn')}
+							class:active={activeTab === 'signIn'}>Sign in</button
 						>
 						<button
 							class="tab-button"
-							on:click={() => (activeTab = 'register')}
-							class:active={activeTab === 'register'}>Register</button
+							on:click={() => (activeTab = 'signUp')}
+							class:active={activeTab === 'signUp'}>Sign up</button
 						>
 					</div>
-					{#if activeTab === 'login'}
+					{#if activeTab === 'signIn'}
 						<LoginBox {usernameOrEmailLogin} {passwordLogin} {handleLogin} />
 					{:else}
 						<RegisterBox {emailRegister} {usernameRegister} {passwordRegister} {handleRegister} />
@@ -134,16 +134,16 @@
 				<div class="tab-container">
 					<button
 						class="tab-button"
-						on:click={() => (activeTab = 'login')}
-						class:active={activeTab === 'login'}>Login</button
+						on:click={() => (activeTab = 'signIn')}
+						class:active={activeTab === 'signIn'}>Sign in</button
 					>
 					<button
 						class="tab-button"
-						on:click={() => (activeTab = 'register')}
-						class:active={activeTab === 'register'}>Register</button
+						on:click={() => (activeTab = 'signUp')}
+						class:active={activeTab === 'signUp'}>Sign up</button
 					>
 				</div>
-				{#if activeTab === 'login'}
+				{#if activeTab === 'signIn'}
 					<LoginBox {usernameOrEmailLogin} {passwordLogin} {handleLogin} />
 				{:else}
 					<RegisterBox {emailRegister} {usernameRegister} {passwordRegister} {handleRegister} />

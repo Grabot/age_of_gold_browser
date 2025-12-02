@@ -13,6 +13,7 @@
 		offMessageEvent
 	} from '$lib/socket';
 	import type { Socket } from 'socket.io-client';
+  	import { page } from '$app/state';
 
 	let { children } = $props();
 	const options = {};
@@ -25,10 +26,13 @@
 	}
 
 	onMount(() => {
-		if (authStore.isValidationNeeded()) {
-			authStore.validateToken();
-		} else {
-			authStore.authorized();
+    	const isCallbackPage = page.url.pathname === '/auth/callback';
+		if (!isCallbackPage) {
+			if (authStore.isValidationNeeded()) {
+				authStore.validateToken();
+			} else {
+				authStore.authorized();
+			}
 		}
 
 		const unsubscribe = authStore.subscribe((state) => {
