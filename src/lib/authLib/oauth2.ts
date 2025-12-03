@@ -1,3 +1,5 @@
+import { GoogleOAuthProvider } from 'google-oauth-gsi';
+
 
 export async function signInWithApple(): Promise<void> {
   try {
@@ -21,15 +23,21 @@ export async function signInWithGithub(): Promise<void> {
 }
 
 
-export async function signInWithGoogle(): Promise<void> {
-  try {
-    const baseUrl: string = import.meta.env.VITE_PUBLIC_BASE_URL || '';
-    window.location.href = baseUrl + '/api/v1.0/auth/google';
-  } catch (error: unknown) {
-    console.error('Error during Google login:', error);
-    throw error;
-  }
-}
+// export async function signInWithGoogle(): Promise<void> {
+//   try {
+//     const baseUrl: string = import.meta.env.VITE_PUBLIC_BASE_URL || '';
+//     window.location.href = baseUrl + '/api/v1.0/auth/google';
+//   } catch (error: unknown) {
+//     console.error('Error during Google login:', error);
+//     throw error;
+//   }
+// }
+
+export const googleProvider = new GoogleOAuthProvider({
+  clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+  onScriptLoadError: () => console.log('onScriptLoadError'),
+  onScriptLoadSuccess: () => console.log('onScriptLoadSuccess'),
+});
 
 
 

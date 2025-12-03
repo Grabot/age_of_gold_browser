@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
 import type { User } from '../types/user';
-import { getUserDetail, loginUser, logoutUser, registerUser, validateToken, type LoginResponse } from '$lib/authLib/apiClient';
+import { getUserDetail, loginTokenGoogle, loginUser, logoutUser, registerUser, validateToken, type LoginResponse } from '$lib/authLib/apiClient';
 import { toast } from '@zerodevx/svelte-toast';
 
 
@@ -217,6 +217,21 @@ function createAuthStore() {
           const validateResult: LoginResponse = await validateToken(get(accessTokenValue));
           await handleLoginResponse(validateResult);
         }
+        return true;
+      } catch (err) {
+        clearLoginStorage();
+        set({
+          ...initialState,
+          loading: false,
+        });
+        return false;
+      }
+    },
+    validateTokenGoogle: async (googleAccessToken: string): Promise<boolean> => {
+      set({ ...initialState, loading: true });
+      try {
+        const validateResult: LoginResponse = await loginTokenGoogle(googleAccessToken);
+        await handleLoginResponse(validateResult);
         return true;
       } catch (err) {
         clearLoginStorage();

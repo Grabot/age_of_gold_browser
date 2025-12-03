@@ -60,6 +60,7 @@ class ApiConfig {
     tokenLogin: 'login/token',
     tokenRefresh: 'login/token/refresh',
     logout: 'logout',
+    tokenLoginGoogle: 'auth/google/token',
   } as const;
 
   buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {
@@ -275,4 +276,17 @@ export async function logoutUser(
     endpoint: API.endpoints.logout,
     accessToken: accessToken,
   });
+}
+
+export async function loginTokenGoogle(
+  accessTokenGoogle: string,
+): Promise<LoginResponse> {
+  const refreshTokenLogin = await makeRequest<LoginResponse>({
+    method: 'POST',
+    endpoint: API.endpoints.tokenLoginGoogle,
+    body: {
+      access_token: accessTokenGoogle
+    },
+  });
+  return LoginResponseSchema.parse(refreshTokenLogin.data);
 }

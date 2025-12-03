@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { signInWithApple, signInWithGithub, signInWithGoogle, signInWithReddit } from '$lib/authLib/oauth2';
+	import { googleProvider, signInWithApple, signInWithGithub, signInWithReddit } from '$lib/authLib/oauth2';
   import { toast } from '@zerodevx/svelte-toast';
+	import { authStore } from '../stores/authStore';
 
-
-  async function handleGoogleLogin() {
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      console.error('Error during Google login:', err);
-      toast.push('An error occurred during Google login.', {
-        theme: {
-          '--toastColor': '#000000',
-          '--toastBackground': '#EE4B2B',
-          '--toastBarBackground': '#4A0404'
-        }
-      });
+  const googleLogin = googleProvider.useGoogleLogin({
+    flow: 'implicit',
+    onSuccess: async (tokenResponse) => {
+      const loginResult = await authStore.validateTokenGoogle(tokenResponse.access_token);
+      if (loginResult) {
+        window.location.href = '/world';
+      }
     }
-  }
+  });
 
+  const handleGoogleLogin = (event: MouseEvent) => {
+    event.preventDefault();
+    googleLogin();
+  };
+  
   async function handleGitHubLogin() {
     try {
       await signInWithGithub();
