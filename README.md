@@ -76,5 +76,5 @@ Than you can pull and run your container on the server
 ```sh
 docker pull <docker hub account>/age_of_gold_browser:1.0
 
-docker run -d -p 3000:3000 --env-file .env <docker hub account>/age-of-gold-browser:latest
+docker run -d -p 3000:3000 --env-file .env <docker hub account>/age_of_gold_browser:latest
 ```
