@@ -257,35 +257,35 @@
 						</div>
 					{/if}
 				</div>
-			<div
-				class="avatar-upload"
-				on:dragover={handleDragOver}
-				on:drop={handleDrop}
-				on:dragenter={() => (isDragging = true)}
-				on:dragleave={() => (isDragging = false)}
-				class:dragging={isDragging}
-				role="region"
-				aria-label="Avatar upload area"
-			>
-				<input
-				type="file"
-				on:change={handleFileInput}
-				accept="image/*"
-				class="field-input"
-				style="display: none;"
-				bind:this={fileInput}
-				/>
-				<input
-				type="text"
-				class="filename-input"
-				value={filename}
-				readonly
-				placeholder="No file chosen"
-				/>
-				<button type="button" class="browse-button" on:click={() => fileInput.click()}>
-				Browse...
-				</button>
-			</div>
+				<div
+					class="avatar-upload"
+					on:dragover={handleDragOver}
+					on:drop={handleDrop}
+					on:dragenter={() => (isDragging = true)}
+					on:dragleave={() => (isDragging = false)}
+					class:dragging={isDragging}
+					role="region"
+					aria-label="Avatar upload area"
+				>
+					<input
+						type="file"
+						on:change={handleFileInput}
+						accept="image/*"
+						class="field-input"
+						style="display: none;"
+						bind:this={fileInput}
+					/>
+					<input
+						type="text"
+						class="filename-input"
+						value={filename}
+						readonly
+						placeholder="No file chosen"
+					/>
+					<button type="button" class="browse-button" on:click={() => fileInput.click()}>
+						Browse...
+					</button>
+				</div>
 			</div>
 		</div>
 		<div class="modal-actions">

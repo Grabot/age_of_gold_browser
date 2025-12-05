@@ -61,11 +61,13 @@ class ApiConfig {
     tokenRefresh: 'login/token/refresh',
     logout: 'logout',
     tokenLoginGoogle: 'auth/google/token',
+    forgotPassword: 'password/forgot',
+    resetPassword: 'password/reset',
   } as const;
 
   buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {
     let url = `${this.baseUrl}/${this.version}/${endpoint}`;
-    
+
     if (params) {
       const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
@@ -73,7 +75,7 @@ class ApiConfig {
       });
       url += `?${searchParams.toString()}`;
     }
-    
+
     return url;
   }
 }
@@ -195,7 +197,7 @@ export async function changeAvatar(
   useDefaultAvatar: boolean = false
 ): Promise<ApiResponse<unknown>> {
   const formData = new FormData();
-  
+
   if (!useDefaultAvatar && newAvatar) {
     formData.append('avatar', newAvatar);
   }
@@ -268,6 +270,7 @@ export async function getUserDetail(
   });
   return UserResponseSchema.parse(userResponse.data);
 }
+
 export async function logoutUser(
   accessToken: string,
 ): Promise<ApiResponse<unknown>> {
@@ -289,4 +292,32 @@ export async function loginTokenGoogle(
     },
   });
   return LoginResponseSchema.parse(refreshTokenLogin.data);
+}
+
+export async function forgotPassword(
+  email: string,
+): Promise<boolean> {
+  const forgotPasswordLogin = await makeRequest<boolean>({
+    method: 'POST',
+    endpoint: API.endpoints.forgotPassword,
+    body: {
+      "email": email
+    },
+  });
+  return forgotPasswordLogin["success"];
+}
+
+export async function resetPassword(
+  newPassword: string,
+  accessToken: string,
+): Promise<boolean> {
+  const resetPasswordLogin = await makeRequest<boolean>({
+    method: 'PATCH',
+    endpoint: API.endpoints.resetPassword,
+    accessToken: accessToken,
+    body: {
+      "new_password": newPassword
+    },
+  });
+  return resetPasswordLogin["success"];
 }

@@ -7,10 +7,11 @@
 	import { writable } from 'svelte/store';
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
+	import ForgotPasswordModal from '../components/ForgotPasswordModal.svelte';
+	import { forgotPassword } from '$lib/authLib/apiClient';
 
 	const usernameOrEmailLogin = writable('');
 	const passwordLogin = writable('');
-
 	const emailRegister = writable('');
 	const usernameRegister = writable('');
 	const passwordRegister = writable('');
@@ -21,10 +22,10 @@
 		}
 		return { success: true };
 	}
+
 	async function handleLogin() {
 		const usernameOrEmailValue = $usernameOrEmailLogin;
 		const passwordValue = $passwordLogin;
-
 		const validationResult = validateLoginFields(passwordValue, usernameOrEmailValue);
 		if (!validationResult.success) {
 			toast.push(validationResult.message || 'An error occurred during validation', {
@@ -40,7 +41,6 @@
 		const isEmail = emailRegex.test(usernameOrEmailValue);
 		const emailValue = isEmail ? usernameOrEmailValue : null;
 		const usernameValue = isEmail ? null : usernameOrEmailValue;
-
 		const loginResult = await authStore.login(emailValue, usernameValue, passwordValue);
 		if (loginResult) {
 			window.location.href = '/world';
@@ -53,11 +53,11 @@
 		}
 		return { success: true };
 	}
+
 	async function handleRegister() {
 		const emailValue = $emailRegister;
 		const usernameValue = $usernameRegister;
 		const passwordValue = $passwordRegister;
-
 		const validationResult = validateRegisterFields(emailValue, usernameValue, passwordValue);
 		if (!validationResult.success) {
 			toast.push(validationResult.message || 'An error occurred during validation', {
@@ -77,19 +77,60 @@
 		}
 	}
 
-	let activeTab = 'Sign in';
-
+	let activeTab = 'SignIn';
 	let isMobile = false;
 
 	onMount(() => {
 		if (browser) {
 			checkIfMobile();
 			window.addEventListener('resize', checkIfMobile);
+			// Check if the user has visited before
+			const hasVisitedBefore = localStorage.getItem('hasVisitedBefore');
+			if (hasVisitedBefore) {
+				activeTab = 'signIn';
+			} else {
+				activeTab = 'signUp';
+				localStorage.setItem('hasVisitedBefore', 'true');
+			}
 		}
 	});
 
 	function checkIfMobile() {
 		isMobile = window.innerWidth <= 768;
+	}
+
+	let showForgotPasswordModal = false;
+
+	async function handleForgotPassword() {
+		showForgotPasswordModal = true;
+	}
+
+	async function handleForgotPasswordSubmit(email: string) {
+		try {
+			const forgotPasswordResult: boolean = await forgotPassword(email);
+			if (!forgotPasswordResult) {
+				throw new Error('Failed to send reset email');
+			} else {
+				console.log('Sending reset link to:', email);
+				showForgotPasswordModal = false;
+				toast.push('Password reset email sent!', {
+					theme: {
+						'--toastColor': '#000000',
+						'--toastBackground': '#2ecc71',
+						'--toastBarBackground': '#27ae60'
+					}
+				});
+			}
+		} catch (err) {
+			toast.push('Failed to send reset email', {
+				theme: {
+					'--toastColor': '#000000',
+					'--toastBackground': '#EE4B2B',
+					'--toastBarBackground': '#4A0404'
+				}
+			});
+			return false;
+		}
 	}
 </script>
 
@@ -117,7 +158,7 @@
 						>
 					</div>
 					{#if activeTab === 'signIn'}
-						<LoginBox {usernameOrEmailLogin} {passwordLogin} {handleLogin} />
+						<LoginBox {usernameOrEmailLogin} {passwordLogin} {handleLogin} {handleForgotPassword} />
 					{:else}
 						<RegisterBox {emailRegister} {usernameRegister} {passwordRegister} {handleRegister} />
 					{/if}
@@ -144,12 +185,18 @@
 					>
 				</div>
 				{#if activeTab === 'signIn'}
-					<LoginBox {usernameOrEmailLogin} {passwordLogin} {handleLogin} />
+					<LoginBox {usernameOrEmailLogin} {passwordLogin} {handleLogin} {handleForgotPassword} />
 				{:else}
 					<RegisterBox {emailRegister} {usernameRegister} {passwordRegister} {handleRegister} />
 				{/if}
 			{/if}
 		</div>
+	{/if}
+	{#if showForgotPasswordModal}
+		<ForgotPasswordModal
+			onClose={() => (showForgotPasswordModal = false)}
+			onSubmit={handleForgotPasswordSubmit}
+		/>
 	{/if}
 </div>
 

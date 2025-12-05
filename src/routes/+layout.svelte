@@ -13,7 +13,7 @@
 		offMessageEvent
 	} from '$lib/socket';
 	import type { Socket } from 'socket.io-client';
-  	import { page } from '$app/state';
+	import { page } from '$app/state';
 
 	let { children } = $props();
 	const options = {};
@@ -26,8 +26,8 @@
 	}
 
 	onMount(() => {
-    	const isCallbackPage = page.url.pathname === '/auth/callback';
-		if (!isCallbackPage) {
+		const isAuthPage = page.url.pathname.startsWith('/auth/');
+		if (!isAuthPage) {
 			if (authStore.isValidationNeeded()) {
 				authStore.validateToken();
 			} else {

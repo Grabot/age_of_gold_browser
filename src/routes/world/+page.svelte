@@ -18,9 +18,12 @@
 	import EditProfileUsername from '../../components/edit_profile/EditProfileUsername.svelte';
 	import EditProfileAvatar from '../../components/edit_profile/EditProfileAvatar.svelte';
 	import { get } from 'svelte/store';
+	import EditProfilePassword from '../../components/edit_profile/EditProfilePassword.svelte';
+	import { resetPassword } from '$lib/authLib/apiClient';
 
 	let showModalAvatar = false;
 	let showModalUsername = false;
+	let showModalPassword = false;
 	let hasFetchedAvatar = false;
 	let showDropdown = false;
 
@@ -102,6 +105,34 @@
 		showModalUsername = false;
 	}
 
+	async function handleEditProfileSavePassword(data: { password?: string | null }) {
+		try {
+			if (data.password) {
+				const resetPasswordResult: boolean = await resetPassword(
+					data.password,
+					get(accessTokenValue)
+				);
+				if (!resetPasswordResult) {
+					throw new Error('Failed to send reset email');
+				} else {
+					toast.push('Password changed!');
+				}
+			} else {
+				throw new Error('No password provided');
+			}
+		} catch (err) {
+			toast.push('Failed to change password', {
+				theme: {
+					'--toastColor': '#000000',
+					'--toastBackground': '#EE4B2B',
+					'--toastBarBackground': '#4A0404'
+				}
+			});
+		} finally {
+			showModalPassword = false;
+		}
+	}
+
 	function handleEditProfileSaveAvatar(data: {
 		avatar?: File | null;
 		defaultAvatar?: boolean | null;
@@ -145,6 +176,11 @@
 		showDropdown = false;
 	}
 
+	function openPasswordModal() {
+		showModalPassword = true;
+		showDropdown = false;
+	}
+
 	function openAvatarModal() {
 		showModalAvatar = true;
 		showDropdown = false;
@@ -177,6 +213,7 @@
 				<div class="dropdown-menu" style:visibility={showDropdown ? 'visible' : 'hidden'}>
 					<button class="dropdown-item" on:click={openUsernameModal}>Change Username</button>
 					<button class="dropdown-item" on:click={openAvatarModal}>Change Avatar</button>
+					<button class="dropdown-item" on:click={openPasswordModal}>Change Password</button>
 					<button class="dropdown-item" on:click={() => authStore.logout()}>Logout</button>
 				</div>
 			</div>
@@ -204,6 +241,12 @@
 			<EditProfileUsername
 				onSave={handleEditProfileSaveUsername}
 				onClose={() => (showModalUsername = false)}
+			/>
+		{/if}
+		{#if showModalPassword}
+			<EditProfilePassword
+				onSave={handleEditProfileSavePassword}
+				onClose={() => (showModalPassword = false)}
 			/>
 		{/if}
 	</div>
