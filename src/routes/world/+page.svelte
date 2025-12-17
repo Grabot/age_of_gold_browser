@@ -12,6 +12,7 @@
 	import {
 		handleChangeAvatar,
 		handleChangeUsername,
+		handleDeleteAccount,
 		handleGetAvatar
 	} from '../../services/settingsService';
 	import { toast } from '@zerodevx/svelte-toast';
@@ -19,11 +20,15 @@
 	import EditProfileAvatar from '../../components/edit_profile/EditProfileAvatar.svelte';
 	import { get } from 'svelte/store';
 	import EditProfilePassword from '../../components/edit_profile/EditProfilePassword.svelte';
+	import DeleteAccount from '../../components/edit_profile/DeleteAccount.svelte';
 	import { resetPassword } from '$lib/authLib/apiClient';
+	import { errorToast, successToast } from '../../utils/toast';
+	import { success } from 'zod';
 
 	let showModalAvatar = false;
 	let showModalUsername = false;
 	let showModalPassword = false;
+	let showModalDeleteAccount = false;
 	let hasFetchedAvatar = false;
 	let showDropdown = false;
 
@@ -51,13 +56,7 @@
 				throw new Error('Failed to fetch avatar');
 			}
 		} catch (error) {
-			toast.push('Failed to fetch avatar.', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast('Failed to fetch avatar.');
 			hasFetchedAvatar = true;
 			return false;
 		}
@@ -89,15 +88,9 @@
 			if (accessToken) {
 				handleChangeUsername(accessToken, data.username).then((response) => {
 					if (response.success) {
-						toast.push('Username updated successfully!');
+						successToast('Username updated successfully!')
 					} else {
-						toast.push('Failed to update username', {
-							theme: {
-								'--toastColor': '#000000',
-								'--toastBackground': '#EE4B2B',
-								'--toastBarBackground': '#4A0404'
-							}
-						});
+						errorToast('Failed to update username');
 					}
 				});
 			}
@@ -115,19 +108,13 @@
 				if (!resetPasswordResult) {
 					throw new Error('Failed to send reset email');
 				} else {
-					toast.push('Password changed!');
+					successToast('Password changed!');
 				}
 			} else {
 				throw new Error('No password provided');
 			}
 		} catch (err) {
-			toast.push('Failed to change password', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast('Failed to change password');
 		} finally {
 			showModalPassword = false;
 		}
@@ -146,16 +133,10 @@
 				}
 				handleChangeAvatar(accessToken, data.avatar, defaultAvatar).then((response) => {
 					if (response.success) {
-						toast.push('Avatar updated successfully!');
+						successToast('Avatar updated successfully!');
 						avatarVersionValue.set(get(avatarVersionValue) + 1);
 					} else {
-						toast.push('Failed to update avatar: ' + response.message, {
-							theme: {
-								'--toastColor': '#000000',
-								'--toastBackground': '#EE4B2B',
-								'--toastBarBackground': '#4A0404'
-							}
-						});
+						errorToast('Failed to update avatar: ' + response.message);
 					}
 				});
 			}
@@ -202,6 +183,26 @@
 		}
 		showDropdown = false;
 	};
+
+    function openDeleteAccountModal() {
+        showModalDeleteAccount = true;
+        showDropdown = false;
+    }
+
+	function handleDeleteAccountChoice() {
+        const accessToken = $accessTokenValue;
+		if (accessToken) {
+			handleDeleteAccount(accessToken).then(async (response) => {
+				if (response.success) {
+					errorToast('Account deleted!');
+					authStore.clearLogin();
+				} else {
+					errorToast('Failed to Delete account: ' + response.message);
+				}
+			});
+		}
+        showModalDeleteAccount = false;
+    }
 </script>
 
 {#if $authStore.isAuthenticated && !$authStore.loading}
@@ -215,6 +216,8 @@
 					<button class="dropdown-item" on:click={openAvatarModal}>Change Avatar</button>
 					<button class="dropdown-item" on:click={openPasswordModal}>Change Password</button>
 					<button class="dropdown-item" on:click={() => authStore.logout()}>Logout</button>
+					<hr class="dropdown-divider" />
+					<button class="dropdown-item delete-item" on:click={openDeleteAccountModal}>Delete Account</button>
 				</div>
 			</div>
 		</div>
@@ -247,6 +250,12 @@
 			<EditProfilePassword
 				onSave={handleEditProfileSavePassword}
 				onClose={() => (showModalPassword = false)}
+			/>
+		{/if}
+		{#if showModalDeleteAccount}
+			<DeleteAccount
+				onSave={handleDeleteAccountChoice}
+				onClose={() => (showModalDeleteAccount = false)}
 			/>
 		{/if}
 	</div>
@@ -381,5 +390,14 @@
 
 	.dropdown-item:hover {
 		background: #f0f0f0;
+	}
+	.dropdown-divider {
+		border: 0;
+		border-top: 1px solid #eee;
+		margin: 0.5rem 0;
+	}
+	.delete-item {
+		color: #e74c3c !important;
+		font-weight: bold;
 	}
 </style>

@@ -6,6 +6,7 @@
 	import { toast } from '@zerodevx/svelte-toast';
 	import { logoutUser, resetPassword } from '$lib/authLib/apiClient';
 	import { get } from 'svelte/store';
+	import { errorToast, successToast } from '../../../utils/toast';
 
 	let showForm = true;
 	let loading = true;
@@ -26,33 +27,15 @@
 				} else {
 					error =
 						'The token has expired, apologies for the inconvenience. \nPlease try again or contact support if the issue persists.';
-					toast.push('The token has expired.', {
-						theme: {
-							'--toastColor': '#000000',
-							'--toastBackground': '#EE4B2B',
-							'--toastBarBackground': '#4A0404'
-						}
-					});
+					errorToast(error);
 				}
 			} else {
 				error = 'Authentication token not found.';
-				toast.push('Authentication token not found.', {
-					theme: {
-						'--toastColor': '#000000',
-						'--toastBackground': '#EE4B2B',
-						'--toastBarBackground': '#4A0404'
-					}
-				});
+				errorToast(error);
 			}
 		} catch (err) {
 			error = 'An error occurred during authentication.';
-			toast.push('An error occurred during authentication.', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast(error);
 			console.error('Exception occurred during authentication callback:', err);
 		} finally {
 			loading = false;
@@ -74,20 +57,14 @@
 				throw new Error('Failed to send reset email');
 			} else {
 				showForm = false;
-				toast.push('Password reset done! Please login again.');
+				successToast('Password reset done! Please login again.')
 				await authStore.logout();
 				setTimeout(() => {
 					goto('/');
 				}, 1000);
 			}
 		} catch (err) {
-			toast.push('Failed to reset password', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast('Failed to reset password');
 			formError = 'Network error. Please try again.';
 		} finally {
 			loading = false;

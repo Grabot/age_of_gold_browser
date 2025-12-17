@@ -9,6 +9,7 @@
 	import { onMount } from 'svelte';
 	import ForgotPasswordModal from '../components/ForgotPasswordModal.svelte';
 	import { forgotPassword } from '$lib/authLib/apiClient';
+	import { errorToast } from '../utils/toast';
 
 	const usernameOrEmailLogin = writable('');
 	const passwordLogin = writable('');
@@ -28,13 +29,7 @@
 		const passwordValue = $passwordLogin;
 		const validationResult = validateLoginFields(passwordValue, usernameOrEmailValue);
 		if (!validationResult.success) {
-			toast.push(validationResult.message || 'An error occurred during validation', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast(validationResult.message || 'An error occurred during validation');
 			return;
 		}
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -60,13 +55,7 @@
 		const passwordValue = $passwordRegister;
 		const validationResult = validateRegisterFields(emailValue, usernameValue, passwordValue);
 		if (!validationResult.success) {
-			toast.push(validationResult.message || 'An error occurred during validation', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast(validationResult.message || 'An error occurred during validation');
 			return;
 		}
 		const registerResult = await authStore.register(emailValue, usernameValue, passwordValue);
@@ -113,22 +102,10 @@
 			} else {
 				console.log('Sending reset link to:', email);
 				showForgotPasswordModal = false;
-				toast.push('Password reset email sent!', {
-					theme: {
-						'--toastColor': '#000000',
-						'--toastBackground': '#2ecc71',
-						'--toastBarBackground': '#27ae60'
-					}
-				});
+				errorToast('Password reset email sent!');
 			}
 		} catch (err) {
-			toast.push('Failed to send reset email', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast('Failed to send reset email');
 			return false;
 		}
 	}

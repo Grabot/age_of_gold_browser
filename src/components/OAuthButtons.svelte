@@ -7,6 +7,7 @@
 	} from '$lib/authLib/oauth2';
 	import { toast } from '@zerodevx/svelte-toast';
 	import { authStore } from '../stores/authStore';
+	import { errorToast } from '../utils/toast';
 
 	const googleLogin = googleProvider.useGoogleLogin({
 		flow: 'implicit',
@@ -28,13 +29,7 @@
 			await signInWithGithub();
 		} catch (err) {
 			console.error('Error during GitHub login:', err);
-			toast.push('An error occurred during GitHub login.', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast('An error occurred during GitHub login.');
 		}
 	}
 
@@ -43,13 +38,7 @@
 			await signInWithReddit();
 		} catch (err) {
 			console.error('Error during Reddit login:', err);
-			toast.push('An error occurred during Reddit login.', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast('An error occurred during Reddit login.');
 		}
 	}
 
@@ -58,13 +47,7 @@
 			await signInWithApple();
 		} catch (err) {
 			console.error('Error during Apple login:', err);
-			toast.push('An error occurred during Apple login.', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast('An error occurred during Apple login.');
 		}
 	}
 </script>

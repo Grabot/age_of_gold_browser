@@ -5,6 +5,7 @@
 	import { handleGetAvatar } from '../../services/settingsService';
 	import { toast } from '@zerodevx/svelte-toast';
 	import { onDestroy, onMount } from 'svelte';
+	import { errorToast } from '../../utils/toast';
 
 	export let onSave: (data: { avatar?: File | null; defaultAvatar?: boolean | null }) => void;
 	export let onClose: () => void;
@@ -33,13 +34,7 @@
 				data.defaultAvatar = defaultAvatar;
 				onSave(data);
 			} else if (e.data.msg.type === 'error') {
-				toast.push(e.data.msg.message, {
-					theme: {
-						'--toastColor': '#000000',
-						'--toastBackground': '#EE4B2B',
-						'--toastBarBackground': '#4A0404'
-					}
-				});
+				errorToast(e.data.msg.message);
 			}
 		};
 	});
@@ -100,13 +95,7 @@
 						resetDefault = true;
 					}
 				} else {
-					toast.push('Failed to fetch avatar', {
-						theme: {
-							'--toastColor': '#000000',
-							'--toastBackground': '#EE4B2B',
-							'--toastBarBackground': '#4A0404'
-						}
-					});
+					errorToast('Failed to fetch avatar');
 				}
 			});
 		}

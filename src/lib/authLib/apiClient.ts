@@ -63,6 +63,9 @@ class ApiConfig {
     tokenLoginGoogle: 'auth/google/token',
     forgotPassword: 'password/forgot',
     resetPassword: 'password/reset',
+    deleteAccount: 'delete/account',
+    deleteAccountAll: 'delete/account/all',
+    deleteAccountRequest: 'delete/account/request',
   } as const;
 
   buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {
@@ -320,4 +323,36 @@ export async function resetPassword(
     },
   });
   return resetPasswordLogin["success"];
+}
+
+export async function deleteAccount(
+  accessToken: string,
+): Promise<ApiResponse<unknown>> {
+  return await makeRequest<boolean>({
+    method: 'DELETE',
+    endpoint: API.endpoints.deleteAccount,
+    accessToken: accessToken,
+  });
+}
+
+export async function deleteAccountRequest(
+  email: string,
+): Promise<ApiResponse<unknown>> {
+  return await makeRequest<boolean>({
+    method: 'POST',
+    endpoint: API.endpoints.deleteAccountRequest,
+    body: {
+      "email": email
+    },
+  });
+}
+
+export async function confirmDeleteAccount(
+  accessToken: string,
+): Promise<ApiResponse<unknown>> {
+  return await makeRequest<boolean>({
+    method: 'DELETE',
+    endpoint: API.endpoints.deleteAccountAll,
+    accessToken: accessToken,
+  });
 }

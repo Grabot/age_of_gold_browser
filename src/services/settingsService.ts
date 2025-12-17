@@ -1,4 +1,4 @@
-import { changeAvatar, changeUsername, getAvatar, type ApiResponse, type ApiResult } from "$lib/authLib/apiClient";
+import { changeAvatar, changeUsername, deleteAccount, getAvatar, type ApiResponse, type ApiResult } from "$lib/authLib/apiClient";
 import { get } from "svelte/store";
 import { userAvatar, userDetail } from "../stores/authStore";
 import type { User } from "../types/user";
@@ -73,5 +73,20 @@ export async function handleGetAvatar(accessToken: string, get_default: boolean 
     }
   } catch (err) {
     return { success: false, message: (err as Error).message || 'Getting avatar failed' };
+  }
+}
+
+export async function handleDeleteAccount(accessToken: string): Promise<ApiResult> {
+  try {
+    const response: ApiResult = await deleteAccount(accessToken);
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to delete account.');
+    }
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      message: (err as Error).message || 'An error occurred during account deletion.',
+    };
   }
 }

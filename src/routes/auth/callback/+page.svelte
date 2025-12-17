@@ -4,6 +4,7 @@
 	import { getTokenFromUrl } from '$lib/authLib';
 	import { accessTokenValue, authStore } from '../../../stores/authStore';
 	import { toast } from '@zerodevx/svelte-toast';
+	import { errorToast } from '../../../utils/toast';
 
 	let loading = true;
 	let error = '';
@@ -22,36 +23,15 @@
 				} else {
 					error =
 						'There was an issue with the token validation, apologies for the inconvenience. \nPlease try again or contact support if the issue persists.';
-					toast.push(
-						'There was an issue with the token validation, apologies for the inconvenience. \nPlease try again or contact support if the issue persists.',
-						{
-							theme: {
-								'--toastColor': '#000000',
-								'--toastBackground': '#EE4B2B',
-								'--toastBarBackground': '#4A0404'
-							}
-						}
-					);
+					errorToast(error);
 				}
 			} else {
 				error = 'Authentication token not found.';
-				toast.push('Authentication token not found.', {
-					theme: {
-						'--toastColor': '#000000',
-						'--toastBackground': '#EE4B2B',
-						'--toastBarBackground': '#4A0404'
-					}
-				});
+				errorToast(error);
 			}
 		} catch (err) {
 			error = 'An error occurred during authentication.';
-			toast.push('An error occurred during authentication.', {
-				theme: {
-					'--toastColor': '#000000',
-					'--toastBackground': '#EE4B2B',
-					'--toastBarBackground': '#4A0404'
-				}
-			});
+			errorToast(error);
 			console.error('Exception occurred during authentication callback:', err);
 		} finally {
 			loading = false;

@@ -2,6 +2,7 @@ import { get, writable } from 'svelte/store';
 import type { User } from '../types/user';
 import { getUserDetail, loginTokenGoogle, loginUser, logoutUser, registerUser, validateToken, type LoginResponse } from '$lib/authLib/apiClient';
 import { toast } from '@zerodevx/svelte-toast';
+import { errorToast } from '../utils/toast';
 
 
 export const STORAGE_KEY_ACCESS_TOKEN = 'accessToken';
@@ -178,13 +179,7 @@ function createAuthStore() {
           ...initialState,
           loading: false,
         });
-        toast.push(err instanceof Error ? err.message : 'Unknown error', {
-          theme: {
-            '--toastColor': '#000000',
-            '--toastBackground': '#EE4B2B',
-            '--toastBarBackground': '#4A0404'
-          }
-        });
+        errorToast(err instanceof Error ? err.message : 'Unknown error');
         return false;
       }
     },
@@ -200,13 +195,7 @@ function createAuthStore() {
           ...initialState,
           loading: false,
         });
-        toast.push(err instanceof Error ? err.message : 'Unknown error', {
-          theme: {
-            '--toastColor': '#000000',
-            '--toastBackground': '#EE4B2B',
-            '--toastBarBackground': '#4A0404'
-          }
-        });
+        errorToast(err instanceof Error ? err.message : 'Unknown error')
         return false;
       }
     },
@@ -254,6 +243,10 @@ function createAuthStore() {
         set({ ...initialState, loading: false });
         return;
       }
+    },
+    clearLogin() {
+      clearLoginStorage();
+      set({ ...initialState, loading: false });
     },
     authorized: async (): Promise<void> => {
       set({
