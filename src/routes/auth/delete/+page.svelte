@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { toast } from '@zerodevx/svelte-toast';
 	import { deleteAccountRequest, confirmDeleteAccount } from '$lib/authLib/apiClient';
 	import { onMount } from 'svelte';
 	import { getTokenFromUrl } from '$lib/authLib';

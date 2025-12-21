@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { getTokenFromUrl } from '$lib/authLib';
 	import { accessTokenValue, authStore } from '../../../stores/authStore';
-	import { toast } from '@zerodevx/svelte-toast';
 	import { errorToast } from '../../../utils/toast';
 
 	let loading = true;

@@ -3,7 +3,6 @@
 	import { accessTokenValue, userAvatar } from '../../stores/authStore';
 	import Cropper from 'svelte-easy-crop';
 	import { handleGetAvatar } from '../../services/settingsService';
-	import { toast } from '@zerodevx/svelte-toast';
 	import { onDestroy, onMount } from 'svelte';
 	import { errorToast } from '../../utils/toast';
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { toast } from '@zerodevx/svelte-toast';
 	import LoginBox from '../components/LoginBox.svelte';
 	import RegisterBox from '../components/RegisterBox.svelte';
 	import UserBox from '../components/UserBox.svelte';

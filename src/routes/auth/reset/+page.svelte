@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { getTokenFromUrl } from '$lib/authLib';
 	import { accessTokenValue, authStore } from '../../../stores/authStore';
-	import { toast } from '@zerodevx/svelte-toast';
 	import { logoutUser, resetPassword } from '$lib/authLib/apiClient';
 	import { get } from 'svelte/store';
 	import { errorToast, successToast } from '../../../utils/toast';

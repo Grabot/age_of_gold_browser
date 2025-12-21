@@ -15,7 +15,6 @@
 		handleDeleteAccount,
 		handleGetAvatar
 	} from '../../services/settingsService';
-	import { toast } from '@zerodevx/svelte-toast';
 	import EditProfileUsername from '../../components/edit_profile/EditProfileUsername.svelte';
 	import EditProfileAvatar from '../../components/edit_profile/EditProfileAvatar.svelte';
 	import { get } from 'svelte/store';
@@ -23,7 +22,6 @@
 	import DeleteAccount from '../../components/edit_profile/DeleteAccount.svelte';
 	import { resetPassword } from '$lib/authLib/apiClient';
 	import { errorToast, successToast } from '../../utils/toast';
-	import { success } from 'zod';
 
 	let showModalAvatar = false;
 	let showModalUsername = false;

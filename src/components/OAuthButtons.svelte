@@ -5,7 +5,6 @@
 		signInWithGithub,
 		signInWithReddit
 	} from '$lib/authLib/oauth2';
-	import { toast } from '@zerodevx/svelte-toast';
 	import { authStore } from '../stores/authStore';
 	import { errorToast } from '../utils/toast';
 
