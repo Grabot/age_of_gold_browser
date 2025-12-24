@@ -213,8 +213,8 @@
 					<button class="dropdown-item" on:click={openUsernameModal}>Change Username</button>
 					<button class="dropdown-item" on:click={openAvatarModal}>Change Avatar</button>
 					<button class="dropdown-item" on:click={openPasswordModal}>Change Password</button>
-					<button class="dropdown-item" on:click={() => authStore.logout()}>Logout</button>
 					<hr class="dropdown-divider" />
+					<button class="dropdown-item" on:click={() => authStore.logout()}>Logout</button>
 					<button class="dropdown-item delete-item" on:click={openDeleteAccountModal}>Delete Account</button>
 				</div>
 			</div>
