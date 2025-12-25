@@ -22,6 +22,8 @@
 	import DeleteAccount from '../../components/edit_profile/DeleteAccount.svelte';
 	import { resetPassword } from '$lib/authLib/apiClient';
 	import { errorToast, successToast } from '../../utils/toast';
+	import ChatView from '../../components/chat/ChatView.svelte';
+	import FriendView from '../../components/chat/FriendView.svelte';
 
 	let showModalAvatar = false;
 	let showModalUsername = false;
@@ -29,6 +31,8 @@
 	let showModalDeleteAccount = false;
 	let hasFetchedAvatar = false;
 	let showDropdown = false;
+	let showChatModal = false;
+	let showFriendModal = false;
 
 	function getRandomColor(username: string): string {
 		let hash = 0;
@@ -86,7 +90,7 @@
 			if (accessToken) {
 				handleChangeUsername(accessToken, data.username).then((response) => {
 					if (response.success) {
-						successToast('Username updated successfully!')
+						successToast('Username updated successfully!');
 					} else {
 						errorToast('Failed to update username');
 					}
@@ -182,13 +186,13 @@
 		showDropdown = false;
 	};
 
-    function openDeleteAccountModal() {
-        showModalDeleteAccount = true;
-        showDropdown = false;
-    }
+	function openDeleteAccountModal() {
+		showModalDeleteAccount = true;
+		showDropdown = false;
+	}
 
 	function handleDeleteAccountChoice() {
-        const accessToken = $accessTokenValue;
+		const accessToken = $accessTokenValue;
 		if (accessToken) {
 			handleDeleteAccount(accessToken).then(async (response) => {
 				if (response.success) {
@@ -199,39 +203,61 @@
 				}
 			});
 		}
-        showModalDeleteAccount = false;
-    }
+		showModalDeleteAccount = false;
+	}
+
+	function toggleChat() {
+		showChatModal = !showChatModal;
+	}
+
+	function toggleFriend() {
+		showFriendModal = !showFriendModal;
+	}
 </script>
 
 {#if $authStore.isAuthenticated && !$authStore.loading}
-	<div class="protected-page">
-		<div class="header">
-			<h1>Age of Gold</h1>
-			<div class="settings-container" on:focusout={handleDropdownFocusLoss}>
-				<button class="settings-btn" on:click={toggleDropdown}>⚙️</button>
-				<div class="dropdown-menu" style:visibility={showDropdown ? 'visible' : 'hidden'}>
-					<button class="dropdown-item" on:click={openUsernameModal}>Change Username</button>
-					<button class="dropdown-item" on:click={openAvatarModal}>Change Avatar</button>
-					<button class="dropdown-item" on:click={openPasswordModal}>Change Password</button>
-					<hr class="dropdown-divider" />
-					<button class="dropdown-item" on:click={() => authStore.logout()}>Logout</button>
-					<button class="dropdown-item delete-item" on:click={openDeleteAccountModal}>Delete Account</button>
+	<div class="page-container">
+		<nav class="top-nav">
+			<div class="nav-left">
+				<button class="nav-btn" on:click={toggleFriend}>🫂 Friends</button>
+				<button class="nav-btn" on:click={toggleChat}>💬 Chat</button>
+			</div>
+			<div class="nav-center">
+				<h1>Age of Gold</h1>
+			</div>
+			<div class="nav-right">
+				<div class="settings-container" on:focusout={handleDropdownFocusLoss}>
+					<button class="settings-btn" on:click={toggleDropdown}>⚙️</button>
+					<div class="dropdown-menu" style:visibility={showDropdown ? 'visible' : 'hidden'}>
+						<button class="dropdown-item" on:click={openUsernameModal}>Change Username</button>
+						<button class="dropdown-item" on:click={openAvatarModal}>Change Avatar</button>
+						<button class="dropdown-item" on:click={openPasswordModal}>Change Password</button>
+						<hr class="dropdown-divider" />
+						<button class="dropdown-item" on:click={() => authStore.logout()}>Logout</button>
+						<button class="dropdown-item delete-item" on:click={openDeleteAccountModal}
+							>Delete Account</button
+						>
+					</div>
 				</div>
 			</div>
+		</nav>
+
+		<div class="main-content">
+			<p>Welcome!</p>
+			{#if $userAvatar}
+				<img src={$userAvatar} alt="User Avatar" class="avatar-box" />
+			{:else}
+				<div
+					class="avatar-box default-avatar"
+					style="background-color: {getRandomColor($userDetail.username)}"
+				>
+					{getInitial($userDetail.username)}
+				</div>
+			{/if}
+			<p class="username">{$userDetail.username}</p>
+			<button class="logout-btn" on:click={() => authStore.logout()}> Logout </button>
 		</div>
-		<p>Welcome!</p>
-		{#if $userAvatar}
-			<img src={$userAvatar} alt="User Avatar" class="avatar-box" />
-		{:else}
-			<div
-				class="avatar-box default-avatar"
-				style="background-color: {getRandomColor($userDetail.username)}"
-			>
-				{getInitial($userDetail.username)}
-			</div>
-		{/if}
-		<p class="username">{$userDetail.username}</p>
-		<button class="logout-btn" on:click={() => authStore.logout()}> Logout </button>
+
 		{#if showModalAvatar}
 			<EditProfileAvatar
 				onSave={handleEditProfileSaveAvatar}
@@ -256,6 +282,12 @@
 				onClose={() => (showModalDeleteAccount = false)}
 			/>
 		{/if}
+		{#if showFriendModal}
+			<FriendView onClose={() => (showFriendModal = false)} />
+		{/if}
+		{#if showChatModal}
+			<ChatView onClose={() => (showChatModal = false)} />
+		{/if}
 	</div>
 {:else if !$authStore.loading}
 	<div class="protected-page">
@@ -264,6 +296,73 @@
 {/if}
 
 <style>
+	.page-container {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 0;
+		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	}
+
+	.top-nav {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.75rem 1.5rem;
+		background: #0b9476;
+		color: white;
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 1000;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	.nav-left {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.nav-center {
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+
+	.nav-center h1 {
+		margin: 0;
+		color: white;
+		font-size: 1.5rem;
+	}
+
+	.nav-right {
+		display: flex;
+		align-items: center;
+	}
+
+	.nav-btn {
+		background: #048162;
+		color: white;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.9rem;
+	}
+
+	.nav-btn:hover {
+		background: #095c39;
+	}
+
+	.main-content {
+		max-width: 1200px;
+		margin: 6rem auto;
+		padding: 2rem;
+		text-align: center;
+		background: #f9f9f9;
+		border-radius: 12px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	}
 	.protected-page {
 		max-width: 1200px;
 		margin: 2rem auto;
@@ -331,20 +430,13 @@
 		margin-left: 0.5rem;
 	}
 
-	.header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1.5rem;
-	}
-
 	.settings-container {
 		position: relative;
 		display: inline-block;
 	}
 
 	.settings-btn {
-		background: #0363a3;
+		background: transparent;
 		color: white;
 		border: none;
 		padding: 0.5rem;
@@ -360,7 +452,7 @@
 	}
 
 	.settings-btn:hover {
-		background: #2980b9;
+		background: #095c39;
 	}
 
 	.dropdown-menu {

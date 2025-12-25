@@ -61,20 +61,20 @@ http://127.0.0.1:3000/
 First build the container
 
 ```sh
-podman build -t age_of_gold_browser:1.0 .
+podman build -t age_of_gold_browser:1.0.0 .
 ```
 
 Then tag it with your docker hub username
 
 ```sh
-podman image tag age_of_gold_browser:1.0 <docker hub account>/age_of_gold_browser:1.0
+podman image tag age_of_gold_browser:1.0.0 <docker hub account>/age_of_gold_browser:1.0.0
 
-podman push <docker hub account>/age_of_gold_browser:1.0
+podman push <docker hub account>/age_of_gold_browser:1.0.0
 ```
 
 Than you can pull and run your container on the server
 ```sh
-docker pull <docker hub account>/age_of_gold_browser:1.0
+docker pull <docker hub account>/age_of_gold_browser:1.0.0
 
 docker run -d -p 3000:3000 --env-file .env <docker hub account>/age_of_gold_browser:latest
 ```

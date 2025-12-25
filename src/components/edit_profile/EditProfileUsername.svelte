@@ -40,7 +40,6 @@
 >
 	<div class="modal-content">
 		<h2>Edit Profile</h2>
-		<!-- Username Section -->
 		<div class="username-section">
 			<input
 				type="text"
