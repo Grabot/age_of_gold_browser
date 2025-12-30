@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { deleteAccountRequest, confirmDeleteAccount } from '$lib/authLib/apiClient';
+	import { deleteAccountRequest, confirmDeleteAccount } from '$lib/api/authApi';
 	import { onMount } from 'svelte';
 	import { getTokenFromUrl } from '$lib/authLib';
 	import { accessTokenValue, authStore } from '../../../stores/authStore';

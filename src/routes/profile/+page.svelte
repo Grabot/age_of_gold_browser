@@ -20,7 +20,7 @@
 	import { get } from 'svelte/store';
 	import EditProfilePassword from '../../components/edit_profile/EditProfilePassword.svelte';
 	import DeleteAccount from '../../components/edit_profile/DeleteAccount.svelte';
-	import { resetPassword } from '$lib/authLib/apiClient';
+	import { resetPassword } from '$lib/api/authApi';
 	import { errorToast, successToast } from '../../utils/toast';
 
 	let showModalAvatar = false;
@@ -323,7 +323,7 @@
 	}
 
 	.settings-btn {
-		background: #626262;
+		background: transparent;
 		color: white;
 		border: none;
 		padding: 0.5rem;

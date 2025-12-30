@@ -54,3 +54,16 @@ export function offMessageEvent() {
         socket.off("message_event");
     }
 }
+
+export function onChatAddedEvent(callback: (message: string) => void) {
+    if (socket) {
+        socket.on("chat_added", callback);
+    }
+}
+
+export function offChatAddedEvent() {
+    if (socket) {
+        socket.off("chat_added");
+    }
+}
+

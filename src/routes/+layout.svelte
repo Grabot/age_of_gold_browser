@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { SvelteToast, toast } from '@zerodevx/svelte-toast';
+	import { SvelteToast } from '@zerodevx/svelte-toast';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount, onDestroy } from 'svelte';
-	import { authStore, accessTokenValue, shouldUpdateAvatar, userAvatar, userDetail } from '../stores/authStore';
-	import { connectSocket, disconnectSocket, joinRoom, leaveRoom, onMessageEvent, offMessageEvent } from '$lib/socket';
+	import { authStore, shouldUpdateAvatar, userAvatar, userDetail } from '../stores/authStore';
+	import { connectSocket, disconnectSocket, joinRoom, leaveRoom, onMessageEvent, offMessageEvent, onChatAddedEvent } from '$lib/socket';
 	import { handleGetAvatar } from '../services/settingsService';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import type { Socket } from 'socket.io-client';
 	import { get } from 'svelte/store';
 	import { errorToast } from '../utils/toast';
-	import FriendView from '../components/chat/FriendView.svelte';
 	import ChatView from '../components/chat/ChatView.svelte';
+	import FriendView from '../components/chat/FriendView.svelte';
 
 	let { children } = $props();
 	const options = {};
@@ -23,9 +23,8 @@
 	let showProfileDropdown = $state(false);
 	let showChatModal = $state(false);
 	let showFriendModal = $state(false);
-	let dropdownRef: HTMLDivElement;
+    let dropdownRef: HTMLDivElement | null = $state(null);
 
-	// Navigation and profile dropdown logic
 	function toggleProfileDropdown() {
 		showProfileDropdown = !showProfileDropdown;
 	}
@@ -76,6 +75,10 @@
 		console.log('socket message:', message);
 	}
 
+	function handleMessageChatAddedEvent(message: string) {
+		console.log('socket message:', message);
+	}
+
 	function handleClickOutside(event: MouseEvent) {
 		if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
 			showProfileDropdown = false;
@@ -101,6 +104,7 @@
 					socket = connectSocket(userId);
 					joinRoom(userId);
 					onMessageEvent(handleMessageEvent);
+					onChatAddedEvent(handleMessageChatAddedEvent);
 				}
 				if (state.accessToken) {
 					getUserDetails(state.accessToken);
@@ -130,7 +134,9 @@
 	});
 
 	function toggleHome() {
-		window.location.href = '/world';
+		if (!page.url.pathname.startsWith("/world")) {
+			window.location.href = '/world';
+		}
 	}
 	
 	function toggleChat() {
@@ -150,14 +156,16 @@
 	{#if $authStore.isAuthenticated && !$authStore.loading}
 		<nav class="top-nav">
 			<div class="nav-left">
-				<h1>Age of Gold</h1>
+				<button class="nav-title-btn" onclick={() => toggleHome()}>
+					<h1>Age of Gold</h1>
+				</button>
 			</div>
 			<div class="nav-center">
-				<button class="nav-btn" onclick={() => toggleHome()}>🏠 Home</button>
 				<button class="nav-btn" onclick={() => toggleFriend()}>🫂 Friends</button>
 				<button class="nav-btn" onclick={() => toggleChat()}>💬 Chat</button>
 			</div>
 			<div class="nav-right">
+				<button class="notification-btn">🔔</button>
 				<div class="profile-dropdown-container" bind:this={dropdownRef}>
 					<button class="profile-btn" onclick={(e) => { e.stopPropagation(); toggleProfileDropdown(); }}>
 						{#if $userAvatar}
@@ -174,16 +182,22 @@
 					</button>
 					{#if showProfileDropdown}
 						<div class="profile-dropdown">
-							<button class="dropdown-item" onclick={() => goto('/profile')}>Profile</button>
-							<button class="dropdown-item" onclick={() => authStore.logout()}>Logout</button>
+							<button class="dropdown-item" onclick={() => { goto('/profile'); showProfileDropdown = false; }}>Profile</button>
+							<button class="dropdown-item" onclick={() => { authStore.logout(); showProfileDropdown = false; }}>Logout</button>
 						</div>
 					{/if}
 				</div>
-				<button class="notification-btn">🔔</button>
 			</div>
 		</nav>
+	{:else}
+		<nav class="top-nav placeholder-nav">
+			<div class="nav-left">
+				<h1>Age of Gold</h1>
+			</div>
+			<div class="nav-center"></div>
+			<div class="nav-right"></div>
+		</nav>
 	{/if}
-
 
 	{#if showFriendModal}
 		<FriendView onClose={() => (showFriendModal = false)} />
@@ -191,7 +205,7 @@
 	{#if showChatModal}
 		<ChatView onClose={() => (showChatModal = false)} />
 	{/if}
-	
+
 	{@render children?.()}
 </div>
 
@@ -246,7 +260,6 @@
 		color: white;
 		border: none;
 		padding: 0.5rem;
-		border-radius: 50%;
 		font-size: 1.2rem;
 		cursor: pointer;
 		display: flex;
@@ -259,14 +272,12 @@
 	.profile-avatar {
 		width: 32px;
 		height: 32px;
-		border-radius: 50%;
 		object-fit: cover;
 	}
 
 	.default-avatar {
 		width: 32px;
 		height: 32px;
-		border-radius: 50%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -341,5 +352,25 @@
 
 	.nav-btn:hover {
 		background: #095c39;
+	}
+	.placeholder-nav {
+		background: #979797;
+		justify-content: flex-start;
+	}
+	.nav-title-btn {
+		background: transparent;
+		color: white;
+		border: none;
+		padding: 0;
+		font-size: 1.5rem;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+	}
+
+	.nav-title-btn h1 {
+		margin: 0;
+		color: white;
+		font-size: 1.5rem;
 	}
 </style>

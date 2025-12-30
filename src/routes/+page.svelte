@@ -7,7 +7,7 @@
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import ForgotPasswordModal from '../components/ForgotPasswordModal.svelte';
-	import { forgotPassword } from '$lib/authLib/apiClient';
+	import { forgotPassword } from '$lib/api/authApi';
 	import { errorToast } from '../utils/toast';
 
 	const usernameOrEmailLogin = writable('');

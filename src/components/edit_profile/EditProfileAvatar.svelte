@@ -85,7 +85,7 @@
 	function handleBackToDefault() {
 		const accessToken = get(accessTokenValue);
 		if (accessToken) {
-			handleGetAvatar(accessToken, true).then((response) => {
+			handleGetAvatar(accessToken, null, true).then((response) => {
 				if (response.success) {
 					if (response.avatar) {
 						imageToCrop = response.avatar;

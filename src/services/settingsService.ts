@@ -1,4 +1,6 @@
-import { changeAvatar, changeUsername, deleteAccount, getAvatar, type ApiResponse, type ApiResult } from "$lib/authLib/apiClient";
+import { changeAvatar, changeUsername, getAvatar } from "$lib/api/userApi";
+import { deleteAccount} from "$lib/api/authApi";
+import { type ApiResult } from "$lib/api/apiClient";
 import { get } from "svelte/store";
 import { userAvatar, userDetail } from "../stores/authStore";
 import type { User } from "../types/user";
@@ -48,9 +50,9 @@ export async function handleChangeAvatar(accessToken: string, newAvatar: File, d
   }
 }
 
-export async function handleGetAvatar(accessToken: string, get_default: boolean = false): Promise<{ success: boolean; message?: string; avatar?: string }> {
+export async function handleGetAvatar(accessToken: string, userId: number | null = null, getDefault: boolean | null = null): Promise<{ success: boolean; message?: string; avatar?: string }> {
   try {
-    const response = await getAvatar(accessToken, get_default);
+    const response = await getAvatar(accessToken, userId, getDefault);
 
     if (response.success) {
       const avatarBase64 = await new Promise<string>((resolve) => {

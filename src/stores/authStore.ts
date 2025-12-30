@@ -1,6 +1,8 @@
 import { get, writable } from 'svelte/store';
 import type { User } from '../types/user';
-import { getUserDetail, loginTokenGoogle, loginUser, logoutUser, registerUser, validateToken, type LoginResponse } from '$lib/authLib/apiClient';
+import { loginTokenGoogle, loginUser, logoutUser, registerUser, validateToken } from '$lib/api/authApi';
+import { getUserDetail } from '$lib/api/userApi';
+import { type LoginResponse } from '$lib/api/apiClient';
 import { errorToast } from '../utils/toast';
 
 
