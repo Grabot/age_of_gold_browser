@@ -58,19 +58,19 @@ function createFriendStore() {
     sendFriendRequest: async (accessToken: string, userId: number) => {
       try {
         const addFriendResponse: ApiResponse = await sendFriendRequest(accessToken, userId);
-        friendStore.addGroup({
-          id: addFriendResponse.data.group_id,
-          name: addFriendResponse.data.name,
-          description: addFriendResponse.data.description,
-          members: addFriendResponse.data.user_ids,
-          private: addFriendResponse.data.private,
-          mute: addFriendResponse.data.mute,
-          unreadMessages: addFriendResponse.data.unread_messages,
-          messageVersion: addFriendResponse.data.message_version,
-          groupVersion: addFriendResponse.data.group_version,
-          groupColour: addFriendResponse.data.group_colour,
-          last_message_read_id: addFriendResponse.data.lastMessageReadId,
-        });
+        // friendStore.addGroup({
+        //   id: addFriendResponse.data.group_id,
+        //   name: addFriendResponse.data.name,
+        //   description: addFriendResponse.data.description,
+        //   members: addFriendResponse.data.user_ids,
+        //   private: addFriendResponse.data.private,
+        //   mute: addFriendResponse.data.mute,
+        //   unreadMessages: addFriendResponse.data.unread_messages,
+        //   messageVersion: addFriendResponse.data.message_version,
+        //   groupVersion: addFriendResponse.data.group_version,
+        //   groupColour: addFriendResponse.data.group_colour,
+        //   last_message_read_id: addFriendResponse.data.lastMessageReadId,
+        // });
         return true;
       } catch (err) {
         errorToast(err instanceof Error ? err.message : 'Unknown error');
@@ -102,10 +102,10 @@ const STORAGE_KEY_FRIEND_REQUESTS = 'friendRequests';
 friendStore.subscribe((state) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_KEY_FRIENDS, JSON.stringify(state.friends));
-    localStorage.setItem(STORAGE_KEY_FRIEND_REQUESTS, JSON.stringify(state.friendRequests));
-    localStorage.setItem(STORAGE_KEY_GROUPS, JSON.stringify(state.groups));
+    // localStorage.setItem(STORAGE_KEY_FRIEND_REQUESTS, JSON.stringify(state.friendRequests));
+    // localStorage.setItem(STORAGE_KEY_GROUPS, JSON.stringify(state.groups));
   }
 });
 
-const storedGroups = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_GROUPS) : '[]';
-const initialGroups = storedGroups ? JSON.parse(storedGroups) : [];
+// const storedGroups = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_GROUPS) : '[]';
+// const initialGroups = storedGroups ? JSON.parse(storedGroups) : [];
