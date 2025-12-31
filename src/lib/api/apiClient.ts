@@ -1,8 +1,13 @@
 import { z } from "zod";
 import { accessTokenValue, authStore, refreshTokenValue } from "../../stores/authStore";
 import { get } from "svelte/store";
-import type { Friend } from "../../types/user";
 
+
+export interface FriendLogin {
+    friend_id: number;
+    accepted: boolean;
+    updated: boolean
+}
 
 export const LoginResponseSchema = z.object({
   access_token: z.string(),
@@ -23,7 +28,7 @@ export interface LoginResponse {
   refresh_token: string;
   profile_version: number;
   avatar_version: number;
-  friends: Friend[];
+  friends: FriendLogin[];
 }
 
 
