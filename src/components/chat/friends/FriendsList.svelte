@@ -13,7 +13,6 @@
 	onMount(() => {
 		const unsubscribe = avatarStore.subscribe((state) => {
 			avatars = state.avatars;
-			console.log('Avatar store updated:', state.avatars);
 		});
 		return unsubscribe;
 	});
@@ -33,13 +32,9 @@
 
 	// Function to fetch avatar if missing
 	async function fetchAvatarIfNeeded(friendUserId: number) {
-		console.log("fetching avatar if needed");
 		if (!getFriendAvatar(friendUserId)) {
-			console.log("avatar needed!");
 			try {
-				console.log(`Fetching avatar for friend ${friendUserId}`);
 				const avatar = await avatarStore.getAvatarWithFetch(friendUserId);
-				console.log(`Avatar fetched for friend ${friendUserId}:`, avatar ? 'success' : 'failed');
 				
 				// Force reactivity by updating local avatars variable
 				if (avatar) {
@@ -55,16 +50,10 @@
 
 	// React to both friend list and avatar changes
 	$: if ($friendStore.friends) {
-		console.log('Friends updated:', $friendStore.friends);
 		// Fetch any missing avatars
 		$friendStore.friends.forEach(async (friendWithUser) => {
 			await fetchAvatarIfNeeded(friendWithUser.friend.friend_id);
 		});
-	}
-
-	// Also react when avatars store changes
-	$: if (avatars) {
-		console.log('Avatars updated:', avatars);
 	}
 
 </script>
