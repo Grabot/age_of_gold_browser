@@ -13,19 +13,7 @@
 <div class="requests-list">
 	<h3>Friend Requests</h3>
 	<ul>
-		{#each $friendStore.friendRequests as request}
-		<li>
-			<div
-				class="friend-avatar"
-				style="background-color: {getRandomColor(request.name)}"
-			>
-				{getInitial(request.name)}
-			</div>
-			<span>{request.name}</span>
-			<button class="accept-btn" on:click={() => handleAcceptRequest(request.id)}>
-				Accept
-			</button>
-		</li>
-		{/each}
+		<!-- Friend requests not implemented yet -->
+		<li>No friend requests at this time</li>
 	</ul>
 </div>

@@ -75,3 +75,16 @@ export async function getUserDetail(
   });
   return UserResponseSchema.parse(userResponse.data);
 }
+
+export async function getUserById(
+  accessToken: string,
+  userId: number
+): Promise<UserResponse> {
+  const userResponse = await makeRequest<UserResponse>({
+    method: 'GET',
+    endpoint: API.userEndpoints.getUserDetail,
+    accessToken,
+    queryParams: { user_id: userId.toString() },
+  });
+  return UserResponseSchema.parse(userResponse.data);
+}

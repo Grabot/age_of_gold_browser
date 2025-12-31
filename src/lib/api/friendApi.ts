@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { makeRequest, type ApiResponse, type LoginResponse, LoginResponseSchema, API, type ApiResult } from './apiClient';
+import type { Friend } from '../../types/user';
 
 export async function searchFriend<T>(
   accessToken: string,
@@ -22,5 +23,15 @@ export async function sendFriendRequest<T>(
     endpoint: API.friendEndpoints.addFriend,
     accessToken,
     body: { user_id: userId },
+  });
+}
+
+export async function fetchAllFriends(
+  accessToken: string
+): Promise<ApiResponse<Friend[]>> {
+  return makeRequest<Friend[]>({
+    method: 'GET',
+    endpoint: API.friendEndpoints.fetchAllFriends,
+    accessToken,
   });
 }

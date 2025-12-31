@@ -2,6 +2,8 @@
 	import AddFriend from "./friends/AddFriend.svelte";
 	import FriendsList from "./friends/FriendsList.svelte";
 	import FriendRequests from "./friends/FriendRequests.svelte";
+	import { friendStore } from "../../stores/friendStore";
+	import { onMount } from 'svelte';
 
 	export let onClose: () => void;
 
@@ -12,6 +14,11 @@
 	let searched = false;
 	let lastSearchedQuery: string | null = null;
 	let isLoading = false;
+
+	onMount(() => {
+		// TODO: Replace with other friend update feature
+		// friendStore.fetchFriends();
+	});
 
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {

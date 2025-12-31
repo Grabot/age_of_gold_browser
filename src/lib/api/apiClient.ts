@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { accessTokenValue, authStore, refreshTokenValue } from "../../stores/authStore";
 import { get } from "svelte/store";
+import type { Friend } from "../../types/user";
 
 
 export const LoginResponseSchema = z.object({
@@ -8,6 +9,13 @@ export const LoginResponseSchema = z.object({
   refresh_token: z.string(),
   profile_version: z.int(),
   avatar_version: z.int(),
+  friends: z.array(z.object({
+    id: z.number(),
+    user_id: z.number(),
+    friend_id: z.number(),
+    accepted: z.boolean(),
+    requested: z.boolean(),
+  })),
 });
 
 export interface LoginResponse {
@@ -15,6 +23,7 @@ export interface LoginResponse {
   refresh_token: string;
   profile_version: number;
   avatar_version: number;
+  friends: Friend[];
 }
 
 
@@ -60,6 +69,7 @@ class ApiConfig {
   readonly friendEndpoints = {
     searchFriend: 'friend/search',
     addFriend: 'friend/add',
+    fetchAllFriends: 'friend/all',
   } as const;
 
   buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {
