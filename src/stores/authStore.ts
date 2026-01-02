@@ -134,6 +134,10 @@ function createAuthStore() {
     }
     profileVersionValue.set(loginResult.profile_version);
     avatarVersionValue.set(loginResult.avatar_version);
+
+    console.log("fiends?");
+    console.log(loginResult.friends);
+    
     authStore.updateValidationTimestamp();
     set({
       isAuthenticated: true,
@@ -263,7 +267,9 @@ function createAuthStore() {
     isValidationNeeded() {
       const lastValidation = get(lastValidationTime);
       const now = Date.now();
-      const oneMinute = 60 * 1000;
+			// For debugging
+      // const oneMinute = 60 * 1000;
+      const oneMinute = 0;
       return now - lastValidation > oneMinute;
     },
     updateValidationTimestamp() {

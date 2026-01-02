@@ -37,7 +37,8 @@
 		const usernameValue = isEmail ? null : usernameOrEmailValue;
 		const loginResult = await authStore.login(emailValue, usernameValue, passwordValue);
 		if (loginResult) {
-			window.location.href = '/world';
+			// For debugging
+			// window.location.href = '/world';
 		}
 	}
 

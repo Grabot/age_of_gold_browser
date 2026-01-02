@@ -58,19 +58,8 @@ function createFriendStore() {
     sendFriendRequest: async (accessToken: string, userId: number) => {
       try {
         const addFriendResponse: ApiResponse = await sendFriendRequest(accessToken, userId);
-        // friendStore.addGroup({
-        //   id: addFriendResponse.data.group_id,
-        //   name: addFriendResponse.data.name,
-        //   description: addFriendResponse.data.description,
-        //   members: addFriendResponse.data.user_ids,
-        //   private: addFriendResponse.data.private,
-        //   mute: addFriendResponse.data.mute,
-        //   unreadMessages: addFriendResponse.data.unread_messages,
-        //   messageVersion: addFriendResponse.data.message_version,
-        //   groupVersion: addFriendResponse.data.group_version,
-        //   groupColour: addFriendResponse.data.group_colour,
-        //   last_message_read_id: addFriendResponse.data.lastMessageReadId,
-        // });
+        if (addFriendResponse.success) {
+        }
         return true;
       } catch (err) {
         errorToast(err instanceof Error ? err.message : 'Unknown error');
