@@ -145,31 +145,8 @@ function createAuthStore() {
       const newUserDetail = await getUserDetail(loginResult.access_token);
       loginResultUser = newUserDetail.user;
       userDetail.set(loginResultUser);
-      // Store user in userStore with complete User object
-      if (loginResultUser) {
-        const completeUser: User = {
-          id: loginResultUser.id,
-          username: loginResultUser.username,
-          profile_version: loginResult.profile_version,
-          avatar_version: loginResult.avatar_version,
-          avatar: get(userAvatar) || undefined
-        };
-        userStore.updateUser(completeUser);
-      }
     } else {
       loginResultUser = get(userDetail);
-      // Also update userStore with current user data if not changed
-      // TODO: if get(userAvatar) is None do a shouldUpdateAvatar, but for other users?
-      if (loginResultUser) {
-        const completeUser: User = {
-          id: loginResultUser.id,
-          username: loginResultUser.username,
-          profile_version: loginResult.profile_version,
-          avatar_version: loginResult.avatar_version,
-          avatar: get(userAvatar) || undefined
-        };
-        userStore.updateUser(completeUser);
-      }
     }
     
     if (get(avatarVersionValue) != loginResult.avatar_version) {

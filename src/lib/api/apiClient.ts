@@ -27,7 +27,6 @@ export interface LoginResponse {
   profile_version: number;
   avatar_version: number;
   friends: FriendLogin[];
-  friends: FriendLogin[];
 }
 
 

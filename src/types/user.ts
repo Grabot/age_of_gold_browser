@@ -5,3 +5,9 @@ export interface User {
     profile_version: number;
     avatar?: string;
 }
+export interface Friend {
+    friendId: number;
+    username: string;
+    accepted: boolean;
+    updated: boolean;
+}

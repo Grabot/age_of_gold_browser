@@ -5,7 +5,7 @@
 <div class="friends-list">
 	<h3>Your Friends</h3>
 	<ul>
-		{#each $friendStore.friends as friendWithUser (friendWithUser.friend.friend_id)}
+		{#each $friendStore.friends as friendWithUser (friendWithUser.friend.friendId)}
 			<li>
 				<!-- TODO: -->
 			</li>
