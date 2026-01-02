@@ -2,6 +2,7 @@
 	import AddFriend from "./friends/AddFriend.svelte";
 	import FriendsList from "./friends/FriendsList.svelte";
 	import FriendRequests from "./friends/FriendRequests.svelte";
+	import { onMount } from 'svelte';
 
 	export let onClose: () => void;
 
@@ -12,7 +13,6 @@
 	let searched = false;
 	let lastSearchedQuery: string | null = null;
 	let isLoading = false;
-
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
 			onClose();

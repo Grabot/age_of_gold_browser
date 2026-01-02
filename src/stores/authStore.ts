@@ -1,8 +1,12 @@
 import { get, writable } from 'svelte/store';
 import type { User } from '../types/user';
+import type { Friend } from '../types/user';
 import { loginTokenGoogle, loginUser, logoutUser, registerUser, validateToken } from '$lib/api/authApi';
 import { getUserDetail } from '$lib/api/userApi';
 import { type LoginResponse } from '$lib/api/apiClient';
+import { userStore } from './userStore';
+import { avatarStore } from './avatarStore';
+import { friendStore } from './friendStore';
 import { errorToast } from '../utils/toast';
 
 
@@ -14,6 +18,7 @@ export const STORAGE_KEY_SHOULD_UPDATE_AVATAR = 'shouldUpdateAvatarFlag';
 export const STORAGE_KEY_LAST_VALIDATION_TIME = 'lastValidationTimeFlag';
 export const STORAGE_KEY_USER_DETAIL = 'userDetail';
 export const STORAGE_KEY_USER_AVATAR = 'userAvatar';
+export const STORAGE_KEY_FRIENDS = 'friends';
 
 const storedValueAccessToken = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_ACCESS_TOKEN) : "";
 const initialValueAccessToken = storedValueAccessToken ? storedValueAccessToken : "";
@@ -46,6 +51,10 @@ export const userDetail = writable(initialValueUserDetail);
 const storedValueUserAvatar = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_USER_AVATAR) : "";
 const initialValueUserAvatar = storedValueUserAvatar ? storedValueUserAvatar : "";
 export const userAvatar = writable(initialValueUserAvatar);
+
+const storedValueFriends = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_FRIENDS) : "[]";
+const initialValueFriends = storedValueFriends ? JSON.parse(storedValueFriends) : [];
+export const friendsValue = writable(initialValueFriends);
 
 accessTokenValue.subscribe((value) => {
   if (typeof window !== 'undefined') {
@@ -95,6 +104,12 @@ userAvatar.subscribe((value) => {
   }
 });
 
+friendsValue.subscribe((value) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_FRIENDS, JSON.stringify(value));
+  }
+});
+
 interface AuthState {
   isAuthenticated: boolean;
   accessToken: string | null;
@@ -102,6 +117,7 @@ interface AuthState {
   profileVersion: number | null;
   avatarVersion: number | null;
   user: User | null;
+  friends: Friend[];
   loading: boolean;
 }
 
@@ -112,6 +128,7 @@ const initialState: AuthState = {
   profileVersion: null,
   avatarVersion: null,
   user: null,
+  friends: [],
   loading: true,
 };
 
@@ -119,19 +136,46 @@ function createAuthStore() {
   const { subscribe, set } = writable<AuthState>(initialState);
 
   async function handleLoginResponse(loginResult: LoginResponse) {
+    console.log("handle login response!");
     accessTokenValue.set(loginResult.access_token);
     refreshTokenValue.set(loginResult.refresh_token);
+    
     let loginResultUser;
     if (get(profileVersionValue) != loginResult.profile_version) {
       const newUserDetail = await getUserDetail(loginResult.access_token);
       loginResultUser = newUserDetail.user;
       userDetail.set(loginResultUser);
+      // Store user in userStore with complete User object
+      if (loginResultUser) {
+        const completeUser: User = {
+          id: loginResultUser.id,
+          username: loginResultUser.username,
+          profile_version: loginResult.profile_version,
+          avatar_version: loginResult.avatar_version,
+          avatar: get(userAvatar) || undefined
+        };
+        userStore.updateUser(completeUser);
+      }
     } else {
       loginResultUser = get(userDetail);
+      // Also update userStore with current user data if not changed
+      // TODO: if get(userAvatar) is None do a shouldUpdateAvatar, but for other users?
+      if (loginResultUser) {
+        const completeUser: User = {
+          id: loginResultUser.id,
+          username: loginResultUser.username,
+          profile_version: loginResult.profile_version,
+          avatar_version: loginResult.avatar_version,
+          avatar: get(userAvatar) || undefined
+        };
+        userStore.updateUser(completeUser);
+      }
     }
+    
     if (get(avatarVersionValue) != loginResult.avatar_version) {
       shouldUpdateAvatar.set(true);
     }
+    
     profileVersionValue.set(loginResult.profile_version);
     avatarVersionValue.set(loginResult.avatar_version);
 
@@ -146,6 +190,7 @@ function createAuthStore() {
       profileVersion: loginResult.profile_version,
       avatarVersion: loginResult.avatar_version,
       user: loginResultUser,
+      friends: loginResult.friends,
       loading: false,
     });
   }
@@ -157,13 +202,16 @@ function createAuthStore() {
     avatarVersionValue.set(0);
     userDetail.set({});
     userAvatar.set("");
+    friendsValue.set([]);
     lastValidationTime.set(0);
+    friendStore.clear();
     localStorage.removeItem(STORAGE_KEY_ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEY_REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEY_PROFILE_VERSION);
     localStorage.removeItem(STORAGE_KEY_AVATAR_VERSION);
     localStorage.removeItem(STORAGE_KEY_USER_DETAIL);
     localStorage.removeItem(STORAGE_KEY_USER_AVATAR);
+    localStorage.removeItem(STORAGE_KEY_FRIENDS);
   }
 
   return {
@@ -261,6 +309,7 @@ function createAuthStore() {
         profileVersion: get(profileVersionValue),
         avatarVersion: get(avatarVersionValue),
         user: get(userDetail),
+        friends: get(friendsValue),
         loading: false,
       });
     },

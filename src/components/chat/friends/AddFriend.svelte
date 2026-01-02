@@ -44,11 +44,21 @@
 		}
 	}
 
-	function handleAddFriend() {
+	async function handleAddFriend() {
 		if (searchResult != null) {
-			const accessToken = $accessTokenValue;
-			if (accessToken) {
-				friendStore.sendFriendRequest(accessToken, searchResult.id);
+			const friendData = {
+				friendId: searchResult.id,
+				username: searchResult.username,
+				avatar: searchResultAvatar || undefined
+			};
+			
+			const success = await friendStore.sendFriendRequest(friendData);
+			
+			if (success) {
+				searchResult = null;
+				searchResultAvatar = null;
+				searched = false;
+				searchQuery = '';
 			}
 		}
 	}

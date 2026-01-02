@@ -100,12 +100,9 @@
 			if (!forgotPasswordResult) {
 				throw new Error('Failed to send reset email');
 			} else {
-				console.log('Sending reset link to:', email);
 				showForgotPasswordModal = false;
-				errorToast('Password reset email sent!');
 			}
 		} catch (err) {
-			errorToast('Failed to send reset email');
 			return false;
 		}
 	}

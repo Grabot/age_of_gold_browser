@@ -1,13 +1,16 @@
 import { writable, get } from 'svelte/store';
 import { errorToast } from '../utils/toast';
-import { sendFriendRequest } from '$lib/api/friendApi';
+import { sendFriendRequest, fetchAllFriends } from '$lib/api/friendApi';
 import type { ApiResponse } from '$lib/api/apiClient';
 import type { User } from '../types/user';
+import type { Friend } from '../types/user';
+import { accessTokenValue } from './authStore';
+import { userStore } from './userStore';
+import { avatarStore } from './avatarStore';
 
-interface Friend {
-    user: User;
-    accepted: boolean;
-    requested: boolean;
+interface FriendWithUser {
+  friend: Friend;
+  user: User | null;
 }
 
 const initialState: FriendState = {
@@ -16,24 +19,43 @@ const initialState: FriendState = {
   error: null,
 };
 
-  
 interface FriendState {
-  friends: Friend[];
+  friends: FriendWithUser[];
   loading: boolean;
   error: string | null;
 }
 
 function createFriendStore() {
-  const { subscribe, set, update } = writable<FriendState>(initialState);
+  const { subscribe, update, set } = writable<FriendState>(initialState);
 
   return {
     subscribe,
-    setFriends: (friends: Friend[]) => update((state) => ({ ...state, friends })),
-    setFriendRequests: (requests: Friend[]) => update((state) => ({ ...state, friendRequests: requests })),
-    addFriend: (friend: Friend) => update((state) => ({ ...state, groups: [...state.friends, friend] })),
-    removeFriend: (id: number) => update((state) => ({
+    setFriends: (friends: Friend[]) => {
+      const friendsWithUsers: FriendWithUser[] = friends.map(friend => {
+        let user = userStore.getUser(friend.friend_id);
+        
+        // Create placeholder user if not found
+        if (!user) {
+          user = {
+            id: friend.friend_id,
+            username: `User_${friend.friend_id}`,
+            profile_version: 1,
+            avatar_version: 1
+          };
+          userStore.updateUser(user);
+        }
+        
+        return { friend, user };
+      });
+      update((state) => ({ ...state, friends: friendsWithUsers }));
+    },
+    addFriend: (friend: Friend) => {
+      const user = userStore.getUser(friend.friend_id);
+      update((state) => ({ ...state, friends: [...state.friends, { friend, user }] }));
+    },
+    removeFriend: (friendId: number) => update((state) => ({
       ...state,
-      friends: state.friends.filter((f) => f.user.id !== id),
+      friends: state.friends.filter((f) => f.friend.friend_id !== friendId),
     })),
     acceptRequest: () => {
 
@@ -55,9 +77,9 @@ function createFriendStore() {
         set({ ...initialState, error: err instanceof Error ? err.message : 'Unknown error' });
       }
     },
-    sendFriendRequest: async (accessToken: string, userId: number) => {
+    sendFriendRequest: async (friendData: { friendId: number; username: string; avatar: string | undefined; }) => {
       try {
-        const addFriendResponse: ApiResponse = await sendFriendRequest(accessToken, userId);
+        const addFriendResponse: ApiResponse = await sendFriendRequest(accessToken, friendData.friendId);
         if (addFriendResponse.success) {
         }
         return true;
@@ -66,17 +88,8 @@ function createFriendStore() {
         return false;
       }
     },
-    createGroup: async (accessToken: string, name: string, memberIds: string[]) => {
-      set({ ...get({ subscribe }), loading: true });
-      try {
-        // TODO: Implement API call to create a group
-        // const newGroup = await createGroupAPI(accessToken, name, memberIds);
-        // addGroup(newGroup);
-        return true;
-      } catch (err) {
-        errorToast(err instanceof Error ? err.message : 'Unknown error');
-        return false;
-      }
+    clear: () => {
+      set(initialState);
     },
   };
 }
@@ -90,11 +103,7 @@ const STORAGE_KEY_FRIEND_REQUESTS = 'friendRequests';
 
 friendStore.subscribe((state) => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY_FRIENDS, JSON.stringify(state.friends));
-    // localStorage.setItem(STORAGE_KEY_FRIEND_REQUESTS, JSON.stringify(state.friendRequests));
-    // localStorage.setItem(STORAGE_KEY_GROUPS, JSON.stringify(state.groups));
+    const friendDataOnly = state.friends.map(fw => fw.friend);
+    localStorage.setItem(STORAGE_KEY_FRIENDS, JSON.stringify(friendDataOnly));
   }
 });
-
-// const storedGroups = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_GROUPS) : '[]';
-// const initialGroups = storedGroups ? JSON.parse(storedGroups) : [];

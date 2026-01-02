@@ -27,6 +27,7 @@ export interface LoginResponse {
   profile_version: number;
   avatar_version: number;
   friends: FriendLogin[];
+  friends: FriendLogin[];
 }
 
 
@@ -72,6 +73,7 @@ class ApiConfig {
   readonly friendEndpoints = {
     searchFriend: 'friend/search',
     addFriend: 'friend/add',
+    fetchAllFriends: 'friend/all',
   } as const;
 
   buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {
