@@ -2,12 +2,12 @@ import { z } from "zod";
 import { accessTokenValue, authStore, refreshTokenValue } from "../../stores/authStore";
 import { get } from "svelte/store";
 
-
 export interface FriendLogin {
     friend_id: number;
     accepted: boolean;
     updated: boolean
 }
+
 
 export const LoginResponseSchema = z.object({
   access_token: z.string(),
@@ -15,11 +15,9 @@ export const LoginResponseSchema = z.object({
   profile_version: z.int(),
   avatar_version: z.int(),
   friends: z.array(z.object({
-    id: z.number(),
-    user_id: z.number(),
     friend_id: z.number(),
     accepted: z.boolean(),
-    requested: z.boolean(),
+    updated: z.boolean(),
   })),
 });
 
@@ -28,6 +26,7 @@ export interface LoginResponse {
   refresh_token: string;
   profile_version: number;
   avatar_version: number;
+  friends: FriendLogin[];
   friends: FriendLogin[];
 }
 

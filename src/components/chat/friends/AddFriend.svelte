@@ -7,7 +7,6 @@
 
 	export let getRandomColor: (username: string) => string;
 	export let getInitial: (username: string) => string;
-	
 	export let searchQuery: string;
 	export let searchResult: { id: number; username: string } | null;
 	export let searchResultAvatar: string | null;
@@ -31,6 +30,8 @@
 						const avatarResponse = await handleGetAvatar(accessToken, searchResult.id, false);
 						if (avatarResponse.success && avatarResponse.avatar) {
 							searchResultAvatar = avatarResponse.avatar;
+						} else {
+							errorToast('Failed to fetch avatar');
 						}
 					} else {
 						lastSearchedQuery = searchQuery;
@@ -46,12 +47,12 @@
 	async function handleAddFriend() {
 		if (searchResult != null) {
 			const friendData = {
-				id: searchResult.id,
+				friendId: searchResult.id,
 				username: searchResult.username,
 				avatar: searchResultAvatar || undefined
 			};
 			
-			const success = await friendStore.sendFriendRequest(searchResult.id, friendData);
+			const success = await friendStore.sendFriendRequest(friendData);
 			
 			if (success) {
 				searchResult = null;
@@ -70,176 +71,196 @@
 			type="text"
 			bind:value={searchQuery}
 			placeholder="Search by name..."
+			on:keydown={(e) => e.key === 'Enter' && handleSearch()}
 			disabled={isLoading}
 		/>
-		<button 
-			class="search-btn"
-			on:click={handleSearch}
-			disabled={isLoading || !searchQuery || searchQuery === lastSearchedQuery}
-		>
-			{isLoading ? 'Searching...' : 'Search'}
+		<button on:click={handleSearch} class="search-btn" disabled={isLoading}>
+			{#if isLoading}
+				<span class="loading-indicator">Searching...</span>
+			{:else}
+				Search
+			{/if}
 		</button>
 	</div>
 
-	{#if searchResult}
-		<div class="search-result">
-			<div class="friend-avatar">
-				{#if searchResultAvatar}
-					<img src={searchResultAvatar} alt="Profile" />
-				{:else}
-					<div 
-						class="friend-avatar-placeholder"
-						style="background-color: {getRandomColor(searchResult.username)}"
-					>
-						{getInitial(searchResult.username)}
+	{#if isLoading}
+		<div class="loading-container">
+			<div class="spinner"></div>
+			<p class="loading-text">Searching for friends...</p>
+		</div>
+	{:else if searchResult}
+		<div class="search-result-container">
+			{#if searchResult}
+				{@const result = searchResult}
+				<div class="search-result">
+					<div class="avatar-container">
+						{#if searchResultAvatar}
+							<img
+								class="friend-avatar"
+								src={searchResultAvatar}
+								alt={result.username}
+							/>
+						{:else}
+							<div
+								class="friend-avatar placeholder"
+								style="background-color: {getRandomColor(result.username)}"
+							>
+								{getInitial(result.username)}
+							</div>
+						{/if}
 					</div>
-				{/if}
-			</div>
-			<div class="friend-info">
-				<div class="username">{searchResult.username}</div>
-				<button 
-					class="add-btn"
-					on:click={handleAddFriend}
-					disabled={isLoading}
-				>
-					Add Friend
-				</button>
-			</div>
+					<span class="username">{result.username}</span>
+					<button class="add-btn" on:click={handleAddFriend}>
+						Add Friend
+					</button>
+				</div>
+			{/if}
 		</div>
-	{/if}
-
-	{#if searched && !searchResult}
-		<div class="no-results">
-			<p>No user found with that name.</p>
-		</div>
+	{:else if searched && !searchResult && lastSearchedQuery}
+		<p class="no-result">No friend found with the name "{lastSearchedQuery}".</p>
 	{/if}
 </div>
 
 <style>
 	.add-friend {
-		padding: 1rem;
-		background: white;
-		border-radius: 8px;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-	}
-
-	.add-friend h3 {
-		margin: 0 0 1rem 0;
-		color: #333;
-		font-size: 1.2rem;
-		font-weight: 600;
+		width: 100%;
+		max-width: 300px;
+		margin: 0 auto;
 	}
 
 	.search-box {
 		display: flex;
 		gap: 0.5rem;
-		margin-bottom: 1rem;
+		margin-top: 1rem;
 	}
 
 	.search-box input {
 		flex: 1;
 		padding: 0.75rem;
 		border: 1px solid #ddd;
-		border-radius: 6px;
+		border-radius: 4px;
 		font-size: 1rem;
 	}
 
+	.search-box input:disabled {
+		background-color: #f5f5f5;
+		cursor: not-allowed;
+	}
+
 	.search-btn {
-		padding: 0.75rem 1.5rem;
 		background: #0b9476;
 		color: white;
 		border: none;
-		border-radius: 6px;
+		padding: 0.75rem 1.5rem;
+		border-radius: 4px;
 		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
-
-	.search-btn:hover:not(:disabled) {
-		background: #098567;
 	}
 
 	.search-btn:disabled {
-		background: #ccc;
+		background: #8bc3a3;
 		cursor: not-allowed;
+	}
+
+	.search-btn:hover:not(:disabled) {
+		background: #095c39;
+	}
+
+	.loading-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		margin-top: 2rem;
+		gap: 1rem;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid rgba(0, 0, 0, 0.1);
+		border-radius: 50%;
+		border-top-color: #0b9476;
+		animation: spin 1s ease-in-out infinite;
+	}
+
+	.loading-text {
+		color: #666;
+		font-style: italic;
+		margin: 0;
+	}
+
+	.loading-indicator {
+		display: inline-block;
+	}
+
+	.search-result-container {
+		margin-top: 2rem;
+		display: flex;
+		justify-content: center;
 	}
 
 	.search-result {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		gap: 1rem;
-		padding: 1rem;
-		background: #f8f9fa;
-		border-radius: 8px;
-		margin-top: 1rem;
+		width: 100%;
 	}
 
-	.friend-info {
-		flex: 1;
+	.avatar-container {
+		width: 80px;
+		height: 80px;
+		overflow: hidden;
+	}
+
+	.friend-avatar {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		color: white;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: bold;
+		font-size: 2rem;
+	}
+
+	.friend-avatar.placeholder {
+		background-color: inherit;
 	}
 
 	.username {
+		font-size: 1.3rem;
 		font-weight: 600;
 		color: #333;
-		margin-bottom: 0.5rem;
+		margin: 0.5rem 0;
+		text-align: center;
 	}
 
 	.add-btn {
 		background: #0b9476;
 		color: white;
 		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
+		padding: 0.75rem 1.5rem;
+		border-radius: 4px;
 		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
-
-	.add-btn:hover:not(:disabled) {
-		background: #098567;
-	}
-
-	.add-btn:disabled {
-		background: #ccc;
-		cursor: not-allowed;
-	}
-
-	.friend-avatar {
-		width: 50px;
-		height: 50px;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-		overflow: hidden;
-	}
-
-	.friend-avatar img {
+		font-size: 1rem;
 		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		border-radius: 50%;
+		max-width: 150px;
 	}
 
-	.friend-avatar-placeholder {
-		width: 100%;
-		height: 100%;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: white;
-		font-weight: 600;
-		font-size: 16px;
+	.add-btn:hover {
+		background: #095c39;
 	}
 
-	.no-results {
-		padding: 1rem;
+	.no-result {
 		text-align: center;
+		margin-top: 2rem;
 		color: #666;
-		background: #f8f9fa;
-		border-radius: 8px;
-		margin-top: 1rem;
+		font-style: italic;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
 	}
 </style>

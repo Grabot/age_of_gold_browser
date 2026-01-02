@@ -57,67 +57,31 @@ function createFriendStore() {
       ...state,
       friends: state.friends.filter((f) => f.friend.friend_id !== friendId),
     })),
-    sendFriendRequest: async (userId: number, friendData?: {id: number, username: string, avatar?: string}) => {
-      const token = get(accessTokenValue);
-      if (!token) {
-        errorToast('No access token available');
-        return false;
-      }
+    acceptRequest: () => {
 
+    },
+    rejectRequest: () => {
+
+    },
+    fetchFriends: async (accessToken: string) => {
+      set({ ...initialState, loading: true });
       try {
-        const response: ApiResponse = await sendFriendRequest(token, userId);
-        if (response.success) {
-          // If we have friend data, store it immediately
-          if (friendData) {
-            // Update user store
-            userStore.updateUser({
-              id: friendData.id,
-              username: friendData.username,
-              profile_version: 1,
-              avatar_version: 1,
-              avatar: friendData.avatar
-            });
-            
-            // Update avatar store if avatar available
-            if (friendData.avatar) {
-              avatarStore.updateAvatar(friendData.id, friendData.avatar);
-            }
-            
-            // Add friend to list without fetching (since we have all data)
-            update((state) => ({
-              ...state,
-              friends: [...state.friends, { 
-                friend: {
-                  friend_id: friendData.id,
-                  accepted: false,
-                  requested: true
-                }, 
-                user: {
-                  id: friendData.id,
-                  username: friendData.username,
-                  profile_version: 1,
-                  avatar_version: 1,
-                  avatar: friendData.avatar
-                }
-              }]
-            }));
-          } else {
-            // Refresh friends list normally if no friend data provided
-            const token = get(accessTokenValue);
-            await fetchAllFriends(token);
-          }
-          return true;
-        }
-        return false;
+        // TODO: Implement API calls for friends and groups
+        // const [friends, requests, groups] = await Promise.all([
+        //   fetchFriendsAPI(accessToken),
+        //   fetchFriendRequestsAPI(accessToken),
+        //   fetchGroupsAPI(accessToken),
+        // ]);
+        // set({ friends, friendRequests, groups, loading: false, error: null });
       } catch (err) {
-        errorToast(err instanceof Error ? err.message : 'Unknown error');
-        return false;
+        set({ ...initialState, error: err instanceof Error ? err.message : 'Unknown error' });
       }
     },
-    createGroup: async (accessToken: string, name: string, memberIds: string[]) => {
-      set({ ...get({ subscribe }), loading: true });
+    sendFriendRequest: async (friendData: { friendId: number; username: string; avatar: string | undefined; }) => {
       try {
-        // TODO: Implement API call to create a group
+        const addFriendResponse: ApiResponse = await sendFriendRequest(accessToken, friendData.friendId);
+        if (addFriendResponse.success) {
+        }
         return true;
       } catch (err) {
         errorToast(err instanceof Error ? err.message : 'Unknown error');

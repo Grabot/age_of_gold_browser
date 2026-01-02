@@ -178,34 +178,9 @@ function createAuthStore() {
     
     profileVersionValue.set(loginResult.profile_version);
     avatarVersionValue.set(loginResult.avatar_version);
-    
-    // Handle friends data
-    friendsValue.set(loginResult.friends);
-    
-    // Update friendStore with the new friends data
-    console.log("friends");  
+
+    console.log("fiends?");
     console.log(loginResult.friends);
-    // friendStore.setFriends(loginResult.friends);
-    
-    // Pre-fetch and store avatars for friends if we have them
-    if (loginResult.friends && loginResult.friends.length > 0) {
-      for (const friend of loginResult.friends) {
-        // Try to get avatar for each friend
-        await avatarStore.getAvatarWithFetch(friend.friend_id);
-        
-        // Also create placeholder user entry if not exists
-        let user = userStore.getUser(friend.friend_id);
-        if (!user) {
-          user = {
-            id: friend.friend_id,
-            username: `User_${friend.friend_id}`, // We'll need to fetch real usernames later
-            profile_version: 1,
-            avatar_version: 1
-          };
-          userStore.updateUser(user);
-        }
-      }
-    }
     
     authStore.updateValidationTimestamp();
     set({
@@ -341,7 +316,9 @@ function createAuthStore() {
     isValidationNeeded() {
       const lastValidation = get(lastValidationTime);
       const now = Date.now();
-      const oneMinute = 60 * 1000;
+			// For debugging
+      // const oneMinute = 60 * 1000;
+      const oneMinute = 0;
       return now - lastValidation > oneMinute;
     },
     updateValidationTimestamp() {
