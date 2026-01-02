@@ -4,8 +4,6 @@ import type { Friend } from '../types/user';
 import { loginTokenGoogle, loginUser, logoutUser, registerUser, validateToken } from '$lib/api/authApi';
 import { getUserDetail } from '$lib/api/userApi';
 import { type LoginResponse } from '$lib/api/apiClient';
-import { userStore } from './userStore';
-import { avatarStore } from './avatarStore';
 import { friendStore } from './friendStore';
 import { errorToast } from '../utils/toast';
 

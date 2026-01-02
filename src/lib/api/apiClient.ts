@@ -4,8 +4,7 @@ import { get } from "svelte/store";
 
 export interface FriendLogin {
     friend_id: number;
-    accepted: boolean;
-    updated: boolean
+    friend_version: number;
 }
 
 
@@ -16,8 +15,7 @@ export const LoginResponseSchema = z.object({
   avatar_version: z.int(),
   friends: z.array(z.object({
     friend_id: z.number(),
-    accepted: z.boolean(),
-    updated: z.boolean(),
+    friend_version: z.number(),
   })),
 });
 

@@ -9,5 +9,5 @@ export interface Friend {
     friendId: number;
     username: string;
     accepted: boolean;
-    updated: boolean;
+    friend_version: number;
 }
