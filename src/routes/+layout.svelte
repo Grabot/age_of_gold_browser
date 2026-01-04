@@ -200,7 +200,7 @@
 	{/if}
 
 	{#if showFriendModal}
-		<FriendView onClose={() => (showFriendModal = false)} />
+		<FriendView onClose={() => (showFriendModal = false)} {getRandomColor} {getInitial} />
 	{/if}
 	{#if showChatModal}
 		<ChatView onClose={() => (showChatModal = false)} />

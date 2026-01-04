@@ -65,12 +65,13 @@ class ApiConfig {
     changeAvatar: 'user/avatar',
     getAvatar: 'user/avatar',
     getUserDetail: 'user/detail',
+    getMultipleUsers: 'user/get-multiple',
   } as const;
 
   readonly friendEndpoints = {
     searchFriend: 'friend/search',
     addFriend: 'friend/add',
-    fetchAllFriends: 'friend/all',
+    fetchFriends: 'friend/all',
   } as const;
 
   buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {

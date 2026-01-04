@@ -2,9 +2,11 @@ import { get, writable } from 'svelte/store';
 import type { User } from '../types/user';
 import type { Friend } from '../types/user';
 import { loginTokenGoogle, loginUser, logoutUser, registerUser, validateToken } from '$lib/api/authApi';
-import { getUserDetail } from '$lib/api/userApi';
-import { type LoginResponse } from '$lib/api/apiClient';
+import { getUserDetail, getMultipleUsers } from '$lib/api/userApi';
+import { type LoginResponse, type FriendLogin } from '$lib/api/apiClient';
 import { friendStore } from './friendStore';
+import { userStore } from './userStore';
+import { avatarStore } from './avatarStore';
 import { errorToast } from '../utils/toast';
 
 
@@ -130,6 +132,97 @@ const initialState: AuthState = {
   loading: true,
 };
 
+async function retrieveMissingUsers(userIds: number[], accessToken: string): Promise<void> {
+  console.log('Retrieving missing users:', userIds);
+  
+  if (userIds.length === 0) {
+    console.log('No users to retrieve');
+    return;
+  }
+  
+  try {
+    const usersResponse = await getMultipleUsers(accessToken, userIds);
+    
+    if (usersResponse.data) {
+      for (const userResponse of usersResponse.data) {
+        const user: User = {
+          id: userResponse.id,
+          username: userResponse.username,
+          avatar_version: userResponse.avatar_version || 0,
+          profile_version: userResponse.profile_version || 0,
+          avatar: undefined
+        };
+        userStore.updateUser(user);
+        console.log(`Retrieved user ${userResponse.id}:`, user);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to retrieve missing users:', error);
+  }
+  
+  console.log('Finished retrieving missing users');
+}
+
+async function retrieveMissingFriends(friendIds: number[], accessToken: string): Promise<void> {
+  console.log('Retrieving missing friends data:', friendIds);
+  
+  if (friendIds.length === 0) {
+    console.log('No friends to retrieve');
+    return;
+  }
+  
+  try {
+    const { fetchFriends } = await import('$lib/api/friendApi');
+    const friendsResponse = await fetchFriends(accessToken, friendIds);
+    
+    if (friendsResponse.success && friendsResponse.data) {
+      // Update each friend's data
+      for (const friendData of friendsResponse.data) {
+        const storedUser = userStore.getUser(friendData.friend_id);
+        const storedAvatar = avatarStore.getAvatar(friendData.friend_id);
+        
+        let user: User;
+        if (storedUser) {
+          user = {
+            ...storedUser,
+            username: friendData.user?.username || storedUser.username,
+            avatar_version: friendData.user?.avatar_version || storedUser.avatar_version,
+            profile_version: friendData.user?.profile_version || storedUser.profile_version,
+            avatar: storedAvatar || undefined
+          };
+        } else {
+          user = {
+            id: friendData.friend_id,
+            username: friendData.user?.username || '',
+            avatar_version: friendData.user?.avatar_version || 0,
+            profile_version: friendData.user?.profile_version || 0,
+            avatar: storedAvatar || undefined
+          };
+        }
+        
+        const friend: Friend = {
+          friend_id: friendData.friend_id,
+          accepted: friendData.accepted,
+          friend_version: friendData.friend_version,
+          user: user
+        };
+        
+        // Update user store
+        userStore.updateUser(user);
+        
+        // Update friend store
+        friendStore.updateStoredFriend(friend);
+        
+        console.log(`Retrieved friend data for ${friendData.friend_id}:`, friend);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to retrieve missing friends data:', error);
+  }
+  
+  console.log('Finished retrieving missing friends data');
+}
+
 function createAuthStore() {
   const { subscribe, set } = writable<AuthState>(initialState);
 
@@ -154,8 +247,89 @@ function createAuthStore() {
     profileVersionValue.set(loginResult.profile_version);
     avatarVersionValue.set(loginResult.avatar_version);
 
-    console.log("fiends?");
-    console.log(loginResult.friends);
+    // Track user IDs and friend IDs that need retrieval
+    const userIdsToRetrieve: number[] = [];
+    const friendIdsToRetrieve: number[] = [];
+
+    // Convert FriendLogin to Friend format using stored data
+    const friends: Friend[] = loginResult.friends.map((friendLogin: FriendLogin) => {
+      console.log('Processing friend:', friendLogin.friend_id);
+      const storedUser = userStore.getUser(friendLogin.friend_id);
+      console.log('Stored user data:', storedUser);
+      const storedAvatar = avatarStore.getAvatar(friendLogin.friend_id);
+      const storedFriend = friendStore.getStoredFriend(friendLogin.friend_id);
+      console.log('Stored friend data:', storedFriend);
+      
+      // Check if we have stored user data or need to retrieve it
+      let user: User;
+      if (storedUser) {
+        console.log('Using stored user data');
+        user = {
+          ...storedUser,
+          avatar: storedAvatar || undefined
+        };
+      } else {
+        console.log('User data not found, marking for retrieval');
+        // Mark user for retrieval
+        userIdsToRetrieve.push(friendLogin.friend_id);
+        user = {
+          id: friendLogin.friend_id,
+          username: '', // Will be populated when fetched
+          avatar_version: 0, // Will be updated when fetched
+          profile_version: 0, // Will be updated when fetched
+          avatar: storedAvatar || undefined
+        };
+      }
+      
+      // Determine accepted status and friend_version from stored data or mark for retrieval
+      let accepted: boolean;
+      let friend_version: number;
+
+      console.log("stored friend version", storedFriend?.friend_version, "friend login version", friendLogin.friend_version)
+      console.log(storedFriend);
+      
+      if (storedFriend && storedFriend.friend_version === friendLogin.friend_version) {
+        console.log('Using stored friend data');
+        accepted = storedFriend.accepted;
+        friend_version = storedFriend.friend_version;
+      } else {
+        console.log('Friend data not found or version mismatch, marking for retrieval');
+        // Mark friend for retrieval
+        friendIdsToRetrieve.push(friendLogin.friend_id);
+        accepted = false;
+        friend_version = friendLogin.friend_version;
+      }
+      
+      console.log('Friend object to return:', {
+          friend_id: friendLogin.friend_id,
+          accepted: accepted,
+          friend_version: friend_version,
+          user: user
+      });
+
+      return {
+        friend_id: friendLogin.friend_id,
+        accepted: accepted,
+        friend_version: friend_version,
+        user: user
+      };
+    });
+
+    // Update friend store with the converted friends
+    friendStore.setFriends(friends);
+
+    console.log("friends?");
+    console.log(friends);
+    
+    // Retrieve missing user data
+    if (userIdsToRetrieve.length > 0) {
+      await retrieveMissingUsers(userIdsToRetrieve, loginResult.access_token);
+    }
+    
+    // Retrieve missing friend data
+    if (friendIdsToRetrieve.length > 0) {
+      await retrieveMissingFriends(friendIdsToRetrieve, loginResult.access_token);
+    }
     
     authStore.updateValidationTimestamp();
     set({
@@ -165,7 +339,7 @@ function createAuthStore() {
       profileVersion: loginResult.profile_version,
       avatarVersion: loginResult.avatar_version,
       user: loginResultUser,
-      friends: loginResult.friends,
+      friends: friends,
       loading: false,
     });
   }

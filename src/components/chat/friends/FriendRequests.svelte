@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { friendStore } from "../../../stores/friendStore";
+	
+	export let getRandomColor: (username: string) => string;
+	export let getInitial: (username: string) => string;
 </script>
 
 <div class="requests-list">

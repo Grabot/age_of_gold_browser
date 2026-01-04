@@ -26,12 +26,14 @@ export async function sendFriendRequest<T>(
   });
 }
 
-export async function fetchAllFriends(
-  accessToken: string
+export async function fetchFriends(
+  accessToken: string,
+  userIds: number[] | null = null
 ): Promise<ApiResponse<Friend[]>> {
   return makeRequest<Friend[]>({
-    method: 'GET',
-    endpoint: API.friendEndpoints.fetchAllFriends,
+    method: 'POST',
+    endpoint: API.friendEndpoints.fetchFriends,
     accessToken,
+    body: { user_ids: userIds },
   });
 }

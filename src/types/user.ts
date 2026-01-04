@@ -6,8 +6,8 @@ export interface User {
     avatar?: string;
 }
 export interface Friend {
-    friendId: number;
-    username: string;
+    friend_id: number;
     accepted: boolean;
     friend_version: number;
+    user: User;
 }

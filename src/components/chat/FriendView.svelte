@@ -5,6 +5,8 @@
 	import { onMount } from 'svelte';
 
 	export let onClose: () => void;
+	export let getRandomColor: (username: string) => string;
+	export let getInitial: (username: string) => string;
 
 	let activeTab: 'friends' | 'requests' | 'add' = 'friends';
 	let searchQuery: string = '';
@@ -29,18 +31,7 @@
 		isLoading = false;
 	}
 
-	function getRandomColor(username: string): string {
-		let hash = 0;
-		for (let i = 0; i < username.length; i++) {
-			hash = username.charCodeAt(i) + ((hash << 5) - hash);
-		}
-		const hue = Math.abs(hash) % 360;
-		return `hsl(${hue}, 70%, 50%)`;
-	}
-
-	function getInitial(username: string): string {
-		return username.charAt(0).toUpperCase();
-	}
+	
 </script>
 
 <div

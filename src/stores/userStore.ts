@@ -1,6 +1,8 @@
 import { writable, get } from 'svelte/store';
 import type { User } from '../types/user';
 import { getAvatarFromStore } from './avatarStore';
+import { getUserById } from '$lib/api/userApi';
+import { accessTokenValue } from './authStore';
 
 export const STORAGE_KEY_USERS_PREFIX = 'user_';
 
@@ -43,8 +45,16 @@ function createUserStore() {
   }
 
   function saveUserToStorage(user: User) {
+    // TODO: Only save the id, username, avatar_version, and profile_version NOT the avatar (this is done in the avatarStore and retrieved when needed)
+    console.log("saving user ", user);
+    const userToSave = {
+      id: user.id,
+      username: user.username,
+      avatar_version: user.avatar_version,
+      profile_version: user.profile_version
+    };
     if (typeof window !== 'undefined') {
-      localStorage.setItem(`${STORAGE_KEY_USERS_PREFIX}${user.id}`, JSON.stringify(user));
+      localStorage.setItem(`${STORAGE_KEY_USERS_PREFIX}${user.id}`, JSON.stringify(userToSave));
     }
   }
 
@@ -121,6 +131,42 @@ function createUserStore() {
     return Array.from(state.users.values());
   }
 
+  function checkUserVersionMismatch(userId: number, expectedProfileVersion: number, expectedAvatarVersion: number): boolean {
+    const user = getUser(userId);
+    if (!user) {
+      return true; // User doesn't exist, needs to be fetched
+    }
+    return user.profile_version !== expectedProfileVersion || user.avatar_version !== expectedAvatarVersion;
+  }
+
+  async function fetchUsersByIds(userIds: number[]): Promise<void> {
+    const accessToken = get(accessTokenValue);
+    if (!accessToken) {
+      console.error('No access token available for fetching users');
+      return;
+    }
+
+    const fetchPromises = userIds.map(async (userId) => {
+      try {
+        const userResponse = await getUserById(accessToken, userId);
+        if (userResponse.user) {
+          const user: User = {
+            id: userResponse.user.id,
+            username: userResponse.user.username,
+            avatar_version: 0, // Will be updated when we get full friend data
+            profile_version: 0, // Will be updated when we get full friend data
+            avatar: undefined // Avatar is handled separately
+          };
+          updateUser(user);
+        }
+      } catch (error) {
+        console.error(`Failed to fetch user ${userId}:`, error);
+      }
+    });
+
+    await Promise.all(fetchPromises);
+  }
+
   return {
     subscribe,
     updateUser,
@@ -129,6 +175,8 @@ function createUserStore() {
     removeUser,
     clearAllUsers,
     getAllUsers,
+    checkUserVersionMismatch,
+    fetchUsersByIds,
   };
 }
 

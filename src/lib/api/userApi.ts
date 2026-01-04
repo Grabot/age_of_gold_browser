@@ -5,17 +5,34 @@ import { makeRequest, type ApiResponse, type LoginResponse, LoginResponseSchema,
 const UserSchema = z.object({
   id: z.number(),
   username: z.string(),
+  avatar_version: z.number().optional(),
+  profile_version: z.number().optional(),
 });
 
 const UserResponseSchema = z.object({
   user: UserSchema
 });
 
+const MultipleUsersResponseSchema = z.object({
+  data: z.array(UserSchema)
+});
+
 export interface UserResponse {
   user?: {
     id: number,
-    username: string
+    username: string,
+    avatar_version?: number,
+    profile_version?: number
   };
+}
+
+export interface MultipleUsersResponse {
+  data?: Array<{
+    id: number,
+    username: string,
+    avatar_version?: number,
+    profile_version?: number
+  }>;
 }
 
 export async function changeUsername(
@@ -87,4 +104,17 @@ export async function getUserById(
     queryParams: { user_id: userId.toString() },
   });
   return UserResponseSchema.parse(userResponse.data);
+}
+
+export async function getMultipleUsers(
+  accessToken: string,
+  userIds: number[]
+): Promise<MultipleUsersResponse> {
+  const userResponse = await makeRequest<MultipleUsersResponse>({
+    method: 'POST',
+    endpoint: API.userEndpoints.getMultipleUsers,
+    accessToken,
+    body: { user_ids: userIds },
+  });
+  return MultipleUsersResponseSchema.parse(userResponse);
 }
