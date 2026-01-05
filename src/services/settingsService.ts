@@ -1,4 +1,4 @@
-import { changeAvatar, changeUsername, getAvatar } from "$lib/api/userApi";
+import { changeAvatar, changeUsername, getAvatar, getAvatarVersion } from "$lib/api/userApi";
 import { deleteAccount} from "$lib/api/authApi";
 import { type ApiResult } from "$lib/api/apiClient";
 import { get } from "svelte/store";
@@ -75,6 +75,20 @@ export async function handleGetAvatar(accessToken: string, userId: number | null
     }
   } catch (err) {
     return { success: false, message: (err as Error).message || 'Getting avatar failed' };
+  }
+}
+
+export async function handleGetAvatarVersion(accessToken: string, userId: number | null = null, getDefault: boolean | null = null): Promise<{ success: boolean; message?: string; avatarVersion?: number }> {
+  try {
+    const response = await getAvatarVersion(accessToken, userId);
+
+    if (response.success) {
+      return { success: true, avatarVersion: response.data as number };
+    } else {
+      return { success: false, message: 'Get avatar version failed.' };
+  }
+  } catch (err) {
+    return { success: false, message: (err as Error).message || 'Getting avatar version failed' };
   }
 }
 

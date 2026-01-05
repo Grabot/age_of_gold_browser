@@ -64,7 +64,8 @@ class ApiConfig {
     changeUsername: 'user/username',
     changeAvatar: 'user/avatar',
     getAvatar: 'user/avatar',
-    getUserDetail: 'user/detail',
+    getAvatarVersion: 'user/avatar/version',
+    getUser: 'user/get',
     getMultipleUsers: 'user/get-multiple',
   } as const;
 
@@ -72,6 +73,9 @@ class ApiConfig {
     searchFriend: 'friend/search',
     addFriend: 'friend/add',
     fetchFriends: 'friend/all',
+    respondFriendRequest: 'friend/respond',
+    cancelFriendRequest: 'friend/cancel',
+    removeFriend: 'friend/remove',
   } as const;
 
   buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {

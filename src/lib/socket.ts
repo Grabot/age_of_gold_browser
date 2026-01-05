@@ -67,3 +67,99 @@ export function offChatAddedEvent() {
     }
 }
 
+export function onUsernameUpdatedEvent(callback: (data: { user_id: number; new_username: string; profile_version: number }) => void) {
+    if (socket) {
+        socket.on("username_updated", callback);
+    }
+}
+
+export function offUsernameUpdatedEvent() {
+    if (socket) {
+        socket.off("username_updated");
+    }
+}
+
+export function onFriendRequestReceivedEvent(callback: (data: {
+    friend_id: number;
+    username: string;
+    avatar_version: number;
+    profile_version: number;
+}) => void) {
+    if (socket) {
+        socket.on("friend_request_received", callback);
+    }
+}
+
+export function offFriendRequestReceivedEvent() {
+    if (socket) {
+        socket.off("friend_request_received");
+    }
+}
+
+export function onAvatarUpdatedEvent(callback: (data: { user_id: number;}) => void) {
+    if (socket) {
+        socket.on("avatar_updated", callback);
+    }
+}
+
+export function offAvatarUpdatedEvent() {
+    if (socket) {
+        socket.off("avatar_updated");
+    }
+}
+
+export function onFriendRequestAcceptedEvent(callback: (data: {
+    friend_id: number;
+    username: string;
+    avatar_version: number;
+    profile_version: number;
+    accepted: boolean;
+    friend_version: number;
+}) => void) {
+    if (socket) {
+        socket.on("friend_request_accepted", callback);
+    }
+}
+
+export function offFriendRequestAcceptedEvent() {
+    if (socket) {
+        socket.off("friend_request_accepted");
+    }
+}
+
+export function onFriendRequestRejectedEvent(callback: (data: { friend_id: number }) => void) {
+    if (socket) {
+        socket.on("friend_request_rejected", callback);
+    }
+}
+
+export function offFriendRequestRejectedEvent() {
+    if (socket) {
+        socket.off("friend_request_rejected");
+    }
+}
+
+export function onFriendRequestCanceledEvent(callback: (data: { friend_id: number }) => void) {
+    if (socket) {
+        socket.on("friend_request_canceled", callback);
+    }
+}
+
+export function offFriendRequestCanceledEvent() {
+    if (socket) {
+        socket.off("friend_request_canceled");
+    }
+}
+
+export function onFriendRemovedEvent(callback: (data: { friend_id: number }) => void) {
+    if (socket) {
+        socket.on("friend_removed", callback);
+    }
+}
+
+export function offFriendRemovedEvent() {
+    if (socket) {
+        socket.off("friend_removed");
+    }
+}
+

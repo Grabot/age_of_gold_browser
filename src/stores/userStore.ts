@@ -1,52 +1,18 @@
 import { writable, get } from 'svelte/store';
 import type { User } from '../types/user';
-import { getAvatarFromStore } from './avatarStore';
-import { getUserById } from '$lib/api/userApi';
-import { accessTokenValue } from './authStore';
 
 export const STORAGE_KEY_USERS_PREFIX = 'user_';
 
 interface UserState {
-  users: Map<number, User>;
 }
 
 const initialState: UserState = {
-  users: new Map(),
 };
 
 function createUserStore() {
   const { subscribe, update, set } = writable<UserState>(initialState);
 
-  // Load users from localStorage on initialization
-  if (typeof window !== 'undefined') {
-    loadUsersFromStorage();
-  }
-
-  function loadUsersFromStorage() {
-    const keys = Object.keys(localStorage);
-    const userKeys = keys.filter(key => key.startsWith(STORAGE_KEY_USERS_PREFIX));
-    
-    const users = new Map<number, User>();
-    
-    userKeys.forEach(key => {
-      const userId = parseInt(key.replace(STORAGE_KEY_USERS_PREFIX, ''));
-      const userData = localStorage.getItem(key);
-      if (userData) {
-        try {
-          const user: User = JSON.parse(userData);
-          users.set(userId, user);
-        } catch (error) {
-          console.error(`Failed to parse user data for user ${userId}:`, error);
-        }
-      }
-    });
-
-    update(state => ({ ...state, users }));
-  }
-
   function saveUserToStorage(user: User) {
-    // TODO: Only save the id, username, avatar_version, and profile_version NOT the avatar (this is done in the avatarStore and retrieved when needed)
-    console.log("saving user ", user);
     const userToSave = {
       id: user.id,
       username: user.username,
@@ -58,64 +24,21 @@ function createUserStore() {
     }
   }
 
-  function removeUserFromStorage(userId: number) {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(`${STORAGE_KEY_USERS_PREFIX}${userId}`);
-    }
-  }
-
   function updateUser(user: User): void {
-    update(state => {
-      const newUsers = new Map(state.users);
-      newUsers.set(user.id, user);
-      saveUserToStorage(user);
-      return { ...state, users: newUsers };
-    });
+    saveUserToStorage(user);
   }
 
   function getUser(userId: number): User | null {
-    const store = { subscribe };
-    const state = get(store) as UserState;
-    return state.users.get(userId) || null;
-  }
-
-  function getStoreState(): UserState {
-    const store = { subscribe };
-    const state = get(store) as UserState;
-    return state;
-  }
-
-  async function getUserWithAvatar(userId: number): Promise<User | null> {
-    let user = getUser(userId);
-    
-    if (!user) {
-      // If user not in store, we could fetch from backend
-      // For now, return null
+    const userData = localStorage.getItem(`${STORAGE_KEY_USERS_PREFIX}${userId}`);
+    if (userData) {
+      const user: User = JSON.parse(userData);
+      return user;
+    } else {
       return null;
     }
-
-    // If user doesn't have avatar, try to get it from avatar store
-    if (!user.avatar) {
-      const avatar = getAvatarFromStore(userId);
-      if (avatar) {
-        user = { ...user, avatar };
-        updateUser(user);
-      }
-    }
-
-    return user;
   }
 
-  function removeUser(userId: number): void {
-    update(state => {
-      const newUsers = new Map(state.users);
-      newUsers.delete(userId);
-      removeUserFromStorage(userId);
-      return { ...state, users: newUsers };
-    });
-  }
-
-  function clearAllUsers(): void {
+  function clear(): void {
     update(state => ({ ...state, users: new Map() }));
     
     if (typeof window !== 'undefined') {
@@ -125,58 +48,11 @@ function createUserStore() {
     }
   }
 
-  function getAllUsers(): User[] {
-    const store = { subscribe };
-    const state = get(store) as UserState;
-    return Array.from(state.users.values());
-  }
-
-  function checkUserVersionMismatch(userId: number, expectedProfileVersion: number, expectedAvatarVersion: number): boolean {
-    const user = getUser(userId);
-    if (!user) {
-      return true; // User doesn't exist, needs to be fetched
-    }
-    return user.profile_version !== expectedProfileVersion || user.avatar_version !== expectedAvatarVersion;
-  }
-
-  async function fetchUsersByIds(userIds: number[]): Promise<void> {
-    const accessToken = get(accessTokenValue);
-    if (!accessToken) {
-      console.error('No access token available for fetching users');
-      return;
-    }
-
-    const fetchPromises = userIds.map(async (userId) => {
-      try {
-        const userResponse = await getUserById(accessToken, userId);
-        if (userResponse.user) {
-          const user: User = {
-            id: userResponse.user.id,
-            username: userResponse.user.username,
-            avatar_version: 0, // Will be updated when we get full friend data
-            profile_version: 0, // Will be updated when we get full friend data
-            avatar: undefined // Avatar is handled separately
-          };
-          updateUser(user);
-        }
-      } catch (error) {
-        console.error(`Failed to fetch user ${userId}:`, error);
-      }
-    });
-
-    await Promise.all(fetchPromises);
-  }
-
   return {
     subscribe,
     updateUser,
     getUser,
-    getUserWithAvatar,
-    removeUser,
-    clearAllUsers,
-    getAllUsers,
-    checkUserVersionMismatch,
-    fetchUsersByIds,
+    clear,
   };
 }
 

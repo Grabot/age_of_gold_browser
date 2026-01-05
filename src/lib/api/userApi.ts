@@ -5,8 +5,8 @@ import { makeRequest, type ApiResponse, type LoginResponse, LoginResponseSchema,
 const UserSchema = z.object({
   id: z.number(),
   username: z.string(),
-  avatar_version: z.number().optional(),
-  profile_version: z.number().optional(),
+  avatar_version: z.number(),
+  profile_version: z.number(),
 });
 
 const UserResponseSchema = z.object({
@@ -21,8 +21,8 @@ export interface UserResponse {
   user?: {
     id: number,
     username: string,
-    avatar_version?: number,
-    profile_version?: number
+    avatar_version: number,
+    profile_version: number
   };
 }
 
@@ -30,8 +30,8 @@ export interface MultipleUsersResponse {
   data?: Array<{
     id: number,
     username: string,
-    avatar_version?: number,
-    profile_version?: number
+    avatar_version: number,
+    profile_version: number
   }>;
 }
 
@@ -82,26 +82,30 @@ export async function getAvatar(
     expectBlob: true,
   });
 }
-export async function getUserDetail(
+
+export async function getAvatarVersion(
   accessToken: string,
-): Promise<UserResponse> {
-  const userResponse = await makeRequest<UserResponse>({
-    method: 'GET',
-    endpoint: API.userEndpoints.getUserDetail,
+  userId: number | null,
+): Promise<ApiResponse<unknown>> {
+  return makeRequest({
+    method: 'POST',
+    endpoint: API.userEndpoints.getAvatarVersion,
     accessToken,
+    body: { user_id: userId },
   });
-  return UserResponseSchema.parse(userResponse.data);
 }
 
-export async function getUserById(
+export async function getUser(
   accessToken: string,
-  userId: number
+  userId: number | undefined = undefined
 ): Promise<UserResponse> {
+  const requestBody = userId !== undefined ? { userId } : undefined;
+
   const userResponse = await makeRequest<UserResponse>({
-    method: 'GET',
-    endpoint: API.userEndpoints.getUserDetail,
+    method: 'POST',
+    endpoint: API.userEndpoints.getUser,
     accessToken,
-    queryParams: { user_id: userId.toString() },
+    body: requestBody,
   });
   return UserResponseSchema.parse(userResponse.data);
 }

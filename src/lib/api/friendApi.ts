@@ -37,3 +37,40 @@ export async function fetchFriends(
     body: { user_ids: userIds },
   });
 }
+
+export async function respondToFriendRequest(
+  accessToken: string,
+  friendId: number,
+  accept: boolean
+): Promise<ApiResponse> {
+  return makeRequest({
+    method: 'POST',
+    endpoint: API.friendEndpoints.respondFriendRequest,
+    accessToken,
+    body: { friend_id: friendId, accept },
+  });
+}
+
+export async function cancelFriendRequest(
+  accessToken: string,
+  friendId: number
+): Promise<ApiResponse> {
+  return makeRequest({
+    method: 'POST',
+    endpoint: API.friendEndpoints.cancelFriendRequest,
+    accessToken,
+    body: { friend_id: friendId },
+  });
+}
+
+export async function removeFriend(
+  accessToken: string,
+  friendId: number
+): Promise<ApiResponse> {
+  return makeRequest({
+    method: 'POST',
+    endpoint: API.friendEndpoints.removeFriend,
+    accessToken,
+    body: { friend_id: friendId },
+  });
+}

@@ -4,6 +4,8 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount, onDestroy } from 'svelte';
 	import { authStore, shouldUpdateAvatar, userAvatar, userDetail } from '../stores/authStore';
+import { friendStore } from '../stores/friendStore';
+import { avatarStore } from '../stores/avatarStore';
 	import { connectSocket, disconnectSocket, joinRoom, leaveRoom, onMessageEvent, offMessageEvent, onChatAddedEvent } from '$lib/socket';
 	import { handleGetAvatar } from '../services/settingsService';
 	import { goto } from '$app/navigation';
@@ -75,9 +77,86 @@
 		console.log('socket message:', message);
 	}
 
-	function handleMessageChatAddedEvent(message: string) {
-		console.log('socket message:', message);
-	}
+    function handleMessageChatAddedEvent(message: string) {
+        console.log('socket message:', message);
+    }
+
+    function handleUsernameUpdatedEvent(data: any) {
+        const store = friendStore as any;
+        if (store.updateFriendUsername) {
+            store.updateFriendUsername(data.user_id, data.new_username, data.profile_version);
+        }
+    }
+
+    function handleFriendRequestReceivedEvent(data: any) {
+        const store = friendStore as any;
+        if (store.addFriendRequest) {
+            store.addFriendRequest(data);
+        }
+    }
+
+    function handleAvatarUpdatedEvent(data: any) {
+        const store = avatarStore as any;
+        if (store.updateAvatarVersion) {
+            store.updateAvatarVersion(data.user_id);
+        }
+    }
+
+    function handleFriendRequestAcceptedEvent(data: any) {
+        console.log('Friend request accepted event:', data);
+        // Update the friend status to accepted
+        const store = friendStore as any;
+        if (store.updateFriend) {
+            const updatedFriend = {
+                friend_id: data.friend_id,
+                accepted: true,
+                friend_version: data.friend_version,
+                user: {
+                    id: data.friend_id,
+                    username: data.username,
+                    avatar_version: data.avatar_version,
+                    profile_version: data.profile_version
+                }
+            };
+            store.updateFriend(updatedFriend);
+        }
+    }
+
+    function handleFriendRequestRejectedEvent(data: any) {
+        console.log('Friend request rejected event:', data);
+        // Remove the friend from the list
+        const store = friendStore as any;
+        if (store.removeFriendFromList) {
+            store.removeFriendFromList(data.friend_id);
+        }
+        if (store.removeFriendFromStorage) {
+            store.removeFriendFromStorage(data.friend_id);
+        }
+    }
+
+    function handleFriendRequestCanceledEvent(data: any) {
+        console.log('Friend request canceled event:', data);
+        // Remove the friend from the list
+        const store = friendStore as any;
+        if (store.removeFriendFromList) {
+            store.removeFriendFromList(data.friend_id);
+        }
+        if (store.removeFriendFromStorage) {
+            store.removeFriendFromStorage(data.friend_id);
+        }
+    }
+
+    function handleFriendRemovedEvent(data: any) {
+        console.log('Friend removed event:', data);
+        // Remove the friend from the list
+        const store = friendStore as any;
+        if (store.removeFriendFromList) {
+            store.removeFriendFromList(data.friend_id);
+        }
+        if (store.removeFriendFromStorage) {
+            store.removeFriendFromStorage(data.friend_id);
+        }
+    }
 
 	function handleClickOutside(event: MouseEvent) {
 		if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
@@ -97,40 +176,62 @@
 
 		document.addEventListener('click', handleClickOutside);
 
-		const unsubscribeAuth = authStore.subscribe((state) => {
-			if (state.isAuthenticated && state.user) {
-				userId = state.user.id;
-				if (userId) {
-					socket = connectSocket(userId);
-					joinRoom(userId);
-					onMessageEvent(handleMessageEvent);
-					onChatAddedEvent(handleMessageChatAddedEvent);
-				}
-				if (state.accessToken) {
-					getUserDetails(state.accessToken);
-				}
-			} else {
-				if (socket) {
-					if (userId != null) {
-						leaveRoom(userId);
-						disconnectSocket();
-					}
-					socket = null;
-				}
-			}
-		});
+        const unsubscribeAuth = authStore.subscribe((state) => {
+            if (state.isAuthenticated && state.user) {
+                userId = state.user.id;
+                if (userId) {
+                    socket = connectSocket(userId);
+                    joinRoom(userId);
+                    onMessageEvent(handleMessageEvent);
+                    onChatAddedEvent(handleMessageChatAddedEvent);
+                    // Add direct socket event listeners
+                     if (socket) {
+                        socket.on("username_updated", handleUsernameUpdatedEvent);
+                        socket.on("friend_request_received", handleFriendRequestReceivedEvent);
+                        socket.on("avatar_updated", handleAvatarUpdatedEvent);
+                         socket.on("friend_request_accepted", handleFriendRequestAcceptedEvent);
+                         socket.on("friend_request_rejected", handleFriendRequestRejectedEvent);
+                         socket.on("friend_request_canceled", handleFriendRequestCanceledEvent);
+                         socket.on("friend_removed", handleFriendRemovedEvent);
+                    }
+                }
+                if (state.accessToken) {
+                    getUserDetails(state.accessToken);
+                }
+            } else {
+                if (socket) {
+                    if (userId != null) {
+                        leaveRoom(userId);
+                        disconnectSocket();
+                    }
+                    socket = null;
+                }
+            }
+        });
 
-		onDestroy(() => {
-			unsubscribeAuth();
-			if (socket) {
-				if (userId != null) {
-					leaveRoom(userId);
-					disconnectSocket();
-				}
-			}
-			offMessageEvent();
-			document.removeEventListener('click', handleClickOutside);
-		});
+        onDestroy(() => {
+            unsubscribeAuth();
+            if (socket) {
+                if (userId != null) {
+                    leaveRoom(userId);
+                    disconnectSocket();
+                }
+            }
+            offMessageEvent();
+            // Remove direct socket event listeners
+            if (socket) {
+                socket.off("message_event", handleMessageEvent);
+                socket.off("chat_added", handleMessageChatAddedEvent);
+                socket.off("username_updated", handleUsernameUpdatedEvent);
+                socket.off("friend_request_received", handleFriendRequestReceivedEvent);
+                socket.off("avatar_updated", handleAvatarUpdatedEvent);
+                 socket.off("friend_request_accepted", handleFriendRequestAcceptedEvent);
+                 socket.off("friend_request_rejected", handleFriendRequestRejectedEvent);
+                 socket.off("friend_request_canceled", handleFriendRequestCanceledEvent);
+                 socket.off("friend_removed", handleFriendRemovedEvent);
+            }
+            document.removeEventListener('click', handleClickOutside);
+        });
 	});
 
 	function toggleHome() {
