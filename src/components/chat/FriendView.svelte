@@ -1,22 +1,21 @@
 <script lang="ts">
-import AddFriend from "./friends/AddFriend.svelte";
-	import FriendsList from "./friends/FriendsList.svelte";
+	import AddFriend from './friends/AddFriend.svelte';
+	import FriendsList from './friends/FriendsList.svelte';
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 	import { avatarStore } from '../../stores/avatarStore';
 	import { accessTokenValue } from '../../stores/authStore';
 	import { friendStore } from '../../stores/friendStore';
-	import type { Friend } from "../../types/user";
-	import { userStore } from "../../stores/userStore";
-	import { handleGetAvatar, handleGetAvatarVersion } from "../../services/settingsService";
-	import { errorToast } from "../../utils/toast";
-	import { getUser } from "$lib/api/userApi";
+	import type { Friend } from '../../types/user';
+	import { userStore } from '../../stores/userStore';
+	import { handleGetAvatar, handleGetAvatarVersion } from '../../services/settingsService';
+	import { errorToast } from '../../utils/toast';
+	import { getUser } from '$lib/api/userApi';
 
 	export let onClose: () => void;
 	export let getRandomColor: (username: string) => string;
 	export let getInitial: (username: string) => string;
 
-    let activeTab: 'friends' | 'add' = 'friends';
+	let activeTab: 'friends' | 'add' = 'friends';
 	let searchQuery: string = '';
 	let searchResult: { id: number; username: string } | null = null;
 	let searchResultAvatar: string | null = null;
@@ -99,17 +98,15 @@ import AddFriend from "./friends/AddFriend.svelte";
 		}
 	}
 
-    function setActiveTab(tab: 'friends' | 'add') {
-        activeTab = tab;
-        searchQuery = '';
-        searchResult = null;
-        searchResultAvatar = null;
-        searched = false;
-        lastSearchedQuery = null;
-        isLoading = false;
-    }
-
-	
+	function setActiveTab(tab: 'friends' | 'add') {
+		activeTab = tab;
+		searchQuery = '';
+		searchResult = null;
+		searchResultAvatar = null;
+		searched = false;
+		lastSearchedQuery = null;
+		isLoading = false;
+	}
 </script>
 
 <div
@@ -138,33 +135,29 @@ import AddFriend from "./friends/AddFriend.svelte";
 				Friends
 			</button>
 
-			<button
-				class={activeTab === 'add' ? 'active' : ''}
-				on:click={() => setActiveTab('add')}
-			>
+			<button class={activeTab === 'add' ? 'active' : ''} on:click={() => setActiveTab('add')}>
 				Add New
 			</button>
 		</div>
 
-        <div class="tab-content">
-            {#if activeTab === 'friends'}
-                <FriendsList {getRandomColor} {getInitial} />
-            {:else if activeTab === 'add'}
-                <AddFriend
-                    {getRandomColor}
-                    {getInitial}
-                    bind:searchQuery
-                    bind:searchResult
-                    bind:searchResultAvatar
-                    bind:searched
-                    bind:lastSearchedQuery
-                    bind:isLoading
-                />
-            {/if}
-        </div>
+		<div class="tab-content">
+			{#if activeTab === 'friends'}
+				<FriendsList {getRandomColor} {getInitial} />
+			{:else if activeTab === 'add'}
+				<AddFriend
+					{getRandomColor}
+					{getInitial}
+					bind:searchQuery
+					bind:searchResult
+					bind:searchResultAvatar
+					bind:searched
+					bind:lastSearchedQuery
+					bind:isLoading
+				/>
+			{/if}
+		</div>
 	</div>
 </div>
-
 
 <style>
 	.modal {
@@ -244,5 +237,4 @@ import AddFriend from "./friends/AddFriend.svelte";
 		padding: 1.5rem;
 		overflow-y: auto;
 	}
-
 </style>

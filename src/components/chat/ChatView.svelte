@@ -3,7 +3,11 @@
 	export let contacts: Array<{ id: string; name: string; type: 'user' | 'group' }> = [
 		{ id: 'world', name: 'World Global Chat', type: 'group' }
 	];
-	export let selectedContact: { id: string; name: string; type: 'user' | 'group' } | null = { id: 'world', name: 'World Global Chat', type: 'group' };
+	export let selectedContact: { id: string; name: string; type: 'user' | 'group' } | null = {
+		id: 'world',
+		name: 'World Global Chat',
+		type: 'group'
+	};
 	export let messages: Array<{ id: string; text: string; sender: 'me' | 'other' }> = [];
 
 	function handleOverlayClick(event: MouseEvent) {
@@ -35,41 +39,40 @@
 		<div class="chat-sidebar">
 			<h3>Chats</h3>
 			<ul class="contact-list">
-				{#each contacts as contact}
-					<li>
-					<button
-						class:selected={selectedContact?.id === contact.id}
-						on:click={() => selectContact(contact)}
-						on:keydown={(e) => {
-						if (e.key === 'Enter' || e.key === ' ') selectContact(contact);
-						}}
-						tabindex="0"
-						aria-label={`Select ${contact.name}`}
-					>
-						{contact.name} {contact.type === 'group' ? '(Group)' : ''}
-					</button>
-					</li>
-				{/each}
+						{#each contacts as contact (contact.id)}
+							<li>
+								<button
+									class:selected={selectedContact?.id === contact.id}
+									on:click={() => selectContact(contact)}
+									on:keydown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') selectContact(contact);
+									}}
+									tabindex="0"
+									aria-label={`Select ${contact.name}`}
+							>
+								{contact.name}
+								{contact.type === 'group' ? '(Group)' : ''}
+							</button>
+						</li>
+						{/each}
 			</ul>
 		</div>
 		<div class="chat-main">
 			{#if selectedContact}
 				<h2>{selectedContact.name}</h2>
-				<div class="messages">
-					{#each messages as message}
-						<div class={message.sender}>
-							{message.text}
-						</div>
-					{/each}
-				</div>
+					<div class="messages">
+						{#each messages as message (message.id)}
+							<div class={message.sender}>
+								{message.text}
+							</div>
+						{/each}
+					</div>
 				<div class="message-input">
 					<input type="text" placeholder="Type a message..." />
 					<button>Send</button>
 				</div>
 			{:else}
-				<div class="placeholder">
-					Select a chat to start chatting
-				</div>
+				<div class="placeholder">Select a chat to start chatting</div>
 			{/if}
 		</div>
 	</div>

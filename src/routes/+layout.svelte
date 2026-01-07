@@ -4,9 +4,32 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount, onDestroy } from 'svelte';
 	import { authStore, shouldUpdateAvatar, userAvatar, userDetail } from '../stores/authStore';
-import { friendStore } from '../stores/friendStore';
-import { avatarStore } from '../stores/avatarStore';
-	import { connectSocket, disconnectSocket, joinRoom, leaveRoom, onMessageEvent, offMessageEvent, onChatAddedEvent } from '$lib/socket';
+	import { friendStore } from '../stores/friendStore';
+	import { avatarStore } from '../stores/avatarStore';
+	import {
+		connectSocket,
+		disconnectSocket,
+		joinRoom,
+		leaveRoom,
+		onMessageEvent,
+		offMessageEvent,
+		onChatAddedEvent,
+		onUsernameUpdatedEvent,
+		onFriendRequestReceivedEvent,
+		onAvatarUpdatedEvent,
+		onFriendRequestAcceptedEvent,
+		onFriendRequestRejectedEvent,
+		onFriendRequestCanceledEvent,
+		onFriendRemovedEvent,
+		offChatAddedEvent,
+		offUsernameUpdatedEvent,
+		offFriendRequestReceivedEvent,
+		offAvatarUpdatedEvent,
+		offFriendRequestAcceptedEvent,
+		offFriendRequestRejectedEvent,
+		offFriendRequestCanceledEvent,
+		offFriendRemovedEvent
+	} from '$lib/socket';
 	import { handleGetAvatar } from '../services/settingsService';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -15,6 +38,7 @@ import { avatarStore } from '../stores/avatarStore';
 	import { errorToast } from '../utils/toast';
 	import ChatView from '../components/chat/ChatView.svelte';
 	import FriendView from '../components/chat/FriendView.svelte';
+	import { userStore } from '../stores/userStore';
 
 	let { children } = $props();
 	const options = {};
@@ -25,7 +49,7 @@ import { avatarStore } from '../stores/avatarStore';
 	let showProfileDropdown = $state(false);
 	let showChatModal = $state(false);
 	let showFriendModal = $state(false);
-    let dropdownRef: HTMLDivElement | null = $state(null);
+	let dropdownRef: HTMLDivElement | null = $state(null);
 
 	function toggleProfileDropdown() {
 		showProfileDropdown = !showProfileDropdown;
@@ -77,86 +101,53 @@ import { avatarStore } from '../stores/avatarStore';
 		console.log('socket message:', message);
 	}
 
-    function handleMessageChatAddedEvent(message: string) {
-        console.log('socket message:', message);
-    }
+	function handleMessageChatAddedEvent(message: string) {
+		console.log('socket message:', message);
+	}
 
-    function handleUsernameUpdatedEvent(data: any) {
-        const store = friendStore as any;
-        if (store.updateFriendUsername) {
-            store.updateFriendUsername(data.user_id, data.new_username, data.profile_version);
-        }
-    }
+	function handleUsernameUpdatedEvent(data: any) {
+		friendStore.updateFriendUsername(data.user_id, data.new_username, data.profile_version);
+	}
 
-    function handleFriendRequestReceivedEvent(data: any) {
-        const store = friendStore as any;
-        if (store.addFriendRequest) {
-            store.addFriendRequest(data);
-        }
-    }
+	function handleFriendRequestReceivedEvent(data: any) {
+		friendStore.addFriendRequest(data);
+	}
 
-    function handleAvatarUpdatedEvent(data: any) {
-        const store = avatarStore as any;
-        if (store.updateAvatarVersion) {
-            store.updateAvatarVersion(data.user_id);
-        }
-    }
+	function handleAvatarUpdatedEvent(data: any) {
+		avatarStore.updateAvatarVersion(data.user_id);
+	}
 
-    function handleFriendRequestAcceptedEvent(data: any) {
-        console.log('Friend request accepted event:', data);
-        // Update the friend status to accepted
-        const store = friendStore as any;
-        if (store.updateFriend) {
-            const updatedFriend = {
-                friend_id: data.friend_id,
-                accepted: true,
-                friend_version: data.friend_version,
-                user: {
-                    id: data.friend_id,
-                    username: data.username,
-                    avatar_version: data.avatar_version,
-                    profile_version: data.profile_version
-                }
-            };
-            store.updateFriend(updatedFriend);
-        }
-    }
+	function handleFriendRequestAcceptedEvent(data: any) {
+		const updatedUser = {
+			id: data.friend_id,
+			username: data.username,
+			avatar_version: data.avatar_version,
+			profile_version: data.profile_version
+		};
+		const updatedFriend = {
+			friend_id: data.friend_id,
+			accepted: true,
+			friend_version: data.friend_version,
+			user: updatedUser
+		};
+		friendStore.updateFriend(updatedFriend);
+		userStore.updateUser(updatedUser);
+	}
 
-    function handleFriendRequestRejectedEvent(data: any) {
-        console.log('Friend request rejected event:', data);
-        // Remove the friend from the list
-        const store = friendStore as any;
-        if (store.removeFriendFromList) {
-            store.removeFriendFromList(data.friend_id);
-        }
-        if (store.removeFriendFromStorage) {
-            store.removeFriendFromStorage(data.friend_id);
-        }
-    }
+	function handleFriendRequestRejectedEvent(data: any) {
+		friendStore.removeFriendFromList(data.friend_id);
+		friendStore.removeFriendFromStorage(data.friend_id);
+	}
 
-    function handleFriendRequestCanceledEvent(data: any) {
-        console.log('Friend request canceled event:', data);
-        // Remove the friend from the list
-        const store = friendStore as any;
-        if (store.removeFriendFromList) {
-            store.removeFriendFromList(data.friend_id);
-        }
-        if (store.removeFriendFromStorage) {
-            store.removeFriendFromStorage(data.friend_id);
-        }
-    }
+	function handleFriendRequestCanceledEvent(data: any) {
+		friendStore.removeFriendFromList(data.friend_id);
+		friendStore.removeFriendFromStorage(data.friend_id);
+	}
 
-    function handleFriendRemovedEvent(data: any) {
-        console.log('Friend removed event:', data);
-        // Remove the friend from the list
-        const store = friendStore as any;
-        if (store.removeFriendFromList) {
-            store.removeFriendFromList(data.friend_id);
-        }
-        if (store.removeFriendFromStorage) {
-            store.removeFriendFromStorage(data.friend_id);
-        }
-    }
+	function handleFriendRemovedEvent(data: any) {
+		friendStore.removeFriendFromList(data.friend_id);
+		friendStore.removeFriendFromStorage(data.friend_id);
+	}
 
 	function handleClickOutside(event: MouseEvent) {
 		if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
@@ -176,70 +167,63 @@ import { avatarStore } from '../stores/avatarStore';
 
 		document.addEventListener('click', handleClickOutside);
 
-        const unsubscribeAuth = authStore.subscribe((state) => {
-            if (state.isAuthenticated && state.user) {
-                userId = state.user.id;
-                if (userId) {
-                    socket = connectSocket(userId);
-                    joinRoom(userId);
-                    onMessageEvent(handleMessageEvent);
-                    onChatAddedEvent(handleMessageChatAddedEvent);
-                    // Add direct socket event listeners
-                     if (socket) {
-                        socket.on("username_updated", handleUsernameUpdatedEvent);
-                        socket.on("friend_request_received", handleFriendRequestReceivedEvent);
-                        socket.on("avatar_updated", handleAvatarUpdatedEvent);
-                         socket.on("friend_request_accepted", handleFriendRequestAcceptedEvent);
-                         socket.on("friend_request_rejected", handleFriendRequestRejectedEvent);
-                         socket.on("friend_request_canceled", handleFriendRequestCanceledEvent);
-                         socket.on("friend_removed", handleFriendRemovedEvent);
-                    }
-                }
-                if (state.accessToken) {
-                    getUserDetails(state.accessToken);
-                }
-            } else {
-                if (socket) {
-                    if (userId != null) {
-                        leaveRoom(userId);
-                        disconnectSocket();
-                    }
-                    socket = null;
-                }
-            }
-        });
+		const unsubscribeAuth = authStore.subscribe((state) => {
+			if (state.isAuthenticated && state.user) {
+				userId = state.user.id;
+				if (userId) {
+					socket = connectSocket(userId);
+					joinRoom(userId);
+					onMessageEvent(handleMessageEvent);
+					onChatAddedEvent(handleMessageChatAddedEvent);
+					onUsernameUpdatedEvent(handleUsernameUpdatedEvent);
+					onFriendRequestReceivedEvent(handleFriendRequestReceivedEvent);
+					onAvatarUpdatedEvent(handleAvatarUpdatedEvent);
+					onFriendRequestAcceptedEvent(handleFriendRequestAcceptedEvent);
+					onFriendRequestRejectedEvent(handleFriendRequestRejectedEvent);
+					onFriendRequestCanceledEvent(handleFriendRequestCanceledEvent);
+					onFriendRemovedEvent(handleFriendRemovedEvent);
+				}
+				if (state.accessToken) {
+					getUserDetails(state.accessToken);
+				}
+			} else {
+				if (socket) {
+					if (userId != null) {
+						leaveRoom(userId);
+						disconnectSocket();
+					}
+					socket = null;
+				}
+			}
+		});
 
-        onDestroy(() => {
-            unsubscribeAuth();
-            if (socket) {
-                if (userId != null) {
-                    leaveRoom(userId);
-                    disconnectSocket();
-                }
-            }
-            offMessageEvent();
-            // Remove direct socket event listeners
-            if (socket) {
-                socket.off("message_event", handleMessageEvent);
-                socket.off("chat_added", handleMessageChatAddedEvent);
-                socket.off("username_updated", handleUsernameUpdatedEvent);
-                socket.off("friend_request_received", handleFriendRequestReceivedEvent);
-                socket.off("avatar_updated", handleAvatarUpdatedEvent);
-                 socket.off("friend_request_accepted", handleFriendRequestAcceptedEvent);
-                 socket.off("friend_request_rejected", handleFriendRequestRejectedEvent);
-                 socket.off("friend_request_canceled", handleFriendRequestCanceledEvent);
-                 socket.off("friend_removed", handleFriendRemovedEvent);
-            }
-            document.removeEventListener('click', handleClickOutside);
-        });
+		onDestroy(() => {
+			unsubscribeAuth();
+			if (socket) {
+				if (userId != null) {
+					leaveRoom(userId);
+					disconnectSocket();
+				}
+			}
+			offMessageEvent();
+			offChatAddedEvent();
+			offUsernameUpdatedEvent();
+			offFriendRequestReceivedEvent();
+			offAvatarUpdatedEvent();
+			offFriendRequestAcceptedEvent();
+			offFriendRequestRejectedEvent();
+			offFriendRequestCanceledEvent();
+			offFriendRemovedEvent();
+			document.removeEventListener('click', handleClickOutside);
+		});
 	});
 
 	function toggleHome() {
-		if (!page.url.pathname.startsWith("/world")) {
+		if (!page.url.pathname.startsWith('/world')) {
 			window.location.href = '/world';
 		}
 	}
-	
+
 	function toggleChat() {
 		showChatModal = !showChatModal;
 	}
@@ -268,7 +252,13 @@ import { avatarStore } from '../stores/avatarStore';
 			<div class="nav-right">
 				<button class="notification-btn">🔔</button>
 				<div class="profile-dropdown-container" bind:this={dropdownRef}>
-					<button class="profile-btn" onclick={(e) => { e.stopPropagation(); toggleProfileDropdown(); }}>
+					<button
+						class="profile-btn"
+						onclick={(e) => {
+							e.stopPropagation();
+							toggleProfileDropdown();
+						}}
+					>
 						{#if $userAvatar}
 							<img src={$userAvatar} alt="User Avatar" class="profile-avatar" />
 						{:else}
@@ -283,8 +273,20 @@ import { avatarStore } from '../stores/avatarStore';
 					</button>
 					{#if showProfileDropdown}
 						<div class="profile-dropdown">
-							<button class="dropdown-item" onclick={() => { goto('/profile'); showProfileDropdown = false; }}>Profile</button>
-							<button class="dropdown-item" onclick={() => { authStore.logout(); showProfileDropdown = false; }}>Logout</button>
+							<button
+								class="dropdown-item"
+								onclick={() => {
+									goto('/profile');
+									showProfileDropdown = false;
+								}}>Profile</button
+							>
+							<button
+								class="dropdown-item"
+								onclick={() => {
+									authStore.logout();
+									showProfileDropdown = false;
+								}}>Logout</button
+							>
 						</div>
 					{/if}
 				</div>

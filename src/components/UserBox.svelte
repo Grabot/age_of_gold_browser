@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { get } from 'svelte/store';
-	import { authStore, userDetail } from '../stores/authStore';
+	import { authStore } from '../stores/authStore';
 
 	function handleLogout() {
 		authStore.logout();
@@ -13,8 +12,8 @@
 </script>
 
 <div class="logged-in-message">
-	{#if $authStore.isAuthenticated && !$authStore.loading}
-		<p>Logged in as: {$userDetail.username}</p>
+	{#if $authStore.isAuthenticated && !$authStore.loading && $authStore.user}
+		<p>Logged in as: {$authStore.user.username}</p>
 		<div class="button-container">
 			<button class="play-button" on:click={goToWorld}>Play</button>
 			<button class="logout-button" on:click={handleLogout}>Logout</button>

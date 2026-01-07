@@ -37,7 +37,6 @@ You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
 
-
 ## Building Podman
 
 To create a production version of your app using podman:
@@ -48,7 +47,8 @@ podman build -t age_of_gold_browser .
 podman run -d -p 3000:3000 age_of_gold_browser
 ```
 
-Or simply run 
+Or simply run
+
 ```sh
 podman-compose up -d
 ```
@@ -73,6 +73,7 @@ podman push <docker hub account>/age_of_gold_browser:1.0.0
 ```
 
 Than you can pull and run your container on the server
+
 ```sh
 docker pull <docker hub account>/age_of_gold_browser:1.0.0
 

@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { errorToast } from "../../../utils/toast";
-	import { friendStore } from "../../../stores/friendStore";
-	import { avatarStore } from "../../../stores/avatarStore";
-	import type { Friend } from "../../../types/user";
-	
+	import { errorToast } from '../../../utils/toast';
+	import { friendStore } from '../../../stores/friendStore';
+	import type { Friend } from '../../../types/user';
+
 	export let friend: Friend;
 	export let onClose: () => void;
 	export let getRandomColor: (username: string) => string;
@@ -55,18 +54,14 @@
 		<div class="friend-detail-content">
 			<div class="avatar-container">
 				{#if friend.user?.avatar}
-					<img
-						class="friend-avatar-large"
-						src={friend.user.avatar}
-						alt={friend.user.username}
-					/>
+					<img class="friend-avatar-large" src={friend.user.avatar} alt={friend.user.username} />
 				{:else}
 					<div
 						class="friend-avatar-large placeholder"
 						style="background-color: {getRandomColor(friend.user?.username || '')}"
 					>
 						{getInitial(friend.user?.username || '')}
-						</div>
+					</div>
 				{/if}
 			</div>
 

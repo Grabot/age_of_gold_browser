@@ -60,7 +60,10 @@
 				errorToast(error);
 			}
 		} catch (err) {
-			error = 'An error occurred: ' + (err instanceof Error ? err.message : 'Unknown error') + '. Please try again.';
+			error =
+				'An error occurred: ' +
+				(err instanceof Error ? err.message : 'Unknown error') +
+				'. Please try again.';
 			errorToast(error);
 			console.error('Exception occurred during delete account request:', err);
 		} finally {
@@ -89,7 +92,10 @@
 				errorToast(error);
 			}
 		} catch (err) {
-			error = 'An error occurred: ' + (err instanceof Error ? err.message : 'Unknown error') + '. Please try again.';
+			error =
+				'An error occurred: ' +
+				(err instanceof Error ? err.message : 'Unknown error') +
+				'. Please try again.';
 			errorToast(error);
 			console.error('Exception occurred during account deletion:', err);
 		} finally {
@@ -105,7 +111,9 @@
 				<div
 					class="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"
 				></div>
-				<p class="mt-4 text-lg text-white">{showConfirmation ? 'Deleting account...' : 'Sending deletion link...'}</p>
+				<p class="mt-4 text-lg text-white">
+					{showConfirmation ? 'Deleting account...' : 'Sending deletion link...'}
+				</p>
 			</div>
 		{:else if success}
 			<div class="flex flex-col items-center text-green-500">
