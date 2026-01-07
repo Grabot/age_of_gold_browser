@@ -69,9 +69,12 @@
 <style>
 	.oauth-buttons {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 10px;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 12px;
 		width: 100%;
+		max-width: 300px;
+		margin: 0 auto;
+		padding: 8px;
 	}
 
 	.oauth-button {
@@ -80,23 +83,31 @@
 		justify-content: center;
 		padding: 0;
 		border: none;
-		border-radius: 5px;
+		border-radius: 8px;
 		cursor: pointer;
 		background-color: transparent;
 		aspect-ratio: 1;
-		height: 10vh;
+		min-height: 60px;
+		max-height: 80px;
+		transition: all 0.2s ease;
+		overflow: hidden;
 	}
 
 	.oauth-button:hover {
 		opacity: 0.9;
 		transform: scale(1.02);
-		transition: all 0.2s ease;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 	}
 
 	.oauth-img {
 		width: 100%;
 		height: 100%;
 		object-fit: contain;
-		border-radius: 5px;
+		border-radius: 8px;
+		transition: transform 0.2s ease;
+	}
+
+	.oauth-button:hover .oauth-img {
+		transform: scale(1.05);
 	}
 </style>

@@ -1,25 +1,104 @@
 <script lang="ts">
-	import AddFriend from "./friends/AddFriend.svelte";
-	import FriendsList from "./friends/FriendsList.svelte";
-	import FriendRequests from "./friends/FriendRequests.svelte";
+	import AddFriend from './friends/AddFriend.svelte';
+	import FriendsList from './friends/FriendsList.svelte';
 	import { onMount } from 'svelte';
+	import { avatarStore } from '../../stores/avatarStore';
+	import { accessTokenValue } from '../../stores/authStore';
+	import { friendStore } from '../../stores/friendStore';
+	import type { Friend } from '../../types/user';
+	import { userStore } from '../../stores/userStore';
+	import { handleGetAvatar, handleGetAvatarVersion } from '../../services/settingsService';
+	import { errorToast } from '../../utils/toast';
+	import { getUser } from '$lib/api/userApi';
 
 	export let onClose: () => void;
+	export let getRandomColor: (username: string) => string;
+	export let getInitial: (username: string) => string;
 
-	let activeTab: 'friends' | 'requests' | 'add' = 'friends';
+	let activeTab: 'friends' | 'add' = 'friends';
 	let searchQuery: string = '';
 	let searchResult: { id: number; username: string } | null = null;
 	let searchResultAvatar: string | null = null;
 	let searched = false;
 	let lastSearchedQuery: string | null = null;
 	let isLoading = false;
+
+	async function updateUserAvatar(friend: Friend) {
+		const accessToken = $accessTokenValue;
+		if (accessToken && friend.user) {
+			const avatarResponse = await handleGetAvatar(accessToken, friend.friend_id, false);
+			if (avatarResponse.success && avatarResponse.avatar) {
+				friend.user.avatar = avatarResponse.avatar;
+				avatarStore.updateAvatar(friend.friend_id, avatarResponse.avatar);
+				const avatarVersionResponse = await handleGetAvatarVersion(accessToken, friend.friend_id);
+				if (avatarVersionResponse.success && avatarVersionResponse.avatarVersion) {
+					friend.user.avatar_version = avatarVersionResponse.avatarVersion;
+				}
+				friendStore.updateFriend(friend);
+				userStore.updateUser(friend.user);
+				avatarStore.setShouldUpdateAvatarForUser(friend.friend_id, false);
+			} else {
+				errorToast('Failed to fetch avatar');
+			}
+		}
+	}
+
+	function checkUserAvatar(friend: Friend) {
+		if (friend.user) {
+			if (!friend.user.avatar) {
+				const avatarUser = avatarStore.getAvatar(friend.friend_id);
+				if (avatarUser) {
+					friend.user.avatar = avatarUser;
+					friendStore.updateFriend(friend);
+					userStore.updateUser(friend.user);
+				} else {
+					updateUserAvatar(friend);
+				}
+			}
+		}
+	}
+
+	async function emergencyFallback(friend: Friend) {
+		const storedUser = userStore.getUser(friend.friend_id);
+		if (!storedUser) {
+			const accessToken = $accessTokenValue;
+			if (accessToken) {
+				const userDetail = await getUser(accessToken, friend.friend_id);
+				friend.user = userDetail.user;
+				checkUserAvatar(friend);
+			}
+		} else {
+			friend.user = storedUser;
+			checkUserAvatar(friend);
+		}
+	}
+
+	onMount(() => {
+		const unsubscribe = friendStore.subscribe((storeState) => {
+			if (!storeState.loading) {
+				storeState.friends.forEach(async (friend) => {
+					if (avatarStore.getShouldUpdateAvatarForUser(friend.friend_id)) {
+						updateUserAvatar(friend);
+					} else {
+						if (friend.user) {
+							checkUserAvatar(friend);
+						} else {
+							emergencyFallback(friend);
+						}
+					}
+				});
+			}
+		});
+		return () => unsubscribe();
+	});
+
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
 			onClose();
 		}
 	}
 
-	function setActiveTab(tab: 'friends' | 'requests' | 'add') {
+	function setActiveTab(tab: 'friends' | 'add') {
 		activeTab = tab;
 		searchQuery = '';
 		searchResult = null;
@@ -27,19 +106,6 @@
 		searched = false;
 		lastSearchedQuery = null;
 		isLoading = false;
-	}
-
-	function getRandomColor(username: string): string {
-		let hash = 0;
-		for (let i = 0; i < username.length; i++) {
-			hash = username.charCodeAt(i) + ((hash << 5) - hash);
-		}
-		const hue = Math.abs(hash) % 360;
-		return `hsl(${hue}, 70%, 50%)`;
-	}
-
-	function getInitial(username: string): string {
-		return username.charAt(0).toUpperCase();
 	}
 </script>
 
@@ -68,16 +134,8 @@
 			>
 				Friends
 			</button>
-			<button
-				class={activeTab === 'requests' ? 'active' : ''}
-				on:click={() => setActiveTab('requests')}
-			>
-				Requests
-			</button>
-			<button
-				class={activeTab === 'add' ? 'active' : ''}
-				on:click={() => setActiveTab('add')}
-			>
+
+			<button class={activeTab === 'add' ? 'active' : ''} on:click={() => setActiveTab('add')}>
 				Add New
 			</button>
 		</div>
@@ -85,8 +143,6 @@
 		<div class="tab-content">
 			{#if activeTab === 'friends'}
 				<FriendsList {getRandomColor} {getInitial} />
-			{:else if activeTab === 'requests'}
-				<FriendRequests {getRandomColor} {getInitial} />
 			{:else if activeTab === 'add'}
 				<AddFriend
 					{getRandomColor}
@@ -102,7 +158,6 @@
 		</div>
 	</div>
 </div>
-
 
 <style>
 	.modal {
@@ -182,5 +237,4 @@
 		padding: 1.5rem;
 		overflow-y: auto;
 	}
-
 </style>

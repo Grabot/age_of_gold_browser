@@ -1,191 +1,197 @@
-import { z } from "zod";
-import { accessTokenValue, authStore, refreshTokenValue } from "../../stores/authStore";
-import { get } from "svelte/store";
+import { z } from 'zod';
+import { accessTokenValue, authStore, refreshTokenValue } from '../../stores/authStore';
+import { get } from 'svelte/store';
 
 export interface FriendLogin {
-    friend_id: number;
-    accepted: boolean;
-    updated: boolean
+	friend_id: number;
+	friend_version: number;
 }
 
-
 export const LoginResponseSchema = z.object({
-  access_token: z.string(),
-  refresh_token: z.string(),
-  profile_version: z.int(),
-  avatar_version: z.int(),
-  friends: z.array(z.object({
-    friend_id: z.number(),
-    accepted: z.boolean(),
-    updated: z.boolean(),
-  })),
+	access_token: z.string(),
+	refresh_token: z.string(),
+	profile_version: z.int(),
+	avatar_version: z.int(),
+	friends: z.array(
+		z.object({
+			friend_id: z.number(),
+			friend_version: z.number()
+		})
+	)
 });
 
 export interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  profile_version: number;
-  avatar_version: number;
-  friends: FriendLogin[];
-  friends: FriendLogin[];
+	access_token: string;
+	refresh_token: string;
+	profile_version: number;
+	avatar_version: number;
+	friends: FriendLogin[];
 }
 
-
 export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
+	success: boolean;
+	data?: T;
 }
 
 export interface ApiResult extends ApiResponse {
-  message?: string;
+	message?: string;
 }
 
 class ApiConfig {
-  private baseUrl: string;
-  private version: string;
+	private baseUrl: string;
+	private version: string;
 
-  constructor() {
-    this.baseUrl = import.meta.env.VITE_PUBLIC_BASE_URL || '';
-    this.version = import.meta.env.VITE_PUBLIC_API_VERSION || '';
-  }
+	constructor() {
+		this.baseUrl = import.meta.env.VITE_PUBLIC_BASE_URL || '';
+		this.version = import.meta.env.VITE_PUBLIC_API_VERSION || '';
+	}
 
-  readonly authEndpoints = {
-    login: 'login',
-    register: 'register',
-    tokenLogin: 'login/token',
-    tokenRefresh: 'login/token/refresh',
-    logout: 'logout',
-    tokenLoginGoogle: 'auth/google/token',
-    forgotPassword: 'password/forgot',
-    resetPassword: 'password/reset',
-    deleteAccount: 'delete/account',
-    deleteAccountAll: 'delete/account/all',
-    deleteAccountRequest: 'delete/account/request',
-  } as const;
+	readonly authEndpoints = {
+		login: 'login',
+		register: 'register',
+		tokenLogin: 'login/token',
+		tokenRefresh: 'login/token/refresh',
+		logout: 'logout',
+		tokenLoginGoogle: 'auth/google/token',
+		forgotPassword: 'password/forgot',
+		resetPassword: 'password/reset',
+		deleteAccount: 'delete/account',
+		deleteAccountAll: 'delete/account/all',
+		deleteAccountRequest: 'delete/account/request'
+	} as const;
 
-  readonly userEndpoints = {
-    changeUsername: 'user/username',
-    changeAvatar: 'user/avatar',
-    getAvatar: 'user/avatar',
-    getUserDetail: 'user/detail',
-  } as const;
+	readonly userEndpoints = {
+		changeUsername: 'user/username',
+		changeAvatar: 'user/avatar',
+		getAvatar: 'user/avatar',
+		getAvatarVersion: 'user/avatar/version',
+		getUser: 'user',
+		getMultipleUsers: 'users'
+	} as const;
 
-  readonly friendEndpoints = {
-    searchFriend: 'friend/search',
-    addFriend: 'friend/add',
-    fetchAllFriends: 'friend/all',
-  } as const;
+	readonly friendEndpoints = {
+		searchFriend: 'friend/search',
+		addFriend: 'friend/add',
+		fetchFriends: 'friend/all',
+		respondFriendRequest: 'friend/respond',
+		cancelFriendRequest: 'friend/cancel',
+		removeFriend: 'friend/remove'
+	} as const;
 
-  buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {
-    let url = `${this.baseUrl}/${this.version}/${endpoint}`;
+	buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {
+		let url = `${this.baseUrl}/${this.version}/${endpoint}`;
 
-    if (params) {
-      const searchParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        searchParams.append(key, String(value));
-      });
-      url += `?${searchParams.toString()}`;
-    }
+		if (params) {
+			const searchParams = new URLSearchParams();
+			Object.entries(params).forEach(([key, value]) => {
+				searchParams.append(key, String(value));
+			});
+			url += `?${searchParams.toString()}`;
+		}
 
-    return url;
-  }
+		return url;
+	}
 }
 
 export const API = new ApiConfig();
 
-
 type RequestBody = Record<string, unknown> | FormData | null;
 
 interface RequestOptions {
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  endpoint: string;
-  accessToken?: string;
-  body?: RequestBody;
-  queryParams?: Record<string, string | boolean>;
-  expectBlob?: boolean;
+	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+	endpoint: string;
+	accessToken?: string;
+	body?: RequestBody;
+	queryParams?: Record<string, string | boolean>;
+	expectBlob?: boolean;
 }
 function buildFetchOptions(method: string, body: RequestBody | undefined, accessToken?: string) {
-  const headers: Record<string, string> = {};
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
-  }
-  const isFormData = body instanceof FormData;
-  if (!isFormData && body !== null && body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-  }
-  const fetchOptions: RequestInit = { method, headers };
-  if (body && method !== 'GET') {
-    fetchOptions.body = isFormData ? body : JSON.stringify(body);
-  }
-  return fetchOptions;
+	const headers: Record<string, string> = {};
+	if (accessToken) {
+		headers['Authorization'] = `Bearer ${accessToken}`;
+	}
+	const isFormData = body instanceof FormData;
+	if (!isFormData && body !== null && body !== undefined) {
+		headers['Content-Type'] = 'application/json';
+	}
+	const fetchOptions: RequestInit = { method, headers };
+	if (body && method !== 'GET') {
+		fetchOptions.body = isFormData ? body : JSON.stringify(body);
+	}
+	return fetchOptions;
 }
 
 async function handleResponse<T>(response: Response, expectBlob: boolean): Promise<ApiResponse<T>> {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-  }
-  if (expectBlob) {
-    const blob = await response.blob();
-    return { success: true, data: blob as T };
-  }
-  const data = await response.json();
-  if (!data.success) {
-    throw new Error(data.message || "An error occurred while processing your request.");
-  }
-  return data as ApiResponse<T>;
+	if (!response.ok) {
+		const errorData = await response.json().catch(() => ({}));
+		throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+	}
+	if (expectBlob) {
+		const blob = await response.blob();
+		return { success: true, data: blob as T };
+	}
+	const data = await response.json();
+	if (!data.success) {
+		throw new Error(data.message || 'An error occurred while processing your request.');
+	}
+	return data as ApiResponse<T>;
 }
 
 async function refreshTokenAndRetry(
-  url: string,
-  fetchOptions: RequestInit,
-  accessToken: string,
-  refreshToken: string
+	url: string,
+	fetchOptions: RequestInit,
+	accessToken: string,
+	refreshToken: string
 ): Promise<Response> {
-  const newTokensResponse = await refreshTokenRequest(accessToken, refreshToken);
-  await authStore.validateLoginResponse(newTokensResponse);
-  fetchOptions.headers = {
-    ...fetchOptions.headers,
-    'Authorization': `Bearer ${get(accessTokenValue)}`,
-  };
-  return await fetch(url, fetchOptions);
+	const newTokensResponse = await refreshTokenRequest(accessToken, refreshToken);
+	await authStore.validateLoginResponse(newTokensResponse);
+	fetchOptions.headers = {
+		...fetchOptions.headers,
+		Authorization: `Bearer ${get(accessTokenValue)}`
+	};
+	return await fetch(url, fetchOptions);
 }
 
 let isRefreshing = false;
 
 export async function makeRequest<T>(options: RequestOptions): Promise<ApiResponse<T>> {
-  const { method, endpoint, accessToken, body, queryParams, expectBlob = false } = options;
-  const url = API.buildUrl(endpoint, queryParams);
-  let fetchOptions = buildFetchOptions(method, body, accessToken);
-  let response = await fetch(url, fetchOptions);
+	const { method, endpoint, accessToken, body, queryParams, expectBlob = false } = options;
+	const url = API.buildUrl(endpoint, queryParams);
+	const fetchOptions = buildFetchOptions(method, body, accessToken);
+	let response = await fetch(url, fetchOptions);
 
-  if (response.status === 401 && !isRefreshing && endpoint !== API.authEndpoints.tokenRefresh && endpoint !== API.authEndpoints.login) {
-    isRefreshing = true;
-    try {
-      const refreshToken = get(refreshTokenValue);
-      if (!refreshToken) {
-        throw new Error("No refresh token available. Please log in again.");
-      }
-      response = await refreshTokenAndRetry(url, fetchOptions, accessToken!, refreshToken);
-    } finally {
-      isRefreshing = false;
-    }
-  }
+	if (
+		response.status === 401 &&
+		!isRefreshing &&
+		endpoint !== API.authEndpoints.tokenRefresh &&
+		endpoint !== API.authEndpoints.login
+	) {
+		isRefreshing = true;
+		try {
+			const refreshToken = get(refreshTokenValue);
+			if (!refreshToken) {
+				throw new Error('No refresh token available. Please log in again.');
+			}
+			response = await refreshTokenAndRetry(url, fetchOptions, accessToken!, refreshToken);
+		} finally {
+			isRefreshing = false;
+		}
+	}
 
-  return handleResponse<T>(response, expectBlob);
+	return handleResponse<T>(response, expectBlob);
 }
 
 export async function refreshTokenRequest(
-  accessToken: string,
-  refreshToken: string,
+	accessToken: string,
+	refreshToken: string
 ): Promise<LoginResponse> {
-  const refreshTokenLogin = await makeRequest<LoginResponse>({
-    method: 'POST',
-    endpoint: API.authEndpoints.tokenRefresh,
-    body: {
-      refresh_token: refreshToken,
-      access_token: accessToken
-    },
-  });
-  return LoginResponseSchema.parse(refreshTokenLogin.data);
+	const refreshTokenLogin = await makeRequest<LoginResponse>({
+		method: 'POST',
+		endpoint: API.authEndpoints.tokenRefresh,
+		body: {
+			refresh_token: refreshToken,
+			access_token: accessToken
+		}
+	});
+	return LoginResponseSchema.parse(refreshTokenLogin.data);
 }

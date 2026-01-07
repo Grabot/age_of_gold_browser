@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import {
-		authStore,
-	} from '../../stores/authStore';
-	
+	import { authStore } from '../../stores/authStore';
+
 	onMount(() => {
 		const unsubscribe = authStore.subscribe((state) => {
 			if (!state.isAuthenticated && !state.loading) {
@@ -13,7 +11,6 @@
 		});
 		return () => unsubscribe();
 	});
-
 </script>
 
 {#if $authStore.isAuthenticated && !$authStore.loading}
@@ -21,7 +18,6 @@
 		<div class="main-content">
 			<p>TODO</p>
 		</div>
-
 	</div>
 {:else if !$authStore.loading}
 	<div class="protected-page">

@@ -4,7 +4,32 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount, onDestroy } from 'svelte';
 	import { authStore, shouldUpdateAvatar, userAvatar, userDetail } from '../stores/authStore';
-	import { connectSocket, disconnectSocket, joinRoom, leaveRoom, onMessageEvent, offMessageEvent, onChatAddedEvent } from '$lib/socket';
+	import { friendStore } from '../stores/friendStore';
+	import { avatarStore } from '../stores/avatarStore';
+	import {
+		connectSocket,
+		disconnectSocket,
+		joinRoom,
+		leaveRoom,
+		onMessageEvent,
+		offMessageEvent,
+		onChatAddedEvent,
+		onUsernameUpdatedEvent,
+		onFriendRequestReceivedEvent,
+		onAvatarUpdatedEvent,
+		onFriendRequestAcceptedEvent,
+		onFriendRequestRejectedEvent,
+		onFriendRequestCanceledEvent,
+		onFriendRemovedEvent,
+		offChatAddedEvent,
+		offUsernameUpdatedEvent,
+		offFriendRequestReceivedEvent,
+		offAvatarUpdatedEvent,
+		offFriendRequestAcceptedEvent,
+		offFriendRequestRejectedEvent,
+		offFriendRequestCanceledEvent,
+		offFriendRemovedEvent
+	} from '$lib/socket';
 	import { handleGetAvatar } from '../services/settingsService';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -13,6 +38,7 @@
 	import { errorToast } from '../utils/toast';
 	import ChatView from '../components/chat/ChatView.svelte';
 	import FriendView from '../components/chat/FriendView.svelte';
+	import { userStore } from '../stores/userStore';
 
 	let { children } = $props();
 	const options = {};
@@ -23,7 +49,7 @@
 	let showProfileDropdown = $state(false);
 	let showChatModal = $state(false);
 	let showFriendModal = $state(false);
-    let dropdownRef: HTMLDivElement | null = $state(null);
+	let dropdownRef: HTMLDivElement | null = $state(null);
 
 	function toggleProfileDropdown() {
 		showProfileDropdown = !showProfileDropdown;
@@ -79,6 +105,50 @@
 		console.log('socket message:', message);
 	}
 
+	function handleUsernameUpdatedEvent(data: any) {
+		friendStore.updateFriendUsername(data.user_id, data.new_username, data.profile_version);
+	}
+
+	function handleFriendRequestReceivedEvent(data: any) {
+		friendStore.addFriendRequest(data);
+	}
+
+	function handleAvatarUpdatedEvent(data: any) {
+		avatarStore.updateAvatarVersion(data.user_id);
+	}
+
+	function handleFriendRequestAcceptedEvent(data: any) {
+		const updatedUser = {
+			id: data.friend_id,
+			username: data.username,
+			avatar_version: data.avatar_version,
+			profile_version: data.profile_version
+		};
+		const updatedFriend = {
+			friend_id: data.friend_id,
+			accepted: true,
+			friend_version: data.friend_version,
+			user: updatedUser
+		};
+		friendStore.updateFriend(updatedFriend);
+		userStore.updateUser(updatedUser);
+	}
+
+	function handleFriendRequestRejectedEvent(data: any) {
+		friendStore.removeFriendFromList(data.friend_id);
+		friendStore.removeFriendFromStorage(data.friend_id);
+	}
+
+	function handleFriendRequestCanceledEvent(data: any) {
+		friendStore.removeFriendFromList(data.friend_id);
+		friendStore.removeFriendFromStorage(data.friend_id);
+	}
+
+	function handleFriendRemovedEvent(data: any) {
+		friendStore.removeFriendFromList(data.friend_id);
+		friendStore.removeFriendFromStorage(data.friend_id);
+	}
+
 	function handleClickOutside(event: MouseEvent) {
 		if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
 			showProfileDropdown = false;
@@ -105,6 +175,13 @@
 					joinRoom(userId);
 					onMessageEvent(handleMessageEvent);
 					onChatAddedEvent(handleMessageChatAddedEvent);
+					onUsernameUpdatedEvent(handleUsernameUpdatedEvent);
+					onFriendRequestReceivedEvent(handleFriendRequestReceivedEvent);
+					onAvatarUpdatedEvent(handleAvatarUpdatedEvent);
+					onFriendRequestAcceptedEvent(handleFriendRequestAcceptedEvent);
+					onFriendRequestRejectedEvent(handleFriendRequestRejectedEvent);
+					onFriendRequestCanceledEvent(handleFriendRequestCanceledEvent);
+					onFriendRemovedEvent(handleFriendRemovedEvent);
 				}
 				if (state.accessToken) {
 					getUserDetails(state.accessToken);
@@ -129,16 +206,24 @@
 				}
 			}
 			offMessageEvent();
+			offChatAddedEvent();
+			offUsernameUpdatedEvent();
+			offFriendRequestReceivedEvent();
+			offAvatarUpdatedEvent();
+			offFriendRequestAcceptedEvent();
+			offFriendRequestRejectedEvent();
+			offFriendRequestCanceledEvent();
+			offFriendRemovedEvent();
 			document.removeEventListener('click', handleClickOutside);
 		});
 	});
 
 	function toggleHome() {
-		if (!page.url.pathname.startsWith("/world")) {
+		if (!page.url.pathname.startsWith('/world')) {
 			window.location.href = '/world';
 		}
 	}
-	
+
 	function toggleChat() {
 		showChatModal = !showChatModal;
 	}
@@ -167,7 +252,13 @@
 			<div class="nav-right">
 				<button class="notification-btn">🔔</button>
 				<div class="profile-dropdown-container" bind:this={dropdownRef}>
-					<button class="profile-btn" onclick={(e) => { e.stopPropagation(); toggleProfileDropdown(); }}>
+					<button
+						class="profile-btn"
+						onclick={(e) => {
+							e.stopPropagation();
+							toggleProfileDropdown();
+						}}
+					>
 						{#if $userAvatar}
 							<img src={$userAvatar} alt="User Avatar" class="profile-avatar" />
 						{:else}
@@ -182,8 +273,20 @@
 					</button>
 					{#if showProfileDropdown}
 						<div class="profile-dropdown">
-							<button class="dropdown-item" onclick={() => { goto('/profile'); showProfileDropdown = false; }}>Profile</button>
-							<button class="dropdown-item" onclick={() => { authStore.logout(); showProfileDropdown = false; }}>Logout</button>
+							<button
+								class="dropdown-item"
+								onclick={() => {
+									goto('/profile');
+									showProfileDropdown = false;
+								}}>Profile</button
+							>
+							<button
+								class="dropdown-item"
+								onclick={() => {
+									authStore.logout();
+									showProfileDropdown = false;
+								}}>Logout</button
+							>
 						</div>
 					{/if}
 				</div>
@@ -200,7 +303,7 @@
 	{/if}
 
 	{#if showFriendModal}
-		<FriendView onClose={() => (showFriendModal = false)} />
+		<FriendView onClose={() => (showFriendModal = false)} {getRandomColor} {getInitial} />
 	{/if}
 	{#if showChatModal}
 		<ChatView onClose={() => (showChatModal = false)} />

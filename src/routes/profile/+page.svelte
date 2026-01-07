@@ -190,7 +190,9 @@
 						<button class="dropdown-item" on:click={openPasswordModal}>Change Password</button>
 						<hr class="dropdown-divider" />
 						<button class="dropdown-item" on:click={() => authStore.logout()}>Logout</button>
-						<button class="dropdown-item delete-item" on:click={openDeleteAccountModal}>Delete Account</button>
+						<button class="dropdown-item delete-item" on:click={openDeleteAccountModal}
+							>Delete Account</button
+						>
 					</div>
 				</div>
 			</div>

@@ -1,6 +1,6 @@
 {
-    "continue.enableQuickActions": true,
-    "continue.disableQuickFix": false,
-    "css.format.spaceAroundSelectorSeparator": true,
-    "css.format.maxPreserveNewLines": null
+	"continue.enableQuickActions": true,
+	"continue.disableQuickFix": false,
+	"css.format.spaceAroundSelectorSeparator": true,
+	"css.format.maxPreserveNewLines": null
 }

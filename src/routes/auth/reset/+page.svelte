@@ -56,7 +56,7 @@
 				throw new Error('Failed to send reset email');
 			} else {
 				showForm = false;
-				successToast('Password reset done! Please login again.')
+				successToast('Password reset done! Please login again.');
 				await authStore.logout();
 				setTimeout(() => {
 					goto('/');

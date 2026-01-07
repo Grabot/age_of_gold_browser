@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { handleSearchFriend } from "../../../services/friendsService";
-	import { handleGetAvatar } from "../../../services/settingsService";
-	import { accessTokenValue } from "../../../stores/authStore";
-	import { friendStore } from "../../../stores/friendStore";
-	import { errorToast } from "../../../utils/toast";
+	import { handleSearchFriend } from '../../../services/friendsService';
+	import { handleGetAvatar } from '../../../services/settingsService';
+	import { accessTokenValue } from '../../../stores/authStore';
+	import { friendStore } from '../../../stores/friendStore';
+	import { errorToast } from '../../../utils/toast';
 
 	export let getRandomColor: (username: string) => string;
 	export let getInitial: (username: string) => string;
@@ -51,9 +51,9 @@
 				username: searchResult.username,
 				avatar: searchResultAvatar || undefined
 			};
-			
+
 			const success = await friendStore.sendFriendRequest(friendData);
-			
+
 			if (success) {
 				searchResult = null;
 				searchResultAvatar = null;
@@ -95,11 +95,7 @@
 				<div class="search-result">
 					<div class="avatar-container">
 						{#if searchResultAvatar}
-							<img
-								class="friend-avatar"
-								src={searchResultAvatar}
-								alt={result.username}
-							/>
+							<img class="friend-avatar" src={searchResultAvatar} alt={result.username} />
 						{:else}
 							<div
 								class="friend-avatar placeholder"
@@ -110,9 +106,7 @@
 						{/if}
 					</div>
 					<span class="username">{result.username}</span>
-					<button class="add-btn" on:click={handleAddFriend}>
-						Add Friend
-					</button>
+					<button class="add-btn" on:click={handleAddFriend}> Add Friend </button>
 				</div>
 			{/if}
 		</div>
@@ -261,6 +255,8 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>
