@@ -63,7 +63,7 @@
     {#if $friendStore.friends.length > 0}
         <!-- Incoming friend requests section (accepted === false) -->
         {#if $friendStore.friends.some(f => f.accepted === false && f.user)}
-            <div class="section-separator">
+            <div class="section-separator-top">
                 <span>Incoming requests</span>
             </div>
             {#each $friendStore.friends as friend (friend.friend_id)}
@@ -124,9 +124,15 @@
 
         <!-- Pending friend requests (sent by current user, accepted === null) -->
         {#if $friendStore.friends.some(f => f.accepted === null)}
-            <div class="section-separator">
-                <span>Pending requests</span>
-            </div>
+            {#if $friendStore.friends.some(f => f.accepted === false && f.user)}
+                <div class="section-separator">
+                    <span>Pending requests</span>
+                </div>
+            {:else}
+                <div class="section-separator-top">
+                    <span>Pending requests</span>
+                </div>
+            {/if}                
             {#each $friendStore.friends as friend (friend.friend_id)}
                 {#if friend.accepted === null}
                     <div class="request pending">
@@ -247,34 +253,7 @@
 		gap: 0.5rem;
 	}
 
-	.friends-list h3 {
-		margin: 0 0 1rem 0;
-		color: #333;
-		font-size: 1.2rem;
-		font-weight: 600;
-	}
 
-	.friends-list ul {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.friends-list li {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.5rem;
-		border-radius: 8px;
-		transition: background-color 0.2s;
-	}
-
-	.friends-list li:hover {
-		background-color: #f5f5f5;
-	}
 
 	.friend-item {
 		display: flex;
@@ -343,9 +322,7 @@
 		background-color: #fff9f0;
 	}
 
-	.friend-accepted {
-		border-left: 3px solid transparent;
-	}
+
 
 	.request-actions {
 		display: flex;
@@ -388,6 +365,12 @@
 		font-weight: 500;
 		border-top: 1px solid #eee;
 		margin-top: 1rem;
+	}
+
+    .section-separator-top {
+		font-size: 0.9rem;
+		color: #7f8c8d;
+		font-weight: 500;
 	}
 
 	.no-friends {

@@ -65,8 +65,8 @@ class ApiConfig {
 		changeAvatar: 'user/avatar',
 		getAvatar: 'user/avatar',
 		getAvatarVersion: 'user/avatar/version',
-		getUser: 'user/get',
-		getMultipleUsers: 'user/get-multiple'
+		getUser: 'user',
+		getMultipleUsers: 'users'
 	} as const;
 
 	readonly friendEndpoints = {
