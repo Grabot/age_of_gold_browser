@@ -2,33 +2,25 @@ import { z } from 'zod';
 import {
 	makeRequest,
 	type ApiResponse,
-	type LoginResponse,
-	LoginResponseSchema,
 	API
 } from './apiClient';
 
-const UserSchema = z.object({
+const UserResponseSchema = z.object({
 	id: z.number(),
 	username: z.string(),
 	avatar_version: z.number(),
 	profile_version: z.number()
 });
 
-const UserResponseSchema = z.object({
-	user: UserSchema
-});
-
 const MultipleUsersResponseSchema = z.object({
-	data: z.array(UserSchema)
+	data: z.array(UserResponseSchema)
 });
 
 export interface UserResponse {
-	user?: {
-		id: number;
-		username: string;
-		avatar_version: number;
-		profile_version: number;
-	};
+	id: number;
+	username: string;
+	avatar_version: number;
+	profile_version: number;
 }
 
 export interface MultipleUsersResponse {

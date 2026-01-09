@@ -55,18 +55,6 @@ export function offMessageEvent() {
 	}
 }
 
-export function onChatAddedEvent(callback: (message: string) => void) {
-	if (socket) {
-		socket.on('chat_added', callback);
-	}
-}
-
-export function offChatAddedEvent() {
-	if (socket) {
-		socket.off('chat_added');
-	}
-}
-
 export function onUsernameUpdatedEvent(
 	callback: (data: { user_id: number; new_username: string; profile_version: number }) => void
 ) {

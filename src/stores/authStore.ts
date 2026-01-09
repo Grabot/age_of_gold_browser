@@ -218,13 +218,10 @@ function createAuthStore() {
 		refreshTokenValue.set(loginResult.refresh_token);
 
 		let loginResultUser;
-		console.log('logged in');
-		console.log(loginResult);
 		if (get(profileVersionValue) != loginResult.profile_version) {
-			console.log('update user detailse');
 			const newUserDetail = await getUser(loginResult.access_token);
-			console.log(newUserDetail.user);
-			loginResultUser = newUserDetail.user;
+			console.log(newUserDetail);
+			loginResultUser = newUserDetail;
 			userDetail.set(loginResultUser);
 		} else {
 			loginResultUser = get(userDetail);

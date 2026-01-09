@@ -29,7 +29,7 @@
 		text-align: center;
 		font-size: 1.2em;
 		color: #000;
-		background-color: #f9f5f0;
+		background-color: #c29b73;
 		border-radius: 12px;
 		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 		border: 1px solid #e0d5c8;
@@ -67,7 +67,7 @@
 
 	.username {
 		font-weight: 600;
-		color: #d4b18c;
+		color: #5a3610;
 		font-family: 'Georgia', serif;
 	}
 
@@ -86,7 +86,6 @@
 		cursor: pointer;
 		font-size: 1rem;
 		font-weight: 600;
-		transition: all 0.3s ease;
 		font-family: 'Georgia', serif;
 	}
 
@@ -97,7 +96,6 @@
 
 	.play-button:hover {
 		background-color: #3e8e41;
-		transform: translateY(-2px);
 	}
 
 	.logout-button {
@@ -107,6 +105,5 @@
 
 	.logout-button:hover {
 		background-color: #d32f2f;
-		transform: translateY(-2px);
 	}
 </style>

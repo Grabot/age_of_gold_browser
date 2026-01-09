@@ -64,7 +64,7 @@
 			const accessToken = $accessTokenValue;
 			if (accessToken) {
 				const userDetail = await getUser(accessToken, friend.friend_id);
-				friend.user = userDetail.user;
+				friend.user = userDetail;
 				checkUserAvatar(friend);
 			}
 		} else {

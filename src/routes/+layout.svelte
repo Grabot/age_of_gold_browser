@@ -13,7 +13,6 @@
 		leaveRoom,
 		onMessageEvent,
 		offMessageEvent,
-		onChatAddedEvent,
 		onUsernameUpdatedEvent,
 		onFriendRequestReceivedEvent,
 		onAvatarUpdatedEvent,
@@ -21,7 +20,6 @@
 		onFriendRequestRejectedEvent,
 		onFriendRequestCanceledEvent,
 		onFriendRemovedEvent,
-		offChatAddedEvent,
 		offUsernameUpdatedEvent,
 		offFriendRequestReceivedEvent,
 		offAvatarUpdatedEvent,
@@ -53,11 +51,6 @@
 
 	function toggleProfileDropdown() {
 		showProfileDropdown = !showProfileDropdown;
-	}
-
-	function handleLogout() {
-		authStore.logout();
-		goto('/');
 	}
 
 	async function getAvatar(accessToken: string) {
@@ -98,10 +91,6 @@
 	}
 
 	function handleMessageEvent(message: string) {
-		console.log('socket message:', message);
-	}
-
-	function handleMessageChatAddedEvent(message: string) {
 		console.log('socket message:', message);
 	}
 
@@ -174,7 +163,6 @@
 					socket = connectSocket(userId);
 					joinRoom(userId);
 					onMessageEvent(handleMessageEvent);
-					onChatAddedEvent(handleMessageChatAddedEvent);
 					onUsernameUpdatedEvent(handleUsernameUpdatedEvent);
 					onFriendRequestReceivedEvent(handleFriendRequestReceivedEvent);
 					onAvatarUpdatedEvent(handleAvatarUpdatedEvent);
@@ -206,7 +194,6 @@
 				}
 			}
 			offMessageEvent();
-			offChatAddedEvent();
 			offUsernameUpdatedEvent();
 			offFriendRequestReceivedEvent();
 			offAvatarUpdatedEvent();
