@@ -37,7 +37,7 @@
 		const usernameValue = isEmail ? null : usernameOrEmailValue;
 		const loginResult = await authStore.login(emailValue, usernameValue, passwordValue);
 		if (loginResult) {
-			window.location.href = '/world';
+			// window.location.href = '/world';
 		}
 	}
 
@@ -60,7 +60,7 @@
 		const registerResult = await authStore.register(emailValue, usernameValue, passwordValue);
 		if (registerResult) {
 			setTimeout(() => {
-				window.location.href = '/world';
+				// window.location.href = '/world';
 			}, 1500);
 		}
 	}

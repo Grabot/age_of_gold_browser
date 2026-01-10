@@ -1,6 +1,8 @@
 <script lang="ts">
-	import AddFriend from './friends/AddFriend.svelte';
-	import FriendsList from './friends/FriendsList.svelte';
+    import AddFriend from './friends/AddFriend.svelte';
+    import FriendsList from './friends/FriendsList.svelte';
+    import GroupsTab from './groups/GroupsTab.svelte';
+    import { groupStore } from '../../stores/groupStore';
 	import { onMount } from 'svelte';
 	import { avatarStore } from '../../stores/avatarStore';
 	import { accessTokenValue } from '../../stores/authStore';
@@ -12,10 +14,10 @@
 	import { getUser } from '$lib/api/userApi';
 
 	export let onClose: () => void;
-	export let getRandomColor: (username: string) => string;
-	export let getInitial: (username: string) => string;
+    export let getRandomColor: (username: string) => string;
+    export let getInitial: (username: string) => string;
 
-	let activeTab: 'friends' | 'add' = 'friends';
+    let activeTab: 'friends' | 'add' | 'groups' = 'friends';
 	let searchQuery: string = '';
 	let searchResult: { id: number; username: string } | null = null;
 	let searchResultAvatar: string | null = null;
@@ -73,24 +75,25 @@
 		}
 	}
 
-	onMount(() => {
-		const unsubscribe = friendStore.subscribe((storeState) => {
-			if (!storeState.loading) {
-				storeState.friends.forEach(async (friend) => {
-					if (avatarStore.getShouldUpdateAvatarForUser(friend.friend_id)) {
-						updateUserAvatar(friend);
-					} else {
-						if (friend.user) {
-							checkUserAvatar(friend);
-						} else {
-							emergencyFallback(friend);
-						}
-					}
-				});
-			}
-		});
-		return () => unsubscribe();
-	});
+    onMount(() => {
+        const unsubscribe = friendStore.subscribe((storeState) => {
+            if (!storeState.loading) {
+                storeState.friends.forEach(async (friend) => {
+                    if (avatarStore.getShouldUpdateAvatarForUser(friend.friend_id)) {
+                        updateUserAvatar(friend);
+                    } else {
+                        if (friend.user) {
+                            checkUserAvatar(friend);
+                        } else {
+                            emergencyFallback(friend);
+                        }
+                    }
+                });
+            }
+        });
+        
+        return () => unsubscribe();
+    });
 
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
@@ -98,15 +101,15 @@
 		}
 	}
 
-	function setActiveTab(tab: 'friends' | 'add') {
-		activeTab = tab;
-		searchQuery = '';
-		searchResult = null;
-		searchResultAvatar = null;
-		searched = false;
-		lastSearchedQuery = null;
-		isLoading = false;
-	}
+    function setActiveTab(tab: 'friends' | 'add' | 'groups') {
+        activeTab = tab;
+        searchQuery = '';
+        searchResult = null;
+        searchResultAvatar = null;
+        searched = false;
+        lastSearchedQuery = null;
+        isLoading = false;
+    }
 </script>
 
 <div
@@ -122,40 +125,46 @@
 	aria-modal="true"
 >
 	<div class="modal-content">
-		<div class="modal-header">
-			<h2>Friends</h2>
-			<button class="close-btn" on:click={onClose}>x</button>
-		</div>
+        <div class="modal-header">
+            <h2>Friends & Groups</h2>
+            <button class="close-btn" on:click={onClose}>x</button>
+        </div>
 
-		<div class="tabs">
-			<button
-				class={activeTab === 'friends' ? 'active' : ''}
-				on:click={() => setActiveTab('friends')}
-			>
-				Friends
-			</button>
+        <div class="tabs">
+            <button
+                class={activeTab === 'friends' ? 'active' : ''}
+                on:click={() => setActiveTab('friends')}
+            >
+                Friends
+            </button>
 
-			<button class={activeTab === 'add' ? 'active' : ''} on:click={() => setActiveTab('add')}>
-				Add New
-			</button>
-		</div>
+            <button class={activeTab === 'groups' ? 'active' : ''} on:click={() => setActiveTab('groups')}>
+                Groups
+            </button>
 
-		<div class="tab-content">
-			{#if activeTab === 'friends'}
-				<FriendsList {getRandomColor} {getInitial} />
-			{:else if activeTab === 'add'}
-				<AddFriend
-					{getRandomColor}
-					{getInitial}
-					bind:searchQuery
-					bind:searchResult
-					bind:searchResultAvatar
-					bind:searched
-					bind:lastSearchedQuery
-					bind:isLoading
-				/>
-			{/if}
-		</div>
+            <button class={activeTab === 'add' ? 'active' : ''} on:click={() => setActiveTab('add')}>
+                Add New
+            </button>
+        </div>
+
+        <div class="tab-content">
+            {#if activeTab === 'friends'}
+                <FriendsList {getRandomColor} {getInitial} />
+            {:else if activeTab === 'groups'}
+                <GroupsTab />
+            {:else if activeTab === 'add'}
+                <AddFriend
+                    {getRandomColor}
+                    {getInitial}
+                    bind:searchQuery
+                    bind:searchResult
+                    bind:searchResultAvatar
+                    bind:searched
+                    bind:lastSearchedQuery
+                    bind:isLoading
+                />
+            {/if}
+        </div>
 	</div>
 </div>
 

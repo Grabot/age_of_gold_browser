@@ -10,9 +10,11 @@ import {
 } from '$lib/api/authApi';
 import { getUser, getMultipleUsers } from '$lib/api/userApi';
 import { type LoginResponse, type FriendLogin } from '$lib/api/apiClient';
-import { friendStore } from './friendStore';
-import { userStore } from './userStore';
-import { avatarStore } from './avatarStore';
+    import { friendStore } from './friendStore';
+    import { userStore } from './userStore';
+    import { avatarStore } from './avatarStore';
+    import { groupStore } from './groupStore';
+    import type { Group } from '../types/groups';
 import { errorToast } from '../utils/toast';
 
 export const STORAGE_KEY_ACCESS_TOKEN = 'accessToken';
@@ -179,35 +181,59 @@ async function retrieveMissingUsers(userIds: number[], accessToken: string): Pro
 }
 
 async function retrieveMissingFriends(friendIds: number[], accessToken: string): Promise<void> {
-	if (friendIds.length === 0) {
-		return;
-	}
+    if (friendIds.length === 0) {
+        return;
+    }
 
-	const friends: Friend[] = [];
-	try {
-		const { fetchFriends } = await import('$lib/api/friendApi');
-		const friendsResponse = await fetchFriends(accessToken, friendIds);
+    const friends: Friend[] = [];
+    try {
+        const { fetchFriends } = await import('$lib/api/friendApi');
+        const friendsResponse = await fetchFriends(accessToken, friendIds);
 
-		if (friendsResponse.success && friendsResponse.data) {
-			// Update each friend's data
-			for (const friendData of friendsResponse.data) {
-				const storedUser = userStore.getUser(friendData.friend_id);
+        if (friendsResponse.success && friendsResponse.data) {
+            // Update each friend's data
+            for (const friendData of friendsResponse.data) {
+                const storedUser = userStore.getUser(friendData.friend_id);
 
-				const friend: Friend = {
-					friend_id: friendData.friend_id,
-					accepted: friendData.accepted,
-					friend_version: friendData.friend_version,
-					user: storedUser || undefined
-				};
+                const friend: Friend = {
+                    friend_id: friendData.friend_id,
+                    accepted: friendData.accepted,
+                    friend_version: friendData.friend_version,
+                    user: storedUser || undefined
+                };
 
-				friendStore.updateFriend(friend);
-			}
-		}
-	} catch (error) {
-		console.error('Failed to retrieve missing friends data:', error);
-	}
+                friendStore.updateFriend(friend);
+            }
+        }
+    } catch (error) {
+        console.error('Failed to retrieve missing friends data:', error);
+    }
+}
 
-	return;
+async function retrieveMissingGroups(groupIds: number[], accessToken: string): Promise<void> {
+	console.log("retrieving missing groups");
+    if (groupIds.length === 0) {
+        return;
+    }
+
+    try {
+        const { fetchGroups } = await import('$lib/api/groupApi');
+		console.log("group call");
+        const groupsResponse = await fetchGroups(accessToken, groupIds);
+		console.log("response");
+		console.log(groupsResponse);
+
+        if (groupsResponse.success && groupsResponse.data) {
+            // Update each group's data
+            for (const groupData of groupsResponse.data) {
+				console.log("updating group");
+				console.log(groupData);
+                groupStore.updateGroup(groupData);
+            }
+        }
+    } catch (error) {
+        console.error('Failed to retrieve missing groups data:', error);
+    }
 }
 
 function createAuthStore() {
@@ -271,17 +297,56 @@ function createAuthStore() {
 			}
 		});
 
-		// Update friend store with the converted friends
-		friendStore.setFriends(friends);
+        // Update friend store with the converted friends
+        friendStore.setFriends(friends);
 
-		// Retrieve missing friend data
-		if (friendIdsToRetrieve.length > 0) {
-			await retrieveMissingFriends(friendIdsToRetrieve, loginResult.access_token);
-		}
-		// Retrieve missing user data
-		if (userIdsToRetrieve.length > 0) {
-			await retrieveMissingUsers(userIdsToRetrieve, loginResult.access_token);
-		}
+        // Handle groups similar to friends
+        const groups: Group[] = [];
+        const groupIdsToRetrieve: number[] = [];
+
+		console.log("going over groups");
+        loginResult.groups.forEach((groupLogin) => {
+            const storedGroup = groupStore.getStoredGroup(groupLogin.group_id);
+			console.log(groupLogin);
+			console.log(storedGroup);
+
+            // Only create group entry if we have stored data with matching version
+            if (storedGroup && storedGroup.group_version === groupLogin.group_version) {
+                groups.push({
+                    id: storedGroup.id,
+                    group_id: storedGroup.group_id,
+                    unread_messages: storedGroup.unread_messages,
+                    mute: storedGroup.mute,
+                    mute_timestamp: storedGroup.mute_timestamp,
+                    group_version: storedGroup.group_version,
+                    message_version: storedGroup.message_version,
+                    avatar_version: storedGroup.avatar_version,
+                    last_message_read_id: storedGroup.last_message_read_id,
+                    chat: storedGroup.chat
+                });
+            } else {
+                // Mark group for retrieval
+				console.log("added to group retrieve", groupLogin.group_id);
+                groupIdsToRetrieve.push(groupLogin.group_id);
+            }
+        });
+
+        // Update group store with the converted groups
+        groupStore.setGroups(groups);
+
+        // Retrieve missing group data
+        if (groupIdsToRetrieve.length > 0) {
+            await retrieveMissingGroups(groupIdsToRetrieve, loginResult.access_token);
+        }
+
+        // Retrieve missing friend data
+        if (friendIdsToRetrieve.length > 0) {
+            await retrieveMissingFriends(friendIdsToRetrieve, loginResult.access_token);
+        }
+        // Retrieve missing user data
+        if (userIdsToRetrieve.length > 0) {
+            await retrieveMissingUsers(userIdsToRetrieve, loginResult.access_token);
+        }
 
 		authStore.updateValidationTimestamp();
 		set({

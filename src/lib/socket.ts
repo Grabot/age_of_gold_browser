@@ -152,7 +152,46 @@ export function onFriendRemovedEvent(callback: (data: { friend_id: number }) => 
 }
 
 export function offFriendRemovedEvent() {
-	if (socket) {
-		socket.off('friend_removed');
-	}
+    if (socket) {
+        socket.off('friend_removed');
+    }
+}
+
+export function onGroupCreatedEvent(
+    callback: (data: {
+        group_id: number;
+        group_name: string;
+        group_description: string;
+        group_colour: string;
+        creator_id: number;
+        creator_username: string;
+    }) => void
+) {
+    if (socket) {
+        socket.on('group_created', callback);
+    }
+}
+
+export function offGroupCreatedEvent() {
+    if (socket) {
+        socket.off('group_created');
+    }
+}
+
+export function onGroupMemberLeftEvent(
+    callback: (data: {
+        group_id: number;
+        user_id: number;
+        username: string;
+    }) => void
+) {
+    if (socket) {
+        socket.on('group_member_left', callback);
+    }
+}
+
+export function offGroupMemberLeftEvent() {
+    if (socket) {
+        socket.off('group_member_left');
+    }
 }

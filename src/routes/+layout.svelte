@@ -6,37 +6,42 @@
 	import { authStore, shouldUpdateAvatar, userAvatar, userDetail } from '../stores/authStore';
 	import { friendStore } from '../stores/friendStore';
 	import { avatarStore } from '../stores/avatarStore';
-	import {
-		connectSocket,
-		disconnectSocket,
-		joinRoom,
-		leaveRoom,
-		onMessageEvent,
-		offMessageEvent,
-		onUsernameUpdatedEvent,
-		onFriendRequestReceivedEvent,
-		onAvatarUpdatedEvent,
-		onFriendRequestAcceptedEvent,
-		onFriendRequestRejectedEvent,
-		onFriendRequestCanceledEvent,
-		onFriendRemovedEvent,
-		offUsernameUpdatedEvent,
-		offFriendRequestReceivedEvent,
-		offAvatarUpdatedEvent,
-		offFriendRequestAcceptedEvent,
-		offFriendRequestRejectedEvent,
-		offFriendRequestCanceledEvent,
-		offFriendRemovedEvent
-	} from '$lib/socket';
+    import {
+        connectSocket,
+        disconnectSocket,
+        joinRoom,
+        leaveRoom,
+        onMessageEvent,
+        offMessageEvent,
+        onUsernameUpdatedEvent,
+        onFriendRequestReceivedEvent,
+        offUsernameUpdatedEvent,
+        onAvatarUpdatedEvent,
+        onFriendRequestAcceptedEvent,
+        onFriendRequestRejectedEvent,
+        onFriendRequestCanceledEvent,
+        onFriendRemovedEvent,
+        offFriendRequestReceivedEvent,
+        offAvatarUpdatedEvent,
+        offFriendRequestAcceptedEvent,
+        offFriendRequestRejectedEvent,
+        offFriendRequestCanceledEvent,
+        offFriendRemovedEvent,
+        onGroupCreatedEvent,
+        onGroupMemberLeftEvent,
+        offGroupCreatedEvent,
+        offGroupMemberLeftEvent
+    } from '$lib/socket';
 	import { handleGetAvatar } from '../services/settingsService';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import type { Socket } from 'socket.io-client';
 	import { get } from 'svelte/store';
-	import { errorToast } from '../utils/toast';
-	import ChatView from '../components/chat/ChatView.svelte';
-	import FriendView from '../components/chat/FriendView.svelte';
-	import { userStore } from '../stores/userStore';
+    import { errorToast, successToast } from '../utils/toast';
+    import ChatView from '../components/chat/ChatView.svelte';
+    import FriendView from '../components/chat/FriendView.svelte';
+    import { userStore } from '../stores/userStore';
+    import { groupStore } from '../stores/groupStore';
 
 	let { children } = $props();
 	const options = {};
@@ -133,10 +138,20 @@
 		friendStore.removeFriendFromStorage(data.friend_id);
 	}
 
-	function handleFriendRemovedEvent(data: any) {
-		friendStore.removeFriendFromList(data.friend_id);
-		friendStore.removeFriendFromStorage(data.friend_id);
-	}
+    function handleFriendRemovedEvent(data: any) {
+        friendStore.removeFriendFromList(data.friend_id);
+        friendStore.removeFriendFromStorage(data.friend_id);
+    }
+    
+    function handleGroupCreatedEvent(data: any) {
+        successToast(`New group created: ${data.group_name}`);
+        groupStore.fetchGroups();
+    }
+    
+    function handleGroupMemberLeftEvent(data: any) {
+        errorToast(`${data.username} left the group`);
+        groupStore.fetchGroups();
+    }
 
 	function handleClickOutside(event: MouseEvent) {
 		if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
@@ -164,12 +179,14 @@
 					joinRoom(userId);
 					onMessageEvent(handleMessageEvent);
 					onUsernameUpdatedEvent(handleUsernameUpdatedEvent);
-					onFriendRequestReceivedEvent(handleFriendRequestReceivedEvent);
-					onAvatarUpdatedEvent(handleAvatarUpdatedEvent);
-					onFriendRequestAcceptedEvent(handleFriendRequestAcceptedEvent);
-					onFriendRequestRejectedEvent(handleFriendRequestRejectedEvent);
-					onFriendRequestCanceledEvent(handleFriendRequestCanceledEvent);
-					onFriendRemovedEvent(handleFriendRemovedEvent);
+                    onFriendRequestReceivedEvent(handleFriendRequestReceivedEvent);
+                    onAvatarUpdatedEvent(handleAvatarUpdatedEvent);
+                    onFriendRequestAcceptedEvent(handleFriendRequestAcceptedEvent);
+                    onFriendRequestRejectedEvent(handleFriendRequestRejectedEvent);
+                    onFriendRequestCanceledEvent(handleFriendRequestCanceledEvent);
+                    onFriendRemovedEvent(handleFriendRemovedEvent);
+                    onGroupCreatedEvent(handleGroupCreatedEvent);
+                    onGroupMemberLeftEvent(handleGroupMemberLeftEvent);
 				}
 				if (state.accessToken) {
 					getUserDetails(state.accessToken);
@@ -193,15 +210,17 @@
 					disconnectSocket();
 				}
 			}
-			offMessageEvent();
-			offUsernameUpdatedEvent();
-			offFriendRequestReceivedEvent();
-			offAvatarUpdatedEvent();
-			offFriendRequestAcceptedEvent();
-			offFriendRequestRejectedEvent();
-			offFriendRequestCanceledEvent();
-			offFriendRemovedEvent();
-			document.removeEventListener('click', handleClickOutside);
+            offMessageEvent();
+            offUsernameUpdatedEvent();
+            offFriendRequestReceivedEvent();
+            offAvatarUpdatedEvent();
+            offFriendRequestAcceptedEvent();
+            offFriendRequestRejectedEvent();
+            offFriendRequestCanceledEvent();
+            offFriendRemovedEvent();
+            offGroupCreatedEvent();
+            offGroupMemberLeftEvent();
+            document.removeEventListener('click', handleClickOutside);
 		});
 	});
 
