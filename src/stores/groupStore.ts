@@ -4,12 +4,13 @@ import {
     createGroup,
     fetchGroups,
     leaveGroup,
-    getGroupDetails
+    getGroupDetails,
+    type CreateGroupResponse
 } from '$lib/api/groupApi';
 import type { ApiResponse } from '$lib/api/apiClient';
 import type { Group } from '../types/groups';
-import type { Chat } from '../types/user';
-import { accessTokenValue } from './authStore';
+import type { Chat } from '../types/groups';
+import { accessTokenValue, authStore } from './authStore';
 import { userStore } from './userStore';
 
 export const STORAGE_KEY_GROUPS_PREFIX = 'group_';
@@ -83,21 +84,46 @@ function createGroupStore() {
             friendIds: number[];
         }): Promise<boolean> => {
             try {
+    console.log('Starting group creation process');
                 const accessToken = get(accessTokenValue);
-                const response: ApiResponse = await createGroup(
+    console.log('Access token retrieved:', accessToken);
+
+    console.log('Group data:', groupData);
+                const response: CreateGroupResponse = await createGroup(
                     accessToken,
                     groupData.groupName,
                     groupData.groupDescription,
                     groupData.groupColour,
                     groupData.friendIds
                 );
+    console.log('Response from createGroup:', response);
+
                 if (response.success) {
-                    // Refresh groups list
-                    await fetchGroups(accessToken);
+        const group: Group = {
+            group_id: response.data,
+            unread_messages: 0,
+            mute: false,
+            mute_timestamp: null,
+            group_version: 0,
+            message_version: 0,
+            avatar_version: 0,
+            last_message_read_id: 0,
+            user_ids: groupData.friendIds,
+            admin_ids: [], // TODO: add only me.
+            group_name: groupData.groupName,
+            private: false,
+            group_description: groupData.groupDescription,
+            group_colour: groupData.groupColour,
+        };
+        console.log('Group object created:', group);
+        saveGroupToStorage(group);
+        console.log('Group saved to storage');
                     return true;
                 }
+    console.log('Group creation not successful');
                 return false;
             } catch (err) {
+    console.error('Error during group creation:', err);
                 errorToast(err instanceof Error ? err.message : 'Unknown error');
                 return false;
             }
@@ -107,18 +133,19 @@ function createGroupStore() {
                 const accessToken = get(accessTokenValue);
                 const response: ApiResponse<Group[]> = await fetchGroups(accessToken);
                 if (response.success && response.data) {
+                    // TODO: only retrieve and give data back? Not have this here?
                     // Update user store with any new users from groups
-                    response.data.forEach((group) => {
-                        if (group.chat) {
-                            group.chat.user_ids.forEach((userId) => {
-                                // This would typically fetch user details, but for now we'll just ensure they're in the store
-                                userStore.getUser(userId);
-                            });
-                        }
-                    });
+                    // response.data.forEach((group) => {
+                    //     if (group.chat) {
+                    //         group.chat.user_ids.forEach((userId) => {
+                    //             // This would typically fetch user details, but for now we'll just ensure they're in the store
+                    //             userStore.getUser(userId);
+                    //         });
+                    //     }
+                    // });
                     
-                    // Save groups to storage and update store
-                    response.data.forEach((group) => saveGroupToStorage(group));
+                    // // Save groups to storage and update store
+                    // response.data.forEach((group) => saveGroupToStorage(group));
                     set({ groups: response.data, loading: false, error: null });
                     return true;
                 }

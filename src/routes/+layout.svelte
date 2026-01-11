@@ -145,12 +145,14 @@
     
     function handleGroupCreatedEvent(data: any) {
         successToast(`New group created: ${data.group_name}`);
-        groupStore.fetchGroups();
+		// TODO: Create group object
+        // groupStore.fetchGroups();
     }
     
     function handleGroupMemberLeftEvent(data: any) {
         errorToast(`${data.username} left the group`);
-        groupStore.fetchGroups();
+		// TODO: remove group object
+        // groupStore.fetchGroups();
     }
 
 	function handleClickOutside(event: MouseEvent) {

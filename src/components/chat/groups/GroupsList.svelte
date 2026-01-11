@@ -41,11 +41,11 @@
                     >
                         <div class="group-info">
                             <div class="group-avatar placeholder"
-                                 style="background-color: {group.chat?.group_colour || getRandomColor('Group')}">
-                                {getInitial(group.chat?.group_name || 'G')}
+                                 style="background-color: {group.group_colour || getRandomColor('Group')}">
+                                {getInitial(group.group_name || 'G')}
                             </div>
                             <div class="group-text">
-                                <span class="group-name">{group.chat?.group_name || 'Unnamed Group'}</span>
+                                <span class="group-name">{group.group_name || 'Unnamed Group'}</span>
                                 {#if group.unread_messages > 0}
                                     <span class="unread-badge">{group.unread_messages}</span>
                                 {/if}

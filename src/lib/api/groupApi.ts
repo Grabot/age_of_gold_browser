@@ -9,14 +9,24 @@ import {
 } from './apiClient';
 import type { Group } from '../../types/groups';
 
+const CreateGroupResponseSchema = z.object({
+    success: z.boolean(),
+	data: z.number(),
+});
+
+export interface CreateGroupResponse {
+    success: boolean;
+	data: number;
+}
+
 export async function createGroup(
     accessToken: string,
     groupName: string,
     groupDescription: string,
     groupColour: string,
     friendIds: number[]
-): Promise<ApiResponse> {
-    return makeRequest({
+): Promise<CreateGroupResponse> {
+    const createGroupResponse = await makeRequest<CreateGroupResponse>({
         method: 'POST',
         endpoint: API.groupEndpoints.createGroup,
         accessToken,
@@ -27,6 +37,9 @@ export async function createGroup(
             friend_ids: friendIds
         }
     });
+    console.log("createGroupResponse");
+    console.log(createGroupResponse);
+	return CreateGroupResponseSchema.parse(createGroupResponse);
 }
 
 export async function fetchGroups(

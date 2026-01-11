@@ -1,7 +1,5 @@
-import type { Chat } from './user';
 
 export interface Group {
-    id: number;
     group_id: number;
     unread_messages: number;
     mute: boolean;
@@ -10,5 +8,19 @@ export interface Group {
     message_version: number;
     avatar_version: number;
     last_message_read_id: number;
-    chat?: Chat;
+    user_ids: number[];
+    admin_ids: number[];
+    group_name: string;
+    private: boolean;
+    group_description: string;
+    group_colour: string;
+}
+export interface Chat {
+    id: number;
+    user_ids: number[];
+    admin_ids: number[];
+    group_name: string;
+    private: boolean;
+    group_description: string;
+    group_colour: string;
 }

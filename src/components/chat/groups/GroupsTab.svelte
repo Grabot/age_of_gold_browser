@@ -29,7 +29,7 @@
     
     // Fetch groups when component mounts
     onMount(async () => {
-        await groupStore.fetchGroups();
+        // await groupStore.fetchGroups();
     });
 </script>
 
