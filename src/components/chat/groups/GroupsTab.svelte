@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { groupStore } from '../../../stores/groupStore';
-    import { friendStore } from '../../../stores/friendStore';
+    import { authStore } from '../../../stores/authStore';
     import CreateGroupModal from './CreateGroupModal.svelte';
     import GroupsList from './GroupsList.svelte';
     
@@ -27,10 +26,6 @@
         return username.charAt(0).toUpperCase();
     }
     
-    // Fetch groups when component mounts
-    onMount(async () => {
-        // await groupStore.fetchGroups();
-    });
 </script>
 
 <div class="groups-tab">
@@ -51,7 +46,6 @@
     <!-- Create Group Modal -->
     {#if showCreateGroupModal}
         <CreateGroupModal
-            isOpen={showCreateGroupModal}
             onClose={() => showCreateGroupModal = false}
         />
     {/if}

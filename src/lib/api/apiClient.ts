@@ -94,7 +94,6 @@ class ApiConfig {
         createGroup: 'group/create',
         fetchGroups: 'group/all',
         leaveGroup: 'group/leave',
-        getGroupDetails: 'group/details'
     } as const;
 
 	buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {

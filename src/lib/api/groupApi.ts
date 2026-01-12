@@ -65,15 +65,3 @@ export async function leaveGroup(
         body: { group_id: groupId }
     });
 }
-
-export async function getGroupDetails(
-    accessToken: string,
-    groupId: number
-): Promise<ApiResponse<Group>> {
-    return makeRequest<Group>({
-        method: 'POST',
-        endpoint: API.groupEndpoints.getGroupDetails,
-        accessToken,
-        body: { group_id: groupId }
-    });
-}

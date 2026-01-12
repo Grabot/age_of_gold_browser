@@ -312,18 +312,8 @@ function createAuthStore() {
 
             // Only create group entry if we have stored data with matching version
             if (storedGroup && storedGroup.group_version === groupLogin.group_version) {
-                groups.push({
-                    id: storedGroup.id,
-                    group_id: storedGroup.group_id,
-                    unread_messages: storedGroup.unread_messages,
-                    mute: storedGroup.mute,
-                    mute_timestamp: storedGroup.mute_timestamp,
-                    group_version: storedGroup.group_version,
-                    message_version: storedGroup.message_version,
-                    avatar_version: storedGroup.avatar_version,
-                    last_message_read_id: storedGroup.last_message_read_id,
-                    chat: storedGroup.chat
-                });
+				console.log("group is added to list!");
+                groups.push(storedGroup);
             } else {
                 // Mark group for retrieval
 				console.log("added to group retrieve", groupLogin.group_id);
@@ -372,6 +362,7 @@ function createAuthStore() {
 		friendStore.clear();
 		userStore.clear();
 		avatarStore.clear();
+		groupStore.clear();
 		localStorage.removeItem(STORAGE_KEY_ACCESS_TOKEN);
 		localStorage.removeItem(STORAGE_KEY_REFRESH_TOKEN);
 		localStorage.removeItem(STORAGE_KEY_PROFILE_VERSION);

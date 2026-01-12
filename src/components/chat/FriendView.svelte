@@ -143,7 +143,7 @@
             </button>
 
             <button class={activeTab === 'add' ? 'active' : ''} on:click={() => setActiveTab('add')}>
-                Add New
+                Add New Friend
             </button>
         </div>
 

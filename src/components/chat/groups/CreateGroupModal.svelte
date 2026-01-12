@@ -2,10 +2,12 @@
     import { groupStore } from '../../../stores/groupStore';
     import { friendStore } from '../../../stores/friendStore';
     import { errorToast, successToast } from '../../../utils/toast';
+	import { onMount } from 'svelte';
+	import { authStore } from '../../../stores/authStore';
     
-    export let isOpen: boolean;
     export let onClose: () => void;
     
+    let myUserId: number | null = null;
     let groupName: string = '';
     let groupDescription: string = '';
     let groupColour: string = '#0b9476';
@@ -13,6 +15,24 @@
     
     // Get available friends (accepted friends only)
     $: availableFriends = $friendStore.friends.filter(f => f.accepted === true && f.user);
+    
+    function handleOverlayClick(event: MouseEvent) {
+        if (event.target === event.currentTarget) {
+            onClose();
+        }
+    }
+    
+    onMount(async () => {
+        authStore.subscribe((state) => {
+			if (state.isAuthenticated && state.user) {
+                console.log("User is authenticated, getting id"); 
+                myUserId = state.user.id;
+                console.log(myUserId);
+            } else {
+                console.log('User is not authenticated');
+			}
+        });
+    });
     
     function toggleFriendSelection(friendId: number) {
         if (selectedFriends.includes(friendId)) {
@@ -32,13 +52,18 @@
             errorToast('Please select at least one friend to create a group');
             return;
         }
+        if (myUserId == null) {
+            errorToast('User not authenticated');
+            return;
+        }
         
         try {
             const success = await groupStore.createGroup({
                 groupName: groupName.trim(),
                 groupDescription: groupDescription.trim(),
                 groupColour: groupColour,
-                friendIds: selectedFriends
+                friendIds: selectedFriends,
+                meId: myUserId
             });
             
             if (success) {
@@ -66,11 +91,24 @@
     }
 </script>
 
-<div class="modal-overlay" class:open={isOpen}>
+<div
+    class="modal"
+    on:click={handleOverlayClick}
+    on:keydown={(e) => {
+        if (e.key === 'Escape') onClose();
+        if (e.key === 'Enter' || e.key === ' ') {
+            handleOverlayClick(e as unknown as MouseEvent);
+        }
+    }}
+    tabindex="0"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Create Group"
+>
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Create New Group</h3>
-            <button class="close-btn" on:click={closeModal}>×</button>
+            <h2>Create New Group</h2>
+            <button class="close-btn" on:click={onClose}>x</button>
         </div>
         
         <div class="modal-body">
@@ -139,64 +177,53 @@
 </div>
 
 <style>
-    .modal-overlay {
+    .modal {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.6);
         display: flex;
-        justify-content: center;
         align-items: center;
-        z-index: 1000;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-    }
-    
-    .modal-overlay.open {
-        opacity: 1;
-        pointer-events: all;
+        justify-content: center;
+        z-index: 1001;
     }
     
     .modal-content {
-        background-color: white;
-        border-radius: 8px;
-        width: 90%;
-        max-width: 500px;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background: white;
+        width: 80%;
+        height: 70%;
+        max-width: 800px;
+        max-height: 600px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
     }
     
     .modal-header {
+        background: #0b9476;
+        color: white;
+        padding: 1rem 1.5rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1rem;
-        border-bottom: 1px solid #eee;
     }
     
-    .modal-header h3 {
+    .modal-header h2 {
         margin: 0;
-        color: #333;
+        font-size: 1.5rem;
     }
     
     .close-btn {
         background: none;
         border: none;
+        color: white;
         font-size: 1.5rem;
         cursor: pointer;
-        color: #666;
-    }
-    
-    .close-btn:hover {
-        color: #333;
-    }
-    
-    .modal-body {
-        padding: 1rem;
     }
     
     .form-group {

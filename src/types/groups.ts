@@ -15,12 +15,3 @@ export interface Group {
     group_description: string;
     group_colour: string;
 }
-export interface Chat {
-    id: number;
-    user_ids: number[];
-    admin_ids: number[];
-    group_name: string;
-    private: boolean;
-    group_description: string;
-    group_colour: string;
-}

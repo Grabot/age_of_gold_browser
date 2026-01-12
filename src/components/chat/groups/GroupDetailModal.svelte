@@ -7,23 +7,10 @@
     export let onClose: () => void;
     export let getRandomColor: (username: string) => string;
     export let getInitial: (username: string) => string;
-    
-    let groupDetails: any = null;
-    let isLoading = false;
-    
-    async function fetchGroupDetails() {
-        if (!group) return;
-        
-        isLoading = true;
-        try {
-            const details = await groupStore.getGroupDetails(group.group_id);
-            if (details) {
-                groupDetails = details;
-            }
-        } catch (error) {
-            errorToast(error instanceof Error ? error.message : 'Unknown error');
-        } finally {
-            isLoading = false;
+ 
+    function handleOverlayClick(event: MouseEvent) {
+        if (event.target === event.currentTarget) {
+            onClose();
         }
     }
     
@@ -37,48 +24,46 @@
             errorToast(error instanceof Error ? error.message : 'Unknown error');
         }
     }
-    
-    // Fetch group details when modal opens
-    $: if (group && !groupDetails) {
-        fetchGroupDetails();
-    }
 </script>
 
-<div class="modal-overlay">
+<div
+    class="modal"
+    on:click={handleOverlayClick}
+    on:keydown={(e) => {
+        if (e.key === 'Escape') onClose();
+        if (e.key === 'Enter' || e.key === ' ') {
+            handleOverlayClick(e as unknown as MouseEvent);
+        }
+    }}
+    tabindex="0"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Group Details"
+>
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Group Details</h3>
-            <button class="close-btn" on:click={onClose}>×</button>
+            <h2>Group Details</h2>
+            <button class="close-btn" on:click={onClose}>x</button>
         </div>
         
         <div class="modal-body">
-            {#if isLoading}
-                <div class="loading-container">
-                    <div class="spinner"></div>
-                    <p class="loading-text">Loading group details...</p>
-                </div>
-            {:else if groupDetails}
-                <div class="group-details">
-                    <div class="group-header">
-                        <div class="group-avatar"
-                             style="background-color: {groupDetails.group_colour || getRandomColor('Group')}">
-                            {getInitial(groupDetails.group_name || 'G')}
-                        </div>
-                        <div class="group-info">
-                            <h4>{groupDetails.group_name}</h4>
-                            <p class="group-description">{groupDetails.group_description || 'No description'}</p>
-                        </div>
+            <div class="group-details">
+                <div class="group-header">
+                    <div class="group-avatar"
+                            style="background-color: {group.group_colour || getRandomColor('Group')}">
+                        {getInitial(group.group_name || 'G')}
                     </div>
-                    
-                    <div class="group-meta">
-                        <p><strong>Members:</strong> {groupDetails.user_ids.length}</p>
-                        <p><strong>Admins:</strong> {groupDetails.admin_ids.length}</p>
-                        <p><strong>Private:</strong> {groupDetails.private ? 'Yes' : 'No'}</p>
+                    <div class="group-info">
+                        <h4>{group.group_name}</h4>
+                        <p class="group-description">{group.group_description || 'No description'}</p>
                     </div>
                 </div>
-            {:else}
-                <p class="no-details">Unable to load group details.</p>
-            {/if}
+                
+                <div class="group-meta">
+                    <p><strong>Members:</strong> {group.user_ids.length}</p>
+                    <p><strong>Admins:</strong> {group.admin_ids.length}</p>
+                </div>
+            </div>
         </div>
         
         <div class="modal-footer">
@@ -89,55 +74,59 @@
 </div>
 
 <style>
-    .modal-overlay {
+    .modal {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.6);
         display: flex;
-        justify-content: center;
         align-items: center;
+        justify-content: center;
         z-index: 1001;
     }
     
     .modal-content {
-        background-color: white;
-        border-radius: 8px;
-        width: 90%;
-        max-width: 400px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background: white;
+        width: 80%;
+        height: 70%;
+        max-width: 800px;
+        max-height: 600px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
     }
     
     .modal-header {
+        background: #0b9476;
+        color: white;
+        padding: 1rem 1.5rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1rem;
-        border-bottom: 1px solid #eee;
     }
     
-    .modal-header h3 {
+    .modal-header h2 {
         margin: 0;
-        color: #333;
+        font-size: 1.5rem;
     }
     
     .close-btn {
         background: none;
         border: none;
+        color: white;
         font-size: 1.5rem;
         cursor: pointer;
-        color: #666;
-    }
-    
-    .close-btn:hover {
-        color: #333;
     }
     
     .modal-body {
-        padding: 1rem;
-        min-height: 150px;
+        flex: 1;
+        padding: 1.5rem;
+        overflow-y: auto;
     }
     
     .loading-container {
@@ -160,6 +149,7 @@
     .loading-text {
         color: #666;
         font-style: italic;
+        margin: 0;
     }
     
     .group-details {

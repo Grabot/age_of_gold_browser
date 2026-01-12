@@ -4,14 +4,11 @@ import {
     createGroup,
     fetchGroups,
     leaveGroup,
-    getGroupDetails,
     type CreateGroupResponse
 } from '$lib/api/groupApi';
 import type { ApiResponse } from '$lib/api/apiClient';
 import type { Group } from '../types/groups';
-import type { Chat } from '../types/groups';
-import { accessTokenValue, authStore } from './authStore';
-import { userStore } from './userStore';
+import { accessTokenValue } from './authStore';
 
 export const STORAGE_KEY_GROUPS_PREFIX = 'group_';
 
@@ -82,13 +79,13 @@ function createGroupStore() {
             groupDescription: string;
             groupColour: string;
             friendIds: number[];
+            meId: number;
         }): Promise<boolean> => {
             try {
-    console.log('Starting group creation process');
+                console.log('Starting group creation process');
                 const accessToken = get(accessTokenValue);
-    console.log('Access token retrieved:', accessToken);
-
-    console.log('Group data:', groupData);
+                console.log('Access token retrieved:', accessToken);
+                console.log('Group data:', groupData);
                 const response: CreateGroupResponse = await createGroup(
                     accessToken,
                     groupData.groupName,
@@ -96,34 +93,33 @@ function createGroupStore() {
                     groupData.groupColour,
                     groupData.friendIds
                 );
-    console.log('Response from createGroup:', response);
-
+                console.log('Response from createGroup:', response);
                 if (response.success) {
-        const group: Group = {
-            group_id: response.data,
-            unread_messages: 0,
-            mute: false,
-            mute_timestamp: null,
-            group_version: 0,
-            message_version: 0,
-            avatar_version: 0,
-            last_message_read_id: 0,
-            user_ids: groupData.friendIds,
-            admin_ids: [], // TODO: add only me.
-            group_name: groupData.groupName,
-            private: false,
-            group_description: groupData.groupDescription,
-            group_colour: groupData.groupColour,
-        };
-        console.log('Group object created:', group);
-        saveGroupToStorage(group);
-        console.log('Group saved to storage');
+                    const group: Group = {
+                        group_id: response.data,
+                        unread_messages: 0,
+                        mute: false,
+                        mute_timestamp: null,
+                        group_version: 0,
+                        message_version: 0,
+                        avatar_version: 0,
+                        last_message_read_id: 0,
+                        user_ids: [...groupData.friendIds, groupData.meId],
+                        admin_ids: [groupData.meId],
+                        group_name: groupData.groupName,
+                        private: false,
+                        group_description: groupData.groupDescription,
+                        group_colour: groupData.groupColour,
+                    };
+                    console.log('Group object created:', group);
+                    groupStore.updateGroup(group);
+                    console.log('Group saved to storage');
                     return true;
                 }
-    console.log('Group creation not successful');
+                console.log('Group creation not successful');
                 return false;
             } catch (err) {
-    console.error('Error during group creation:', err);
+                console.error('Error during group creation:', err);
                 errorToast(err instanceof Error ? err.message : 'Unknown error');
                 return false;
             }
@@ -172,19 +168,6 @@ function createGroupStore() {
             } catch (err) {
                 errorToast(err instanceof Error ? err.message : 'Unknown error');
                 return false;
-            }
-        },
-        getGroupDetails: async (groupId: number): Promise<Chat | null> => {
-            try {
-                const accessToken = get(accessTokenValue);
-                const response: any = await getGroupDetails(accessToken, groupId);
-                if (response.success && response.data) {
-                    return response.data;
-                }
-                return null;
-            } catch (err) {
-                errorToast(err instanceof Error ? err.message : 'Unknown error');
-                return null;
             }
         },
         updateGroup: (group: Group): void => {

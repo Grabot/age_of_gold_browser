@@ -42,6 +42,7 @@
     import FriendView from '../components/chat/FriendView.svelte';
     import { userStore } from '../stores/userStore';
     import { groupStore } from '../stores/groupStore';
+	import type { Group } from '../types/groups';
 
 	let { children } = $props();
 	const options = {};
@@ -145,8 +146,24 @@
     
     function handleGroupCreatedEvent(data: any) {
         successToast(`New group created: ${data.group_name}`);
-		// TODO: Create group object
-        // groupStore.fetchGroups();
+		const group: Group = {
+			group_id: data.group_id,
+			unread_messages: 0,
+			mute: false,
+			mute_timestamp: null,
+			group_version: 0,
+			message_version: 0,
+			avatar_version: 0,
+			last_message_read_id: 0,
+			user_ids: data.user_ids,
+			admin_ids: data.admin_ids,
+			group_name: data.group_name,
+			private: data.private,
+			group_description: data.group_description,
+			group_colour: data.groupColour,
+		};
+		console.log('Group object created:', group);
+		groupStore.updateGroup(group);
     }
     
     function handleGroupMemberLeftEvent(data: any) {
