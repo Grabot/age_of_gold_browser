@@ -5,7 +5,6 @@
 		accessTokenValue,
 		authStore,
 		avatarVersionValue,
-		shouldUpdateAvatar,
 		userAvatar,
 		userDetail
 	} from '../../stores/authStore';

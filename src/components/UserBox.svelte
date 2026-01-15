@@ -14,7 +14,9 @@
 <div class="logged-in-message">
 	{#if $authStore.isAuthenticated && !$authStore.loading && $authStore.user}
 		<div class="user-info">
-			<p class="welcome-text">Welcome back, <span class="username">{$authStore.user.username}</span>!</p>
+			<p class="welcome-text">
+				Welcome back, <span class="username">{$authStore.user.username}</span>!
+			</p>
 		</div>
 		<div class="button-container">
 			<button class="play-button" on:click={goToWorld}>Play</button>
@@ -35,7 +37,9 @@
 		border: 1px solid #e0d5c8;
 		max-width: 350px;
 		margin: 0 auto;
-		transition: transform 0.3s ease, box-shadow 0.3s ease;
+		transition:
+			transform 0.3s ease,
+			box-shadow 0.3s ease;
 		position: relative;
 		overflow: hidden;
 	}

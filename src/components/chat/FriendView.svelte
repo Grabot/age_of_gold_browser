@@ -1,23 +1,23 @@
 <script lang="ts">
-    import AddFriend from './friends/AddFriend.svelte';
-    import FriendsList from './friends/FriendsList.svelte';
-    import GroupsTab from './groups/GroupsTab.svelte';
-    import { groupStore } from '../../stores/groupStore';
+	import AddFriend from './friends/AddFriend.svelte';
+	import FriendsList from './friends/FriendsList.svelte';
+	import GroupsTab from './groups/GroupsTab.svelte';
+	import { groupStore } from '../../stores/groupStore';
 	import { onMount } from 'svelte';
 	import { avatarStore } from '../../stores/avatarStore';
 	import { accessTokenValue } from '../../stores/authStore';
 	import { friendStore } from '../../stores/friendStore';
-	import type { Friend } from '../../types/user';
+	import type { Friend, User } from '../../types/user';
 	import { userStore } from '../../stores/userStore';
 	import { handleGetAvatar, handleGetAvatarVersion } from '../../services/settingsService';
 	import { errorToast } from '../../utils/toast';
 	import { getUser } from '$lib/api/userApi';
 
 	export let onClose: () => void;
-    export let getRandomColor: (username: string) => string;
-    export let getInitial: (username: string) => string;
+	export let getRandomColor: (username: string) => string;
+	export let getInitial: (username: string) => string;
 
-    let activeTab: 'friends' | 'add' | 'groups' = 'friends';
+	let activeTab: 'friends' | 'add' | 'groups' = 'friends';
 	let searchQuery: string = '';
 	let searchResult: { id: number; username: string } | null = null;
 	let searchResultAvatar: string | null = null;
@@ -25,27 +25,28 @@
 	let lastSearchedQuery: string | null = null;
 	let isLoading = false;
 
-	async function updateUserAvatar(friend: Friend) {
+	async function updateUserAvatar(user: User) {
 		const accessToken = $accessTokenValue;
-		if (accessToken && friend.user) {
-			const avatarResponse = await handleGetAvatar(accessToken, friend.friend_id, false);
+		if (accessToken && user) {
+			const avatarResponse = await handleGetAvatar(accessToken, user.id, false);
 			if (avatarResponse.success && avatarResponse.avatar) {
-				friend.user.avatar = avatarResponse.avatar;
-				avatarStore.updateAvatar(friend.friend_id, avatarResponse.avatar);
-				const avatarVersionResponse = await handleGetAvatarVersion(accessToken, friend.friend_id);
+				user.avatar = avatarResponse.avatar;
+				avatarStore.updateAvatar(user.id, avatarResponse.avatar);
+				const avatarVersionResponse = await handleGetAvatarVersion(accessToken, user.id);
 				if (avatarVersionResponse.success && avatarVersionResponse.avatarVersion) {
-					friend.user.avatar_version = avatarVersionResponse.avatarVersion;
+					user.avatar_version = avatarVersionResponse.avatarVersion;
 				}
-				friendStore.updateFriend(friend);
-				userStore.updateUser(friend.user);
-				avatarStore.setShouldUpdateAvatarForUser(friend.friend_id, false);
+				userStore.updateUser(user);
+				avatarStore.setShouldUpdateAvatarForUser(user.id, false);
 			} else {
 				errorToast('Failed to fetch avatar');
 			}
+			return user;
 		}
+		return null;
 	}
 
-	function checkUserAvatar(friend: Friend) {
+	async function checkUserAvatar(friend: Friend) {
 		if (friend.user) {
 			if (!friend.user.avatar) {
 				const avatarUser = avatarStore.getAvatar(friend.friend_id);
@@ -54,7 +55,11 @@
 					friendStore.updateFriend(friend);
 					userStore.updateUser(friend.user);
 				} else {
-					updateUserAvatar(friend);
+					const friendUser: User | null = await updateUserAvatar(friend.user);
+					if (friendUser) {
+						friend.user = friendUser;
+						friendStore.updateFriend(friend);
+					}
 				}
 			}
 		}
@@ -67,33 +72,41 @@
 			if (accessToken) {
 				const userDetail = await getUser(accessToken, friend.friend_id);
 				friend.user = userDetail;
-				checkUserAvatar(friend);
+				await checkUserAvatar(friend);
 			}
 		} else {
 			friend.user = storedUser;
-			checkUserAvatar(friend);
+			await checkUserAvatar(friend);
 		}
 	}
 
-    onMount(() => {
-        const unsubscribe = friendStore.subscribe((storeState) => {
-            if (!storeState.loading) {
-                storeState.friends.forEach(async (friend) => {
-                    if (avatarStore.getShouldUpdateAvatarForUser(friend.friend_id)) {
-                        updateUserAvatar(friend);
-                    } else {
-                        if (friend.user) {
-                            checkUserAvatar(friend);
-                        } else {
-                            emergencyFallback(friend);
-                        }
-                    }
-                });
-            }
-        });
-        
-        return () => unsubscribe();
-    });
+	onMount(() => {
+		const unsubscribe = friendStore.subscribe((storeState) => {
+			if (!storeState.loading) {
+				storeState.friends.forEach(async (friend) => {
+					if (avatarStore.getShouldUpdateAvatarForUser(friend.friend_id)) {
+						if (friend.user) {
+							const friendUser: User | null = await updateUserAvatar(friend.user);
+							if (friendUser) {
+								friend.user = friendUser;
+								friendStore.updateFriend(friend);
+							}
+						} else {
+							emergencyFallback(friend);
+						}
+					} else {
+						if (friend.user) {
+							checkUserAvatar(friend);
+						} else {
+							emergencyFallback(friend);
+						}
+					}
+				});
+			}
+		});
+
+		return () => unsubscribe();
+	});
 
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
@@ -101,15 +114,15 @@
 		}
 	}
 
-    function setActiveTab(tab: 'friends' | 'add' | 'groups') {
-        activeTab = tab;
-        searchQuery = '';
-        searchResult = null;
-        searchResultAvatar = null;
-        searched = false;
-        lastSearchedQuery = null;
-        isLoading = false;
-    }
+	function setActiveTab(tab: 'friends' | 'add' | 'groups') {
+		activeTab = tab;
+		searchQuery = '';
+		searchResult = null;
+		searchResultAvatar = null;
+		searched = false;
+		lastSearchedQuery = null;
+		isLoading = false;
+	}
 </script>
 
 <div
@@ -125,46 +138,49 @@
 	aria-modal="true"
 >
 	<div class="modal-content">
-        <div class="modal-header">
-            <h2>Friends & Groups</h2>
-            <button class="close-btn" on:click={onClose}>x</button>
-        </div>
+		<div class="modal-header">
+			<h2>Friends & Groups</h2>
+			<button class="close-btn" on:click={onClose}>x</button>
+		</div>
 
-        <div class="tabs">
-            <button
-                class={activeTab === 'friends' ? 'active' : ''}
-                on:click={() => setActiveTab('friends')}
-            >
-                Friends
-            </button>
+		<div class="tabs">
+			<button
+				class={activeTab === 'friends' ? 'active' : ''}
+				on:click={() => setActiveTab('friends')}
+			>
+				Friends
+			</button>
 
-            <button class={activeTab === 'groups' ? 'active' : ''} on:click={() => setActiveTab('groups')}>
-                Groups
-            </button>
+			<button
+				class={activeTab === 'groups' ? 'active' : ''}
+				on:click={() => setActiveTab('groups')}
+			>
+				Groups
+			</button>
 
-            <button class={activeTab === 'add' ? 'active' : ''} on:click={() => setActiveTab('add')}>
-                Add New Friend
-            </button>
-        </div>
+			<button class={activeTab === 'add' ? 'active' : ''} on:click={() => setActiveTab('add')}>
+				Add New Friend
+			</button>
+		</div>
 
-        <div class="tab-content">
-            {#if activeTab === 'friends'}
-                <FriendsList {getRandomColor} {getInitial} />
-            {:else if activeTab === 'groups'}
-                <GroupsTab />
-            {:else if activeTab === 'add'}
-                <AddFriend
-                    {getRandomColor}
-                    {getInitial}
-                    bind:searchQuery
-                    bind:searchResult
-                    bind:searchResultAvatar
-                    bind:searched
-                    bind:lastSearchedQuery
-                    bind:isLoading
-                />
-            {/if}
-        </div>
+		<div class="tab-content">
+			{#if activeTab === 'friends'}
+				<FriendsList {getRandomColor} {getInitial} />
+			{:else if activeTab === 'groups'}
+				<GroupsTab />
+			{:else if activeTab === 'add'}
+				<AddFriend
+					{getRandomColor}
+					{getInitial}
+					bind:searchQuery
+					bind:searchResult
+					bind:searchResultAvatar
+					bind:searched
+					bind:lastSearchedQuery
+					bind:isLoading
+				/>
+			{/if}
+		</div>
 	</div>
 </div>
 

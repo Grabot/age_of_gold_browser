@@ -4,6 +4,7 @@ import { type ApiResult } from '$lib/api/apiClient';
 import { get } from 'svelte/store';
 import { userAvatar, userDetail } from '../stores/authStore';
 import type { User } from '../types/user';
+import { getGroupAvatar, getGroupAvatarVersion } from '$lib/api/groupApi';
 
 export async function handleChangeUsername(
 	accessToken: string,
@@ -89,13 +90,61 @@ export async function handleGetAvatar(
 	}
 }
 
+export async function handleGetGroupAvatar(
+	accessToken: string,
+	groupId: number,
+	getDefault: boolean | null = null
+): Promise<{ success: boolean; message?: string; avatar?: string }> {
+	try {
+		const response = await getGroupAvatar(accessToken, groupId, getDefault);
+
+		if (response.success) {
+			const avatarBase64 = await new Promise<string>((resolve) => {
+				if (!response.data) {
+					return null;
+				}
+				const reader = new FileReader();
+				reader.onloadend = () => {
+					resolve(reader.result as string);
+				};
+				reader.readAsDataURL(response.data);
+			});
+
+			if (!avatarBase64) {
+				throw new Error('Issue converting avatar.');
+			}
+			return { success: true, avatar: avatarBase64 };
+		} else {
+			return { success: false, message: 'Get avatar failed.' };
+		}
+	} catch (err) {
+		return { success: false, message: (err as Error).message || 'Getting avatar failed' };
+	}
+}
+
 export async function handleGetAvatarVersion(
 	accessToken: string,
-	userId: number | null = null,
-	getDefault: boolean | null = null
+	userId: number
 ): Promise<{ success: boolean; message?: string; avatarVersion?: number }> {
 	try {
 		const response = await getAvatarVersion(accessToken, userId);
+
+		if (response.success) {
+			return { success: true, avatarVersion: response.data as number };
+		} else {
+			return { success: false, message: 'Get avatar version failed.' };
+		}
+	} catch (err) {
+		return { success: false, message: (err as Error).message || 'Getting avatar version failed' };
+	}
+}
+
+export async function handleGetGroupAvatarVersion(
+	accessToken: string,
+	groupId: number
+): Promise<{ success: boolean; message?: string; avatarVersion?: number }> {
+	try {
+		const response = await getGroupAvatarVersion(accessToken, groupId);
 
 		if (response.success) {
 			return { success: true, avatarVersion: response.data as number };

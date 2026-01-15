@@ -1,67 +1,171 @@
 import { z } from 'zod';
 import {
-    makeRequest,
-    type ApiResponse,
-    type LoginResponse,
-    LoginResponseSchema,
-    API,
-    type ApiResult
+	makeRequest,
+	type ApiResponse,
+	type LoginResponse,
+	LoginResponseSchema,
+	API,
+	type ApiResult
 } from './apiClient';
 import type { Group } from '../../types/groups';
 
 const CreateGroupResponseSchema = z.object({
-    success: z.boolean(),
-	data: z.number(),
+	success: z.boolean(),
+	data: z.number()
 });
 
 export interface CreateGroupResponse {
-    success: boolean;
+	success: boolean;
 	data: number;
 }
 
 export async function createGroup(
-    accessToken: string,
-    groupName: string,
-    groupDescription: string,
-    groupColour: string,
-    friendIds: number[]
+	accessToken: string,
+	groupName: string,
+	groupDescription: string,
+	groupColour: string,
+	friendIds: number[]
 ): Promise<CreateGroupResponse> {
-    const createGroupResponse = await makeRequest<CreateGroupResponse>({
-        method: 'POST',
-        endpoint: API.groupEndpoints.createGroup,
-        accessToken,
-        body: {
-            group_name: groupName,
-            group_description: groupDescription,
-            group_colour: groupColour,
-            friend_ids: friendIds
-        }
-    });
-    console.log("createGroupResponse");
-    console.log(createGroupResponse);
+	const createGroupResponse = await makeRequest<CreateGroupResponse>({
+		method: 'POST',
+		endpoint: API.groupEndpoints.createGroup,
+		accessToken,
+		body: {
+			group_name: groupName,
+			group_description: groupDescription,
+			group_colour: groupColour,
+			friend_ids: friendIds
+		}
+	});
+	console.log('createGroupResponse');
+	console.log(createGroupResponse);
 	return CreateGroupResponseSchema.parse(createGroupResponse);
 }
 
 export async function fetchGroups(
-    accessToken: string,
-    groupIds: number[] | null = null
+	accessToken: string,
+	groupIds: number[] | null = null
 ): Promise<ApiResponse<Group[]>> {
-    return makeRequest<Group[]>({
-        method: 'POST',
-        endpoint: API.groupEndpoints.fetchGroups,
-        accessToken,
-        body: { group_ids: groupIds }
-    });
+	return makeRequest<Group[]>({
+		method: 'POST',
+		endpoint: API.groupEndpoints.fetchGroups,
+		accessToken,
+		body: { group_ids: groupIds }
+	});
 }
 
-export async function leaveGroup(
-    accessToken: string,
-    groupId: number
+export async function leaveGroup(accessToken: string, groupId: number): Promise<ApiResponse> {
+	return makeRequest({
+		method: 'POST',
+		endpoint: API.groupEndpoints.leaveGroup,
+		accessToken,
+		body: { group_id: groupId }
+	});
+}
+
+export async function addGroupMember(
+	accessToken: string,
+	groupId: number,
+	userId: number
 ): Promise<ApiResponse> {
-    return makeRequest({
-        method: 'POST',
-        endpoint: API.groupEndpoints.leaveGroup,
-        accessToken,
-        body: { group_id: groupId }
-    });
+	return makeRequest({
+		method: 'POST',
+		endpoint: API.groupEndpoints.addGroupMember,
+		accessToken,
+		body: { group_id: groupId, user_id: userId }
+	});
+}
+
+export async function removeGroupMember(
+	accessToken: string,
+	groupId: number,
+	userId: number
+): Promise<ApiResponse> {
+	return makeRequest({
+		method: 'POST',
+		endpoint: API.groupEndpoints.removeGroupMember,
+		accessToken,
+		body: { group_id: groupId, user_id: userId }
+	});
+}
+
+export async function promoteAdmin(
+	accessToken: string,
+	groupId: number,
+	userId: number,
+	isAdmin: boolean
+): Promise<ApiResponse> {
+	return makeRequest({
+		method: 'POST',
+		endpoint: API.groupEndpoints.promoteAdmin,
+		accessToken,
+		body: { group_id: groupId, user_id: userId, is_admin: isAdmin }
+	});
+}
+
+export async function updateGroup(
+	accessToken: string,
+	groupId: number,
+	groupName: string | null = null,
+	groupDescription: string | null = null,
+	groupColour: string | null = null
+): Promise<ApiResponse> {
+	return makeRequest({
+		method: 'POST',
+		endpoint: API.groupEndpoints.updateGroup,
+		accessToken,
+		body: {
+			group_id: groupId,
+			group_name: groupName,
+			group_description: groupDescription,
+			group_colour: groupColour
+		}
+	});
+}
+
+export async function muteGroup(
+	accessToken: string,
+	groupId: number,
+	mute: boolean,
+	muteDurationHours: number | null = null
+): Promise<ApiResponse> {
+	return makeRequest({
+		method: 'POST',
+		endpoint: API.groupEndpoints.muteGroup,
+		accessToken,
+		body: {
+			group_id: groupId,
+			mute: mute,
+			mute_duration_hours: muteDurationHours
+		}
+	});
+}
+
+export async function getGroupAvatar(
+	accessToken: string,
+	groupId: number,
+	getDefault: boolean | null = null
+): Promise<ApiResponse<Blob>> {
+	return makeRequest<Blob>({
+		method: 'POST',
+		endpoint: API.groupEndpoints.getGroupAvatar,
+		accessToken,
+		body: {
+			group_id: groupId,
+			get_default: getDefault
+		},
+		expectBlob: true
+	});
+}
+
+export async function getGroupAvatarVersion(
+	accessToken: string,
+	groupId: number
+): Promise<ApiResponse<unknown>> {
+	return makeRequest({
+		method: 'POST',
+		endpoint: API.groupEndpoints.getGroupAvatarVersion,
+		accessToken,
+		body: { group_id: groupId }
+	});
 }

@@ -3,41 +3,41 @@ import { accessTokenValue, authStore, refreshTokenValue } from '../../stores/aut
 import { get } from 'svelte/store';
 
 export interface FriendLogin {
-    friend_id: number;
-    friend_version: number;
+	friend_id: number;
+	friend_version: number;
 }
 
 export interface GroupLogin {
-    group_id: number;
-    group_version: number;
+	group_id: number;
+	group_version: number;
 }
 
 export const LoginResponseSchema = z.object({
-    access_token: z.string(),
-    refresh_token: z.string(),
-    profile_version: z.int(),
-    avatar_version: z.int(),
-    friends: z.array(
-        z.object({
-            friend_id: z.number(),
-            friend_version: z.number()
-        })
-    ),
-    groups: z.array(
-        z.object({
-            group_id: z.number(),
-            group_version: z.number()
-        })
-    )
+	access_token: z.string(),
+	refresh_token: z.string(),
+	profile_version: z.int(),
+	avatar_version: z.int(),
+	friends: z.array(
+		z.object({
+			friend_id: z.number(),
+			friend_version: z.number()
+		})
+	),
+	groups: z.array(
+		z.object({
+			group_id: z.number(),
+			group_version: z.number()
+		})
+	)
 });
 
 export interface LoginResponse {
-    access_token: string;
-    refresh_token: string;
-    profile_version: number;
-    avatar_version: number;
-    friends: FriendLogin[];
-    groups: GroupLogin[];
+	access_token: string;
+	refresh_token: string;
+	profile_version: number;
+	avatar_version: number;
+	friends: FriendLogin[];
+	groups: GroupLogin[];
 }
 
 export interface ApiResponse<T = unknown> {
@@ -81,20 +81,27 @@ class ApiConfig {
 		getMultipleUsers: 'users'
 	} as const;
 
-    readonly friendEndpoints = {
-        searchFriend: 'friend/search',
-        addFriend: 'friend/add',
-        fetchFriends: 'friend/all',
-        respondFriendRequest: 'friend/respond',
-        cancelFriendRequest: 'friend/cancel',
-        removeFriend: 'friend/remove'
-    } as const;
+	readonly friendEndpoints = {
+		searchFriend: 'friend/search',
+		addFriend: 'friend/add',
+		fetchFriends: 'friend/all',
+		respondFriendRequest: 'friend/respond',
+		cancelFriendRequest: 'friend/cancel',
+		removeFriend: 'friend/remove'
+	} as const;
 
-    readonly groupEndpoints = {
-        createGroup: 'group/create',
-        fetchGroups: 'group/all',
-        leaveGroup: 'group/leave',
-    } as const;
+	readonly groupEndpoints = {
+		createGroup: 'group/create',
+		fetchGroups: 'group/all',
+		leaveGroup: 'group/leave',
+		addGroupMember: 'group/member/add',
+		removeGroupMember: 'group/member/remove',
+		promoteAdmin: 'group/admin/promote',
+		updateGroup: 'group/update',
+		muteGroup: 'group/mute',
+		getGroupAvatar: 'group/avatar',
+		getGroupAvatarVersion: 'group/avatar/version'
+	} as const;
 
 	buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {
 		let url = `${this.baseUrl}/${this.version}/${endpoint}`;

@@ -6,43 +6,46 @@
 	import { authStore, shouldUpdateAvatar, userAvatar, userDetail } from '../stores/authStore';
 	import { friendStore } from '../stores/friendStore';
 	import { avatarStore } from '../stores/avatarStore';
-    import {
-        connectSocket,
-        disconnectSocket,
-        joinRoom,
-        leaveRoom,
-        onMessageEvent,
-        offMessageEvent,
-        onUsernameUpdatedEvent,
-        onFriendRequestReceivedEvent,
-        offUsernameUpdatedEvent,
-        onAvatarUpdatedEvent,
-        onFriendRequestAcceptedEvent,
-        onFriendRequestRejectedEvent,
-        onFriendRequestCanceledEvent,
-        onFriendRemovedEvent,
-        offFriendRequestReceivedEvent,
-        offAvatarUpdatedEvent,
-        offFriendRequestAcceptedEvent,
-        offFriendRequestRejectedEvent,
-        offFriendRequestCanceledEvent,
-        offFriendRemovedEvent,
-        onGroupCreatedEvent,
-        onGroupMemberLeftEvent,
-        offGroupCreatedEvent,
-        offGroupMemberLeftEvent
-    } from '$lib/socket';
+	import {
+		connectSocket,
+		disconnectSocket,
+		joinRoom,
+		leaveRoom,
+		onMessageEvent,
+		offMessageEvent,
+		onUsernameUpdatedEvent,
+		onFriendRequestReceivedEvent,
+		offUsernameUpdatedEvent,
+		onAvatarUpdatedEvent,
+		onFriendRequestAcceptedEvent,
+		onFriendRequestRejectedEvent,
+		onFriendRequestCanceledEvent,
+		onFriendRemovedEvent,
+		offFriendRequestReceivedEvent,
+		offAvatarUpdatedEvent,
+		offFriendRequestAcceptedEvent,
+		offFriendRequestRejectedEvent,
+		offFriendRequestCanceledEvent,
+		offFriendRemovedEvent,
+		onGroupCreatedEvent,
+		onGroupMemberLeftEvent,
+		offGroupCreatedEvent,
+		offGroupMemberLeftEvent,
+		onGroupAdminChangedEvent,
+		type GroupAdminChangedEventData
+	} from '$lib/socket';
 	import { handleGetAvatar } from '../services/settingsService';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import type { Socket } from 'socket.io-client';
 	import { get } from 'svelte/store';
-    import { errorToast, successToast } from '../utils/toast';
-    import ChatView from '../components/chat/ChatView.svelte';
-    import FriendView from '../components/chat/FriendView.svelte';
-    import { userStore } from '../stores/userStore';
-    import { groupStore } from '../stores/groupStore';
+	import { errorToast, successToast } from '../utils/toast';
+	import ChatView from '../components/chat/ChatView.svelte';
+	import FriendView from '../components/chat/FriendView.svelte';
+	import { userStore } from '../stores/userStore';
+	import { groupStore } from '../stores/groupStore';
 	import type { Group } from '../types/groups';
+	import { socketEventStore } from '../stores/socketEventStore';
 
 	let { children } = $props();
 	const options = {};
@@ -139,13 +142,13 @@
 		friendStore.removeFriendFromStorage(data.friend_id);
 	}
 
-    function handleFriendRemovedEvent(data: any) {
-        friendStore.removeFriendFromList(data.friend_id);
-        friendStore.removeFriendFromStorage(data.friend_id);
-    }
-    
-    function handleGroupCreatedEvent(data: any) {
-        successToast(`New group created: ${data.group_name}`);
+	function handleFriendRemovedEvent(data: any) {
+		friendStore.removeFriendFromList(data.friend_id);
+		friendStore.removeFriendFromStorage(data.friend_id);
+	}
+
+	function handleGroupCreatedEvent(data: any) {
+		successToast(`New group created: ${data.group_name}`);
 		const group: Group = {
 			group_id: data.group_id,
 			unread_messages: 0,
@@ -154,23 +157,60 @@
 			group_version: 0,
 			message_version: 0,
 			avatar_version: 0,
-			last_message_read_id: 0,
+			last_message_read_id: data.last_message_read_id,
 			user_ids: data.user_ids,
 			admin_ids: data.admin_ids,
 			group_name: data.group_name,
 			private: data.private,
 			group_description: data.group_description,
 			group_colour: data.groupColour,
+			current_message_id: data.current_message_id
 		};
 		console.log('Group object created:', group);
 		groupStore.updateGroup(group);
-    }
-    
-    function handleGroupMemberLeftEvent(data: any) {
-        errorToast(`${data.username} left the group`);
-		// TODO: remove group object
-        // groupStore.fetchGroups();
-    }
+	}
+
+	function handleGroupMemberLeftEvent(data: any) {
+		const group = groupStore.getStoredGroup(data.group_id);
+		if (!group) {
+			console.error(`Group not found in storage.`);
+			return false;
+		}
+
+		const updatedUserIds = group.user_ids.filter((id) => id !== data.user_id);
+
+		const updatedGroup: Group = {
+			...group,
+			user_ids: updatedUserIds
+		};
+		groupStore.updateGroup(updatedGroup);
+
+		socketEventStore.dispatch({
+			type: 'group_member_left',
+			data: data
+		});
+	}
+
+	// TODO: Do an interface for all socket calls? How to structure this?
+	function handleGroupAdminChangedEvent(data: GroupAdminChangedEventData) {
+		const group = groupStore.getStoredGroup(data.group_id);
+		if (!group) {
+			throw new Error(`Group not found in storage.`);
+		}
+
+		const updatedAdminIds = data.is_admin
+			? [...group.admin_ids, data.user_id]
+			: group.admin_ids.filter((id) => id !== data.user_id);
+		const updatedGroup: Group = {
+			...group,
+			admin_ids: updatedAdminIds
+		};
+		groupStore.updateGroup(updatedGroup);
+		socketEventStore.dispatch({
+			type: 'group_admin_changed',
+			data: data
+		});
+	}
 
 	function handleClickOutside(event: MouseEvent) {
 		if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
@@ -198,14 +238,15 @@
 					joinRoom(userId);
 					onMessageEvent(handleMessageEvent);
 					onUsernameUpdatedEvent(handleUsernameUpdatedEvent);
-                    onFriendRequestReceivedEvent(handleFriendRequestReceivedEvent);
-                    onAvatarUpdatedEvent(handleAvatarUpdatedEvent);
-                    onFriendRequestAcceptedEvent(handleFriendRequestAcceptedEvent);
-                    onFriendRequestRejectedEvent(handleFriendRequestRejectedEvent);
-                    onFriendRequestCanceledEvent(handleFriendRequestCanceledEvent);
-                    onFriendRemovedEvent(handleFriendRemovedEvent);
-                    onGroupCreatedEvent(handleGroupCreatedEvent);
-                    onGroupMemberLeftEvent(handleGroupMemberLeftEvent);
+					onFriendRequestReceivedEvent(handleFriendRequestReceivedEvent);
+					onAvatarUpdatedEvent(handleAvatarUpdatedEvent);
+					onFriendRequestAcceptedEvent(handleFriendRequestAcceptedEvent);
+					onFriendRequestRejectedEvent(handleFriendRequestRejectedEvent);
+					onFriendRequestCanceledEvent(handleFriendRequestCanceledEvent);
+					onFriendRemovedEvent(handleFriendRemovedEvent);
+					onGroupCreatedEvent(handleGroupCreatedEvent);
+					onGroupMemberLeftEvent(handleGroupMemberLeftEvent);
+					onGroupAdminChangedEvent(handleGroupAdminChangedEvent);
 				}
 				if (state.accessToken) {
 					getUserDetails(state.accessToken);
@@ -229,17 +270,17 @@
 					disconnectSocket();
 				}
 			}
-            offMessageEvent();
-            offUsernameUpdatedEvent();
-            offFriendRequestReceivedEvent();
-            offAvatarUpdatedEvent();
-            offFriendRequestAcceptedEvent();
-            offFriendRequestRejectedEvent();
-            offFriendRequestCanceledEvent();
-            offFriendRemovedEvent();
-            offGroupCreatedEvent();
-            offGroupMemberLeftEvent();
-            document.removeEventListener('click', handleClickOutside);
+			offMessageEvent();
+			offUsernameUpdatedEvent();
+			offFriendRequestReceivedEvent();
+			offAvatarUpdatedEvent();
+			offFriendRequestAcceptedEvent();
+			offFriendRequestRejectedEvent();
+			offFriendRequestCanceledEvent();
+			offFriendRemovedEvent();
+			offGroupCreatedEvent();
+			offGroupMemberLeftEvent();
+			document.removeEventListener('click', handleClickOutside);
 		});
 	});
 

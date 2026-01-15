@@ -60,128 +60,130 @@
 </script>
 
 <div class="friends-list">
-    {#if $friendStore.friends.length > 0}
-        <!-- Incoming friend requests section (accepted === false) -->
-        {#if $friendStore.friends.some(f => f.accepted === false && f.user)}
-            <div class="section-separator-top">
-                <span>Incoming requests</span>
-            </div>
-            {#each $friendStore.friends as friend (friend.friend_id)}
-                {#if friend.accepted === false && friend.user}
-                    <div class="request incoming">
-                        <li class="friend-request-container">
-                            <button
-                                class="friend-request incoming"
-                                on:click={() => {
-                                    selectedFriend = friend;
-                                    showDetailModal = true;
-                                }}
-                                type="button"
-                                aria-label="View details for {friend.user?.username || 'Unknown User'}"
-                            >
-                                <div class="friend-item">
-                                    <div class="avatar-container">
-                                        {#if friend.user?.avatar}
-                                            <img
-                                                class="friend-avatar"
-                                                src={friend.user.avatar}
-                                                alt={friend.user.username}
-                                            />
-                                        {:else}
-                                            <div
-                                                class="friend-avatar placeholder"
-                                                style="background-color: {getRandomColor(friend.user?.username || '')}"
-                                            >
-                                                {getInitial(friend.user?.username || '')}
-                                            </div>
-                                        {/if}
-                                    </div>
-                                    <div class="friend-info">
-                                        <span class="username">{friend.user?.username || 'Unknown User'}</span>
-                                        <span class="status">⏳ Incoming Request</span>
-                                    </div>
-                                </div>
-                            </button>
-                            <div class="request-actions">
-                                <button
-                                    class="accept-btn"
-                                    on:click|stopPropagation={() => handleAcceptFriend(friend.friend_id)}
-                                >
-                                    <span>✓</span> Accept
-                                </button>
-                                <button
-                                    class="reject-btn"
-                                    on:click|stopPropagation={() => handleRejectFriend(friend.friend_id)}
-                                >
-                                    <span>✗</span> Reject
-                                </button>
-                            </div>
-                        </li>
-                    </div>
-                {/if}
-            {/each}
-        {/if}
+	{#if $friendStore.friends.length > 0}
+		<!-- Incoming friend requests section (accepted === false) -->
+		{#if $friendStore.friends.some((f) => f.accepted === false && f.user)}
+			<div class="section-separator-top">
+				<span>Incoming requests</span>
+			</div>
+			{#each $friendStore.friends as friend (friend.friend_id)}
+				{#if friend.accepted === false && friend.user}
+					<div class="request incoming">
+						<li class="friend-request-container">
+							<button
+								class="friend-request incoming"
+								on:click={() => {
+									selectedFriend = friend;
+									showDetailModal = true;
+								}}
+								type="button"
+								aria-label="View details for {friend.user?.username || 'Unknown User'}"
+							>
+								<div class="friend-item">
+									<div class="avatar-container">
+										{#if friend.user?.avatar}
+											<img
+												class="friend-avatar"
+												src={friend.user.avatar}
+												alt={friend.user.username}
+											/>
+										{:else}
+											<div
+												class="friend-avatar placeholder"
+												style="background-color: {getRandomColor(friend.user?.username || '')}"
+											>
+												{getInitial(friend.user?.username || '')}
+											</div>
+										{/if}
+									</div>
+									<div class="friend-info">
+										<span class="username">{friend.user?.username || 'Unknown User'}</span>
+										<span class="status">⏳ Incoming Request</span>
+									</div>
+								</div>
+							</button>
+							<div class="request-actions">
+								<button
+									class="accept-btn"
+									on:click|stopPropagation={() => handleAcceptFriend(friend.friend_id)}
+								>
+									<span>✓</span> Accept
+								</button>
+								<button
+									class="reject-btn"
+									on:click|stopPropagation={() => handleRejectFriend(friend.friend_id)}
+								>
+									<span>✗</span> Reject
+								</button>
+							</div>
+						</li>
+					</div>
+				{/if}
+			{/each}
+		{/if}
 
-        <!-- Pending friend requests (sent by current user, accepted === null) -->
-        {#if $friendStore.friends.some(f => f.accepted === null)}
-            {#if $friendStore.friends.some(f => f.accepted === false && f.user)}
-                <div class="section-separator">
-                    <span>Pending requests</span>
-                </div>
-            {:else}
-                <div class="section-separator-top">
-                    <span>Pending requests</span>
-                </div>
-            {/if}                
-            {#each $friendStore.friends as friend (friend.friend_id)}
-                {#if friend.accepted === null}
-                    <div class="request pending">
-                        <li class="friend-request-container">
-                            <button
-                                class="friend-request pending"
-                                on:click={() => {
-                                    selectedFriend = friend;
-                                    showDetailModal = true;
-                                }}
-                                type="button"
-                                aria-label="View details for {friend.user?.username || 'Pending Request'}"
-                            >
-                                <div class="friend-item">
-                                    <div class="avatar-container">
-                                        {#if friend.user?.avatar}
-                                            <img
-                                                class="friend-avatar"
-                                                src={friend.user.avatar}
-                                                alt={friend.user?.username || 'Pending'}
-                                            />
-                                        {:else}
-                                            <div
-                                                class="friend-avatar placeholder pending-placeholder"
-                                                style="background-color: {getRandomColor(friend.user?.username || 'Pending')}"
-                                            >
-                                                {getInitial(friend.user?.username || 'P')}
-                                            </div>
-                                        {/if}
-                                    </div>
-                                    <div class="friend-info">
-                                        <span class="username">{friend.user?.username || 'Pending Request'}</span>
-                                        <span class="status">⏳ Waiting for response...</span>
-                                    </div>
-                                </div>
-                            </button>
-                            <div class="request-actions">
-                                <button
-                                    class="cancel-btn"
-                                    on:click|stopPropagation={() => handleCancelFriendRequest(friend.friend_id)}
-                                >
-                                    <span>✗</span> Cancel
-                                </button>
-                            </div>
-                        </li>
-                    </div>
-                {/if}
-            {/each}
-        {/if}
+		<!-- Pending friend requests (sent by current user, accepted === null) -->
+		{#if $friendStore.friends.some((f) => f.accepted === null)}
+			{#if $friendStore.friends.some((f) => f.accepted === false && f.user)}
+				<div class="section-separator">
+					<span>Pending requests</span>
+				</div>
+			{:else}
+				<div class="section-separator-top">
+					<span>Pending requests</span>
+				</div>
+			{/if}
+			{#each $friendStore.friends as friend (friend.friend_id)}
+				{#if friend.accepted === null}
+					<div class="request pending">
+						<li class="friend-request-container">
+							<button
+								class="friend-request pending"
+								on:click={() => {
+									selectedFriend = friend;
+									showDetailModal = true;
+								}}
+								type="button"
+								aria-label="View details for {friend.user?.username || 'Pending Request'}"
+							>
+								<div class="friend-item">
+									<div class="avatar-container">
+										{#if friend.user?.avatar}
+											<img
+												class="friend-avatar"
+												src={friend.user.avatar}
+												alt={friend.user?.username || 'Pending'}
+											/>
+										{:else}
+											<div
+												class="friend-avatar placeholder pending-placeholder"
+												style="background-color: {getRandomColor(
+													friend.user?.username || 'Pending'
+												)}"
+											>
+												{getInitial(friend.user?.username || 'P')}
+											</div>
+										{/if}
+									</div>
+									<div class="friend-info">
+										<span class="username">{friend.user?.username || 'Pending Request'}</span>
+										<span class="status">⏳ Waiting for response...</span>
+									</div>
+								</div>
+							</button>
+							<div class="request-actions">
+								<button
+									class="cancel-btn"
+									on:click|stopPropagation={() => handleCancelFriendRequest(friend.friend_id)}
+								>
+									<span>✗</span> Cancel
+								</button>
+							</div>
+						</li>
+					</div>
+				{/if}
+			{/each}
+		{/if}
 
 		<!-- Friend Detail Modal -->
 		{#if showDetailModal && selectedFriend}
@@ -253,8 +255,6 @@
 		gap: 0.5rem;
 	}
 
-
-
 	.friend-item {
 		display: flex;
 		align-items: center;
@@ -322,8 +322,6 @@
 		background-color: #fff9f0;
 	}
 
-
-
 	.request-actions {
 		display: flex;
 		gap: 0.5rem;
@@ -367,7 +365,7 @@
 		margin-top: 1rem;
 	}
 
-    .section-separator-top {
+	.section-separator-top {
 		font-size: 0.9rem;
 		color: #7f8c8d;
 		font-weight: 500;

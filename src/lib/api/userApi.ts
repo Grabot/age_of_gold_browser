@@ -1,9 +1,5 @@
 import { z } from 'zod';
-import {
-	makeRequest,
-	type ApiResponse,
-	API
-} from './apiClient';
+import { makeRequest, type ApiResponse, API } from './apiClient';
 
 const UserResponseSchema = z.object({
 	id: z.number(),
@@ -82,7 +78,7 @@ export async function getAvatar(
 
 export async function getAvatarVersion(
 	accessToken: string,
-	userId: number | null
+	userId: number
 ): Promise<ApiResponse<unknown>> {
 	return makeRequest({
 		method: 'POST',

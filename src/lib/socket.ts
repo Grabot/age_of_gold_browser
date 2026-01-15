@@ -152,46 +152,54 @@ export function onFriendRemovedEvent(callback: (data: { friend_id: number }) => 
 }
 
 export function offFriendRemovedEvent() {
-    if (socket) {
-        socket.off('friend_removed');
-    }
+	if (socket) {
+		socket.off('friend_removed');
+	}
 }
 
 export function onGroupCreatedEvent(
-    callback: (data: {
-        group_id: number;
-        group_name: string;
-        group_description: string;
-        group_colour: string;
-        creator_id: number;
-        creator_username: string;
-    }) => void
+	callback: (data: {
+		group_id: number;
+		group_name: string;
+		group_description: string;
+		group_colour: string;
+		creator_id: number;
+		creator_username: string;
+	}) => void
 ) {
-    if (socket) {
-        socket.on('group_created', callback);
-    }
+	if (socket) {
+		socket.on('group_created', callback);
+	}
 }
 
 export function offGroupCreatedEvent() {
-    if (socket) {
-        socket.off('group_created');
-    }
+	if (socket) {
+		socket.off('group_created');
+	}
 }
 
 export function onGroupMemberLeftEvent(
-    callback: (data: {
-        group_id: number;
-        user_id: number;
-        username: string;
-    }) => void
+	callback: (data: { group_id: number; user_id: number }) => void
 ) {
-    if (socket) {
-        socket.on('group_member_left', callback);
-    }
+	if (socket) {
+		socket.on('group_member_left', callback);
+	}
+}
+
+// TODO: Do an interface for all socket calls? How to structure this?
+export interface GroupAdminChangedEventData {
+	group_id: number;
+	user_id: number;
+	is_admin: boolean;
+}
+export function onGroupAdminChangedEvent(callback: (data: GroupAdminChangedEventData) => void) {
+	if (socket) {
+		socket.on('group_admin_changed', callback);
+	}
 }
 
 export function offGroupMemberLeftEvent() {
-    if (socket) {
-        socket.off('group_member_left');
-    }
+	if (socket) {
+		socket.off('group_member_left');
+	}
 }
