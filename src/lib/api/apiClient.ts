@@ -100,7 +100,8 @@ class ApiConfig {
 		updateGroup: 'group/update',
 		muteGroup: 'group/mute',
 		getGroupAvatar: 'group/avatar',
-		getGroupAvatarVersion: 'group/avatar/version'
+		getGroupAvatarVersion: 'group/avatar/version',
+		changeGroupAvatar: 'group/avatar'
 	} as const;
 
 	buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {

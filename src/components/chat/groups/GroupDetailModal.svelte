@@ -1,22 +1,30 @@
 <script lang="ts">
-	import { groupStore } from '../../../stores/groupStore';
-	import { errorToast, successToast } from '../../../utils/toast';
-	import type { Group } from '../../../types/groups';
-	import {
-		authStore,
-		accessTokenValue,
-		userAvatar,
-		retrieveMissingUsers
-	} from '../../../stores/authStore';
-	import { get } from 'svelte/store';
-	import { friendStore } from '../../../stores/friendStore';
-	import { searchFriend } from '$lib/api/friendApi';
-	import { userStore } from '../../../stores/userStore';
-	import { avatarStore } from '../../../stores/avatarStore';
-	import { socketEventStore } from '../../../stores/socketEventStore';
-	import type { User } from '../../../types/user';
-	import { handleGetAvatar, handleGetAvatarVersion } from '../../../services/settingsService';
-	import { onMount, onDestroy } from 'svelte';
+import { groupStore } from '../../../stores/groupStore';
+import { errorToast, successToast } from '../../../utils/toast';
+import {
+	authStore,
+	accessTokenValue,
+	userAvatar,
+	retrieveMissingUsers
+} from '../../../stores/authStore';
+import { get } from 'svelte/store';
+import { friendStore } from '../../../stores/friendStore';
+import { searchFriend } from '$lib/api/friendApi';
+import { userStore } from '../../../stores/userStore';
+import { avatarStore } from '../../../stores/avatarStore';
+import { socketEventStore } from '../../../stores/socketEventStore';
+import type { User } from '../../../types/user';
+import type { Group } from '../../../types/groups';
+import {
+	handleGetAvatar,
+	handleGetAvatarVersion,
+	handleChangeGroupAvatar,
+	handleGetGroupAvatar
+} from '../../../services/settingsService';
+import { onMount, onDestroy } from 'svelte';
+import EditGroupAvatar from './EditGroupAvatar.svelte';
+import { updateGroup } from '$lib/api/groupApi';
+import ColorPicker from 'svelte-awesome-color-picker';
 
 	interface FriendSearchResult {
 		id: number;
@@ -36,6 +44,7 @@
 	let isCurrentUserAdmin = false;
 	let showAddMemberModal = false;
 	let showEditGroupModal = false;
+	let showEditAvatarModal = false;
 	let showMuteOptions = false;
 	let muteDurationHours: number | null = null;
 
@@ -43,6 +52,8 @@
 	let editGroupName: string = '';
 	let editGroupDescription: string = '';
 	let editGroupColour: string = '';
+	let groupColor: string = '#0b9476';
+	let textColor: string = 'white';
 
 	// Form fields for adding member
 	let newMemberUsername: string = '';
@@ -167,6 +178,25 @@
 	}
 
 	// Initialize when component mounts
+	// Function to determine text color based on background color brightness
+	function getTextColorForBackground(bgColor: string): string {
+		// Remove # if present
+		const color = bgColor.startsWith('#') ? bgColor.substring(1) : bgColor;
+
+		// Parse hex color
+		const r = parseInt(color.substring(0, 2), 16) / 255;
+		const g = parseInt(color.substring(2, 4), 16) / 255;
+		const b = parseInt(color.substring(4, 6), 16) / 255;
+
+		// Calculate relative luminance using the formula:
+		// L = 0.2126*R + 0.7152*G + 0.0722*B
+		const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+		// Use white text for dark backgrounds, black text for light backgrounds
+		// Threshold of 0.5 is commonly used for accessibility
+		return luminance > 0.5 ? 'black' : 'white';
+	}
+
 	$: {
 		const authState = get(authStore);
 		currentUserId = authState.user?.id || null;
@@ -176,6 +206,8 @@
 		editGroupName = group.group_name || '';
 		editGroupDescription = group.group_description || '';
 		editGroupColour = group.group_colour || '#0b9476';
+		groupColor = group.group_colour || '#0b9476';
+		textColor = getTextColorForBackground(groupColor);
 
 		// Filter friends based on search query
 		filterFriends();
@@ -205,11 +237,13 @@
 			const success = await groupStore.removeGroupMember(group.group_id, userId);
 			if (success) {
 				successToast('Member removed successfully');
-				// Refresh the group data
 				const updatedGroup = groupStore.getStoredGroup(group.group_id);
 				if (updatedGroup) {
+					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
 				}
+				isDoneRetrievingGroupMembers = false;
+				getGroupMembers();
 				// TODO: Check if the member was a friend, if not remove it from the stored data (userStore, friendStore and avatarStore)
 			}
 		} catch (error) {
@@ -225,8 +259,11 @@
 				// Refresh the group data
 				const updatedGroup = groupStore.getStoredGroup(group.group_id);
 				if (updatedGroup) {
+					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
 				}
+				isDoneRetrievingGroupMembers = false;
+				getGroupMembers();
 			}
 		} catch (error) {
 			errorToast(error instanceof Error ? error.message : 'Unknown error');
@@ -243,6 +280,7 @@
 				// Refresh the group data
 				const updatedGroup = groupStore.getStoredGroup(group.group_id);
 				if (updatedGroup) {
+					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
 				}
 			}
@@ -262,9 +300,9 @@
 			if (success) {
 				successToast('Group updated successfully');
 				showEditGroupModal = false;
-				// Refresh the group data
 				const updatedGroup = groupStore.getStoredGroup(group.group_id);
 				if (updatedGroup) {
+					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
 				}
 			}
@@ -302,34 +340,6 @@
 		}));
 	}
 
-	async function searchUsers() {
-		if (!newMemberUsername.trim()) {
-			searchResults = [];
-			return;
-		}
-
-		isSearching = true;
-		try {
-			const accessToken = get(accessTokenValue);
-			const response = await searchFriend<FriendSearchResult>(accessToken, newMemberUsername);
-			if (response.success && response.data) {
-				// Handle both single result and array results
-				const data = Array.isArray(response.data) ? response.data : [response.data];
-				searchResults = data.map((user) => ({
-					user_id: user.id,
-					username: user.username
-				}));
-			} else {
-				searchResults = [];
-			}
-		} catch (error) {
-			errorToast(error instanceof Error ? error.message : 'Unknown error');
-			searchResults = [];
-		} finally {
-			isSearching = false;
-		}
-	}
-
 	async function handleAddMember(userId: number) {
 		try {
 			const success = await groupStore.addGroupMember(group.group_id, userId);
@@ -338,11 +348,13 @@
 				showAddMemberModal = false;
 				newMemberUsername = '';
 				filteredFriends = [];
-				// Refresh the group data
 				const updatedGroup = groupStore.getStoredGroup(group.group_id);
 				if (updatedGroup) {
+					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
 				}
+				isDoneRetrievingGroupMembers = false;
+				getGroupMembers();
 			}
 		} catch (error) {
 			errorToast(error instanceof Error ? error.message : 'Unknown error');
@@ -354,10 +366,10 @@
 	onMount(() => {
 		socketEventUnsubscribe = socketEventStore.subscribe((events) => {
 			events.forEach((_) => {
-				const newGroup = groupStore.getStoredGroup(group.group_id);
-				if (newGroup) {
-					console.log('Group updated');
-					group = newGroup;
+				const updatedGroup = groupStore.getStoredGroup(group.group_id);
+				if (updatedGroup) {
+					updatedGroup.avatar = group.avatar;
+					group = updatedGroup;
 				}
 				isDoneRetrievingGroupMembers = false;
 				getGroupMembers();
@@ -388,10 +400,10 @@
 	aria-label="Group Details"
 >
 	<div class="modal-content">
-		<div class="modal-header">
-			<h2>Group Details</h2>
-			<button class="close-btn" on:click={onClose}>x</button>
-		</div>
+	<div class="modal-header" style="background-color: {groupColor}; color: {textColor};">
+		<h2>Group Details</h2>
+		<button class="close-btn" on:click={onClose}>x</button>
+	</div>
 
 		<div class="modal-body">
 			<div class="group-details">
@@ -422,16 +434,19 @@
 
 				<div class="group-actions">
 					{#if isCurrentUserAdmin}
-						<button class="action-btn" on:click={() => (showAddMemberModal = true)}>
-							Add Member
-						</button>
-						<button class="action-btn" on:click={() => (showEditGroupModal = true)}>
-							Edit Group
-						</button>
-					{/if}
-					<button class="action-btn" on:click={() => (showMuteOptions = !showMuteOptions)}>
-						{group.mute ? 'Unmute Group' : 'Mute Group'}
+					<button class="action-btn" on:click={() => (showEditAvatarModal = true)} style="background-color: {groupColor}; color: {textColor};">
+						Edit Avatar
 					</button>
+					<button class="action-btn" on:click={() => (showAddMemberModal = true)} style="background-color: #2ecc71; color: white;">
+						Add Member
+					</button>
+					<button class="action-btn" on:click={() => (showEditGroupModal = true)} style="background-color: #3498db; color: white;">
+						Edit Group
+					</button>
+					{/if}
+				<button class="action-btn" on:click={() => (showMuteOptions = !showMuteOptions)} style="background-color: #f39c12; color: white;">
+					{group.mute ? 'Unmute Group' : 'Mute Group'}
+				</button>
 				</div>
 
 				{#if showMuteOptions}
@@ -460,7 +475,7 @@
 								Mute for 8 hours
 							</label>
 						</div>
-						<button class="confirm-btn" on:click={handleMuteGroup}> Confirm Mute </button>
+						<button class="confirm-btn" on:click={handleMuteGroup} style="background-color: {groupColor}; color: {textColor};"> Confirm Mute </button>
 					</div>
 				{/if}
 
@@ -500,26 +515,29 @@
 										<span class="you-badge">You</span>
 									{:else if isCurrentUserAdmin && group_member.user_id !== currentUserId}
 										{#if group.admin_ids.includes(group_member.user_id)}
-											<button
-												class="demote-btn"
-												on:click={() => handlePromoteAdmin(group_member.user_id, false)}
-											>
-												Demote
-											</button>
+							<button
+								class="demote-btn"
+								on:click={() => handlePromoteAdmin(group_member.user_id, false)}
+								style="background-color: #f39c12; color: white;"
+							>
+								Demote
+							</button>
 										{:else}
-											<button
-												class="promote-btn"
-												on:click={() => handlePromoteAdmin(group_member.user_id, true)}
-											>
-												Promote
-											</button>
+							<button
+								class="promote-btn"
+								on:click={() => handlePromoteAdmin(group_member.user_id, true)}
+								style="background-color: #2ecc71; color: white;"
+							>
+								Promote
+							</button>
 										{/if}
-										<button
-											class="remove-btn"
-											on:click={() => handleRemoveMember(group_member.user_id)}
-										>
-											Remove
-										</button>
+					<button
+						class="remove-btn"
+						on:click={() => handleRemoveMember(group_member.user_id)}
+						style="background-color: #e74c3c; color: white;"
+					>
+						Remove
+					</button>
 									{/if}
 								</div>
 							</li>
@@ -548,10 +566,10 @@
 				tabindex="0"
 			>
 				<div class="add-member-content">
-					<div class="modal-header">
-						<h3>Add Member</h3>
-						<button class="close-btn" on:click={() => (showAddMemberModal = false)}>×</button>
-					</div>
+				<div class="modal-header" style="background-color: {groupColor}; color: {textColor};">
+					<h3>Add Member</h3>
+					<button class="close-btn" on:click={() => (showAddMemberModal = false)}>×</button>
+				</div>
 					<div class="search-section">
 						<div class="search-input-container">
 							<input
@@ -598,9 +616,9 @@
 										<div class="friend-info">
 											<span class="friend-username">{friend.username}</span>
 										</div>
-										<button class="add-btn" on:click={() => handleAddMember(friend.user_id)}>
-											Add
-										</button>
+						<button class="add-btn" on:click={() => handleAddMember(friend.user_id)} style="background-color: #2ecc71; color: white;">
+					Add
+				</button>
 									</li>
 								{/each}
 							</ul>
@@ -609,9 +627,9 @@
 						<p class="no-results">No friends found matching "{newMemberUsername}"</p>
 					{:else}
 						<p class="no-results">You don't have any friends to add to this group.</p>
-					{/if}
+        {/if}
 
-					<div class="modal-footer">
+        <div class="modal-footer">
 						<button class="cancel-btn" on:click={() => (showAddMemberModal = false)}>
 							Cancel
 						</button>
@@ -639,10 +657,10 @@
 				tabindex="0"
 			>
 				<div class="edit-group-content">
-					<div class="modal-header">
-						<h3>Edit Group</h3>
-						<button class="close-btn" on:click={() => (showEditGroupModal = false)}>×</button>
-					</div>
+				<div class="modal-header" style="background-color: {groupColor}; color: {textColor};">
+					<h3>Edit Group</h3>
+					<button class="close-btn" on:click={() => (showEditGroupModal = false)}>×</button>
+				</div>
 					<form on:submit|preventDefault={handleUpdateGroup}>
 						<div class="form-group">
 							<label for="editGroupName">Group Name</label>
@@ -654,13 +672,13 @@
 							<textarea id="editGroupDescription" bind:value={editGroupDescription}></textarea>
 						</div>
 
-						<div class="form-group">
-							<label for="editGroupColour">Group Color</label>
-							<input id="editGroupColour" type="color" bind:value={editGroupColour} />
-						</div>
+							<div class="form-group">
+								<label for="editGroupColour">Group Color</label>
+								<ColorPicker bind:hex={editGroupColour} />
+							</div>
 
 						<div class="form-actions">
-							<button type="submit" class="save-btn">Save Changes</button>
+							<button type="submit" class="save-btn" style="background-color: #2ecc71; color: white;">Save Changes</button>
 							<button type="button" class="cancel-btn" on:click={() => (showEditGroupModal = false)}
 								>Cancel</button
 							>
@@ -668,12 +686,46 @@
 					</form>
 				</div>
 			</div>
-		{/if}
+        {/if}
 
-		<div class="modal-footer">
-			<button class="leave-btn" on:click={handleLeaveGroup}>Leave Group</button>
-			<button class="close-btn" on:click={onClose}>Close</button>
-		</div>
+        <!-- Edit Group Avatar Modal -->
+        {#if showEditAvatarModal}
+            <EditGroupAvatar
+                groupId={group.group_id}
+                groupName={group.group_name}
+				groupAvatar={group.avatar}
+                onClose={() => (showEditAvatarModal = false)}
+                onSave={async (data) => {
+                    const accessToken = get(accessTokenValue);
+                    if (accessToken && data.avatar) {
+                        const result = await handleChangeGroupAvatar(
+                            accessToken,
+                            group.group_id,
+                            data.avatar,
+                            data.defaultAvatar || false
+                        );
+                        if (result.success) {
+                            successToast('Group avatar updated successfully!');
+                            // Refresh the group avatar
+                            const avatarResponse = await handleGetGroupAvatar(accessToken, group.group_id, false);
+                            if (avatarResponse.success && avatarResponse.avatar) {
+                                group.avatar = avatarResponse.avatar;
+                                avatarStore.updateGroupAvatar(group.group_id, avatarResponse.avatar);
+                                groupStore.updateGroup(group);
+                            }
+                            showEditAvatarModal = false;
+                        } else {
+                            errorToast(result.message || 'Failed to update group avatar');
+                        }
+                    }
+                }}
+            />
+        {/if}
+
+        <div class="modal-footer">
+				<button class="leave-btn" on:click={handleLeaveGroup} style="background-color: {groupColor}; color: {textColor};">Leave Group</button>
+            <button class="close-btn" on:click={onClose}>Close</button>
+        </div>
 	</div>
 </div>
 
@@ -706,8 +758,6 @@
 	}
 
 	.modal-header {
-		background: #0b9476;
-		color: white;
 		padding: 1rem 1.5rem;
 		display: flex;
 		justify-content: space-between;
@@ -768,6 +818,12 @@
 		font-size: 1.5rem;
 		width: 60px;
 		height: 60px;
+		border-radius: 50%;
+		cursor: pointer;
+	}
+
+	.group-avatar-container {
+		position: relative;
 	}
 
 	.group-info h4 {
@@ -798,8 +854,6 @@
 
 	.action-btn {
 		padding: 0.5rem 1rem;
-		background-color: #0b9476;
-		color: white;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
@@ -807,7 +861,7 @@
 	}
 
 	.action-btn:hover {
-		background-color: #087f62;
+		filter: brightness(0.9);
 	}
 
 	.mute-options {
@@ -826,8 +880,6 @@
 
 	.confirm-btn {
 		padding: 0.5rem 1rem;
-		background-color: #e74c3c;
-		color: white;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
@@ -857,8 +909,6 @@
 
 	.promote-btn {
 		padding: 0.3rem 0.6rem;
-		background-color: #2ecc71;
-		color: white;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
@@ -867,8 +917,6 @@
 
 	.demote-btn {
 		padding: 0.3rem 0.6rem;
-		background-color: #f39c12;
-		color: white;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
@@ -877,8 +925,6 @@
 
 	.remove-btn {
 		padding: 0.3rem 0.6rem;
-		background-color: #e74c3c;
-		color: white;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
@@ -944,7 +990,6 @@
 		position: absolute;
 		right: 0.5rem;
 		top: 50%;
-		transform: translateY(-50%);
 		background: none;
 		border: none;
 		color: #999;
@@ -1036,8 +1081,6 @@
 
 	.add-btn {
 		padding: 0.3rem 0.6rem;
-		background-color: #2ecc71;
-		color: white;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
@@ -1054,8 +1097,6 @@
 	}
 
 	.add-member-content .modal-header {
-		background: #0b9476;
-		color: white;
 		padding: 1rem 1.5rem;
 		display: flex;
 		justify-content: space-between;
@@ -1124,8 +1165,6 @@
 
 	.save-btn {
 		padding: 0.5rem 1rem;
-		background-color: #2ecc71;
-		color: white;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
@@ -1141,15 +1180,13 @@
 
 	.leave-btn {
 		padding: 0.5rem 1rem;
-		background-color: #e74c3c;
-		color: white;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
 	}
 
 	.leave-btn:hover {
-		background-color: #c0392b;
+		filter: brightness(0.9);
 	}
 
 	.close-btn {

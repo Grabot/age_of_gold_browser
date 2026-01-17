@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 
 export const STORAGE_KEY_AVATAR_PREFIX = 'avatar_';
 export const STORAGE_KEY_SHOULD_UPDATE_AVATAR_PREFIX = 'shouldUpdateAvatar_';
-export const STORAGE_KEY_GROUP_AVATAR_PREFIX = 'group_avatar_';
+export const STORAGE_KEY_GROUP_AVATAR_PREFIX = 'avatar_group_';
 export const STORAGE_KEY_SHOULD_UPDATE_GROUP_AVATAR_PREFIX = 'shouldUpdateGroupAvatar_';
 
 export interface AvatarState {

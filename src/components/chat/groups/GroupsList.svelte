@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { groupStore } from '../../../stores/groupStore';
-	import GroupDetailModal from './GroupDetailModal.svelte';
-	import type { Group } from '../../../types/groups';
-	import { onMount } from 'svelte';
+import { groupStore } from '../../../stores/groupStore';
+import GroupDetailModal from './GroupDetailModal.svelte';
+import type { Group } from '../../../types/groups';
+import { onMount, afterUpdate } from 'svelte';
 	import { avatarStore } from '../../../stores/avatarStore';
 	import { accessTokenValue } from '../../../stores/authStore';
 	import {
@@ -17,6 +17,35 @@
 	let selectedGroup: Group | null = null;
 	let showDetailModal = false;
 
+	// Function to determine text color based on background color brightness
+	function getTextColorForBackground(bgColor: string): string {
+		// Remove # if present
+		const color = bgColor.startsWith('#') ? bgColor.substring(1) : bgColor;
+
+		// Parse hex color
+		const r = parseInt(color.substring(0, 2), 16) / 255;
+		const g = parseInt(color.substring(2, 4), 16) / 255;
+		const b = parseInt(color.substring(4, 6), 16) / 255;
+
+		// Calculate relative luminance using the formula:
+		// L = 0.2126*R + 0.7152*G + 0.0722*B
+		const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+		// Use white text for dark backgrounds, black text for light backgrounds
+		// Threshold of 0.5 is commonly used for accessibility
+		return luminance > 0.5 ? 'black' : 'white';
+	}
+
+	// Helper function to get button style based on group color
+	function getGroupItemStyle(group: Group): string {
+		if (group.group_colour) {
+			const textColor = getTextColorForBackground(group.group_colour);
+			return `background-color: ${group.group_colour}; color: ${textColor};`;
+		} else {
+			return `background-color: ${getRandomColor('Group')}; color: white;`;
+		}
+	}
+
 	async function updateGroupAvatar(group: Group) {
 		const accessToken = $accessTokenValue;
 		if (accessToken && group) {
@@ -29,10 +58,11 @@
 					group.group_id
 				);
 				if (avatarVersionResponse.success && avatarVersionResponse.avatarVersion) {
+					console.log("updating avatar version", avatarVersionResponse.avatarVersion);
 					group.avatar_version = avatarVersionResponse.avatarVersion;
 				}
 				groupStore.updateGroup(group);
-				avatarStore.setShouldUpdateAvatarForUser(group.group_id, false);
+				avatarStore.setShouldUpdateGroupAvatarForGroup(group.group_id, false);
 			} else {
 				errorToast('Failed to fetch avatar');
 			}
@@ -40,12 +70,14 @@
 	}
 
 	async function checkGroupAvatar(group: Group) {
+		console.log('Checking group avatar for group:', group.group_id);
 		if (!group.avatar) {
 			const avatarGroup = avatarStore.getGroupAvatar(group.group_id);
 			if (avatarGroup) {
 				group.avatar = avatarGroup;
 				groupStore.updateGroup(group);
 			} else {
+				console.log('No avatar found for group:', group.group_id);
 				await updateGroupAvatar(group);
 			}
 		}
@@ -54,8 +86,10 @@
 	onMount(() => {
 		const unsubscribe = groupStore.subscribe((storeState) => {
 			if (!storeState.loading) {
+				console.log('Processing groups:', storeState.groups);
 				storeState.groups.forEach(async (group) => {
 					if (avatarStore.getShouldUpdateGroupAvatarForGroup(group.group_id)) {
+						console.log("it is decided that it should update the avatar!");
 						await updateGroupAvatar(group);
 					} else {
 						await checkGroupAvatar(group);
@@ -66,6 +100,8 @@
 
 		return () => unsubscribe();
 	});
+
+
 </script>
 
 <div class="groups-list">
@@ -82,7 +118,7 @@
 				}}
 				type="button"
 				aria-label="View details for group {group.group_id}"
-				style="background-color: {group.group_colour || getRandomColor('Group')}"
+				style="background-color: {group.group_colour || getRandomColor('Group')}; color: {group.group_colour ? getTextColorForBackground(group.group_colour) : getTextColorForBackground(getRandomColor('Group'))};"
 			>
 				<div class="avatar-container">
 					{#if group.avatar}
@@ -90,7 +126,7 @@
 					{:else}
 						<div
 							class="group-avatar placeholder"
-							style="background-color: {getRandomColor(group.group_name || '')}"
+							style="background-color: {getRandomColor(group.group_name || '')}; color: {getTextColorForBackground(getRandomColor(group.group_name || ''))}"
 						>
 							{getInitial(group.group_name || '')}
 						</div>
@@ -103,6 +139,7 @@
 					{/if}
 				</div>
 			</button>
+
 		{/each}
 	{:else}
 		<p class="no-groups">You don't have any groups yet. Create a group to get started!</p>
@@ -144,7 +181,6 @@
 		border: none;
 		background: transparent;
 		cursor: pointer;
-		color: white;
 		font-weight: bold;
 		transition:
 			transform 0.1s ease,
@@ -153,12 +189,7 @@
 	}
 
 	.group-item:hover {
-		transform: scale(1.02);
 		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-	}
-
-	.group-item:active {
-		transform: scale(0.98);
 	}
 
 	.group-text {
@@ -166,13 +197,11 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		color: white;
 		font-weight: 500;
 	}
 
 	.group-name {
 		font-weight: 500;
-		color: white;
 		font-size: 1rem;
 	}
 

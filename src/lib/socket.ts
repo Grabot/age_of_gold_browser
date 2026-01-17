@@ -43,6 +43,18 @@ export function leaveRoom(userId: number) {
 	}
 }
 
+export function joinGroup(groupId: number) {
+	if (socket) {
+		socket.emit('join_group', { group_id: groupId });
+	}
+}
+
+export function leaveGroup(groupId: number) {
+	if (socket) {
+		socket.emit('leave_group', { group_id: groupId });
+	}
+}
+
 export function onMessageEvent(callback: (message: string) => void) {
 	if (socket) {
 		socket.on('message_event', callback);
@@ -201,5 +213,71 @@ export function onGroupAdminChangedEvent(callback: (data: GroupAdminChangedEvent
 export function offGroupMemberLeftEvent() {
 	if (socket) {
 		socket.off('group_member_left');
+	}
+}
+
+export interface GroupUpdateEventData {
+	group_id: number;
+	group_name: string | undefined;
+	group_description: string | undefined;
+	group_colour: string | undefined;
+}
+export function onGroupUpdateEvent(callback: (data: GroupUpdateEventData) => void) {
+	if (socket) {
+		socket.on('group_updated', callback);
+	}
+}
+
+export function offGroupUpdateEvent() {
+	if (socket) {
+		socket.off('group_updated');
+	}
+}
+
+export interface GroupMemberRemovedEventData {
+	group_id: number;
+	user_id: number;
+}
+export function onGroupMemberRemovedEvent(callback: (data: GroupMemberRemovedEventData) => void) {
+	if (socket) {
+		socket.on('group_member_removed', callback);
+	}
+}
+
+export function offGroupMemberRemovedEvent() {
+	if (socket) {
+		socket.off('group_member_removed');
+	}
+}
+
+export interface GroupMemberAddedEventData {
+	group_id: number;
+	user_id: number;
+}
+export function onGroupMemberAddedEvent(callback: (data: GroupMemberAddedEventData) => void) {
+	if (socket) {
+		socket.on('group_member_added', callback);
+	}
+}
+
+export function offGroupMemberAddedEvent() {
+	if (socket) {
+		socket.off('group_member_added');
+	}
+}
+
+export interface GroupAvatarChangedEventData {
+	group_id: number;
+	user_id: number;
+}
+export function onGroupAvatarChangedEvent(callback: (data: GroupAvatarChangedEventData) => void) {
+	if (socket) {
+		socket.on('group_avatar_updated', callback);
+	}
+}
+
+export function offGroupAvatarChangedEvent() {
+	if (socket) {
+		socket.off('group_avatar_updated');
 	}
 }

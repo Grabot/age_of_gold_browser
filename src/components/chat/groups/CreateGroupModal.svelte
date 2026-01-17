@@ -1,17 +1,32 @@
 <script lang="ts">
-	import { groupStore } from '../../../stores/groupStore';
-	import { friendStore } from '../../../stores/friendStore';
-	import { errorToast, successToast } from '../../../utils/toast';
-	import { onMount } from 'svelte';
-	import { authStore } from '../../../stores/authStore';
+import { groupStore } from '../../../stores/groupStore';
+import { friendStore } from '../../../stores/friendStore';
+import { errorToast, successToast } from '../../../utils/toast';
+import { onMount } from 'svelte';
+import { authStore } from '../../../stores/authStore';
+import ColorPicker from 'svelte-awesome-color-picker';
 
 	export let onClose: () => void;
 
 	let myUserId: number | null = null;
 	let groupName: string = '';
 	let groupDescription: string = '';
-	let groupColour: string = '#0b9476';
+	let groupColour: string = getRandomColor('Group');
 	let selectedFriends: number[] = [];
+
+	// Generate random color for new groups
+	function getRandomColor(seed: string): string {
+		let hash = 0;
+		for (let i = 0; i < seed.length; i++) {
+			hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+		}
+		const colors = [
+			'#FF6B6B', '#FF8E53', '#FFC154', '#48CF85', '#4299E1', '#5677FC',
+			'#9013FE', '#ED64A6', '#F6AD55', '#FC8181', '#667EEA', '#764BA2',
+			'#F093FB', '#4FACFE', '#00C9A7', '#8BD3DD', '#A5DD9B', '#F9D71C'
+		];
+		return colors[Math.abs(hash) % colors.length];
+	}
 
 	// Get available friends (accepted friends only)
 	$: availableFriends = $friendStore.friends.filter((f) => f.accepted === true && f.user);
@@ -135,10 +150,10 @@
 				></textarea>
 			</div>
 
-			<div class="form-group">
-				<label for="groupColour">Group Colour</label>
-				<input type="color" id="groupColour" bind:value={groupColour} class="color-picker" />
-			</div>
+				<div class="form-group">
+					<label for="groupColour">Group Colour</label>
+					<ColorPicker bind:hex={groupColour} />
+				</div>
 
 			<div class="form-group">
 				<legend>Select Friends to Add</legend>

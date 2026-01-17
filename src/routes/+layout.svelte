@@ -6,34 +6,48 @@
 	import { authStore, shouldUpdateAvatar, userAvatar, userDetail } from '../stores/authStore';
 	import { friendStore } from '../stores/friendStore';
 	import { avatarStore } from '../stores/avatarStore';
-	import {
-		connectSocket,
-		disconnectSocket,
-		joinRoom,
-		leaveRoom,
-		onMessageEvent,
-		offMessageEvent,
-		onUsernameUpdatedEvent,
-		onFriendRequestReceivedEvent,
-		offUsernameUpdatedEvent,
-		onAvatarUpdatedEvent,
-		onFriendRequestAcceptedEvent,
-		onFriendRequestRejectedEvent,
-		onFriendRequestCanceledEvent,
-		onFriendRemovedEvent,
-		offFriendRequestReceivedEvent,
-		offAvatarUpdatedEvent,
-		offFriendRequestAcceptedEvent,
-		offFriendRequestRejectedEvent,
-		offFriendRequestCanceledEvent,
-		offFriendRemovedEvent,
-		onGroupCreatedEvent,
-		onGroupMemberLeftEvent,
-		offGroupCreatedEvent,
-		offGroupMemberLeftEvent,
-		onGroupAdminChangedEvent,
-		type GroupAdminChangedEventData
-	} from '$lib/socket';
+import {
+	connectSocket,
+	disconnectSocket,
+	joinRoom,
+	leaveRoom,
+	onMessageEvent,
+	offMessageEvent,
+	onUsernameUpdatedEvent,
+	onFriendRequestReceivedEvent,
+	offUsernameUpdatedEvent,
+	onAvatarUpdatedEvent,
+	onFriendRequestAcceptedEvent,
+	onFriendRequestRejectedEvent,
+	onFriendRequestCanceledEvent,
+	onFriendRemovedEvent,
+	offFriendRequestReceivedEvent,
+	offAvatarUpdatedEvent,
+	offFriendRequestAcceptedEvent,
+	offFriendRequestRejectedEvent,
+	offFriendRequestCanceledEvent,
+	offFriendRemovedEvent,
+	onGroupCreatedEvent,
+	onGroupMemberLeftEvent,
+	offGroupCreatedEvent,
+	offGroupMemberLeftEvent,
+	onGroupAdminChangedEvent,
+	type GroupAdminChangedEventData,
+	onGroupUpdateEvent,
+	type GroupUpdateEventData,
+	onGroupMemberRemovedEvent,
+	offGroupUpdateEvent,
+	offGroupMemberRemovedEvent,
+	type GroupMemberRemovedEventData,
+	onGroupMemberAddedEvent,
+	type GroupMemberAddedEventData,
+
+	onGroupAvatarChangedEvent,
+
+	type GroupAvatarChangedEventData
+
+
+} from '$lib/socket';
 	import { handleGetAvatar } from '../services/settingsService';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -163,7 +177,7 @@
 			group_name: data.group_name,
 			private: data.private,
 			group_description: data.group_description,
-			group_colour: data.groupColour,
+			group_colour: data.group_colour,
 			current_message_id: data.current_message_id
 		};
 		console.log('Group object created:', group);
@@ -184,7 +198,6 @@
 			user_ids: updatedUserIds
 		};
 		groupStore.updateGroup(updatedGroup);
-
 		socketEventStore.dispatch({
 			type: 'group_member_left',
 			data: data
@@ -212,6 +225,108 @@
 		});
 	}
 
+	function handleGroupUpdateEvent(data: GroupUpdateEventData) {
+		const group = groupStore.getStoredGroup(data.group_id);
+		if (!group) {
+			throw new Error(`Group not found in storage.`);
+		}
+
+		let updatedGroup: Group = group;
+		
+		if (data.group_name) {
+			updatedGroup = {
+				...updatedGroup,
+				group_name: data.group_name
+			};
+		}
+		if (data.group_description) {
+			updatedGroup = {
+				...updatedGroup,
+				group_description: data.group_description
+			};
+		}
+		if (data.group_colour) {
+			updatedGroup = {
+				...updatedGroup,
+				group_colour: data.group_colour
+			};
+		}
+		groupStore.updateGroup(updatedGroup);
+		socketEventStore.dispatch({
+			type: 'group_admin_changed',
+			data: data
+		});
+	}
+
+	function handleGroupMemberRemovedEvent(data: GroupMemberRemovedEventData) {
+		const group = groupStore.getStoredGroup(data.group_id);
+		if (!group) {
+			throw new Error(`Group not found in storage.`);
+		}
+		// TODO: Check if the user_id is me.
+		const updatedUserIds = group.user_ids.filter((id) => id !== data.user_id);
+		const updatedAdminIds = group.admin_ids.filter((id) => id !== data.user_id);
+		const updatedGroup: Group = {
+			...group,
+			user_ids: updatedUserIds,
+			admin_ids: updatedAdminIds
+		};
+		groupStore.updateGroup(updatedGroup);
+		socketEventStore.dispatch({
+			type: 'group_member_removed',
+			data: data
+		});
+	}
+	
+	function handleGroupMemberAddedEvent(data: GroupMemberAddedEventData) {
+		const group = groupStore.getStoredGroup(data.group_id);
+		if (!group) {
+			throw new Error(`Group not found in storage.`);
+		}
+
+		const updatedUserIds = [...group.user_ids, data.user_id];
+		const updatedGroup: Group = {
+			...group,
+			user_ids: updatedUserIds,
+		};
+		groupStore.updateGroup(updatedGroup);
+		socketEventStore.dispatch({
+			type: 'group_member_added',
+			data: data
+		});
+	}
+
+	function handleGroupAvatarChangedEvent(data: GroupAvatarChangedEventData) {
+		console.log("avatar changed");
+		avatarStore.setShouldUpdateGroupAvatarForGroup(data.group_id, true);
+	}
+
+	function joinGroup(groupId: number) {
+		if (socket) {
+			socket.emit('join_group', { group_id: groupId });
+		}
+	}
+
+	function leaveGroup(groupId: number) {
+		if (socket) {
+			socket.emit('leave_group', { group_id: groupId });
+		}
+	}
+
+	function joinAllGroupRooms() {
+		const state = get(groupStore);
+		state.groups.forEach((group) => {
+			joinGroup(group.group_id);
+		});
+	}
+
+	function leaveAllGroupRooms() {
+		const state = get(groupStore);
+		state.groups.forEach((group) => {
+			leaveGroup(group.group_id);
+		});
+	}
+
 	function handleClickOutside(event: MouseEvent) {
 		if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
 			showProfileDropdown = false;
@@ -235,7 +350,26 @@
 				userId = state.user.id;
 				if (userId) {
 					socket = connectSocket(userId);
+				
+					// Set up socket event listeners for reconnection handling
+					socket.on('disconnect', () => {
+						console.log('Socket disconnected, leaving all rooms');
+						leaveAllGroupRooms();
+						if (userId !== null) {
+							leaveRoom(userId);
+						}
+					});
+					
+					socket.on('reconnect', () => {
+						console.log('Socket reconnected, rejoining all rooms');
+						if (userId !== null) {
+							joinRoom(userId);
+						}
+						joinAllGroupRooms();
+					});
+					
 					joinRoom(userId);
+					joinAllGroupRooms();
 					onMessageEvent(handleMessageEvent);
 					onUsernameUpdatedEvent(handleUsernameUpdatedEvent);
 					onFriendRequestReceivedEvent(handleFriendRequestReceivedEvent);
@@ -246,17 +380,22 @@
 					onFriendRemovedEvent(handleFriendRemovedEvent);
 					onGroupCreatedEvent(handleGroupCreatedEvent);
 					onGroupMemberLeftEvent(handleGroupMemberLeftEvent);
+					onGroupMemberAddedEvent(handleGroupMemberAddedEvent);
 					onGroupAdminChangedEvent(handleGroupAdminChangedEvent);
+					onGroupUpdateEvent(handleGroupUpdateEvent);
+					onGroupMemberRemovedEvent(handleGroupMemberRemovedEvent);
+					onGroupAvatarChangedEvent(handleGroupAvatarChangedEvent);
 				}
 				if (state.accessToken) {
 					getUserDetails(state.accessToken);
 				}
 			} else {
 				if (socket) {
-					if (userId != null) {
+					leaveAllGroupRooms();
+					if (userId !== null) {
 						leaveRoom(userId);
-						disconnectSocket();
 					}
+					disconnectSocket();
 					socket = null;
 				}
 			}
@@ -265,10 +404,11 @@
 		onDestroy(() => {
 			unsubscribeAuth();
 			if (socket) {
-				if (userId != null) {
+				leaveAllGroupRooms();
+				if (userId !== null) {
 					leaveRoom(userId);
-					disconnectSocket();
 				}
+				disconnectSocket();
 			}
 			offMessageEvent();
 			offUsernameUpdatedEvent();
@@ -280,6 +420,8 @@
 			offFriendRemovedEvent();
 			offGroupCreatedEvent();
 			offGroupMemberLeftEvent();
+			offGroupUpdateEvent();
+			offGroupMemberRemovedEvent();
 			document.removeEventListener('click', handleClickOutside);
 		});
 	});

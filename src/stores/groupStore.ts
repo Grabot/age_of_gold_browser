@@ -46,6 +46,8 @@ function createGroupStore() {
 			const groupData = localStorage.getItem(key);
 			if (groupData) {
 				try {
+					console.log("GroupData");
+					console.log(groupData);
 					const group: Group = JSON.parse(groupData);
 					groups.push(group);
 				} catch (error) {
@@ -58,8 +60,26 @@ function createGroupStore() {
 	}
 
 	function saveGroupToStorage(group: Group) {
+		// Only store group data without avatar
+		const GroupToStore: Group = {
+			group_id: group.group_id,
+			unread_messages: group.unread_messages,
+			mute: group.mute,
+			mute_timestamp: group.mute_timestamp,
+			group_version: group.group_version,
+			message_version: group.message_version,
+			avatar_version: group.avatar_version,
+			last_message_read_id: group.last_message_read_id,
+			user_ids: group.user_ids,
+			admin_ids: group.admin_ids,
+			group_name: group.group_name,
+			private: group.private,
+			group_description: group.group_description,
+			group_colour: group.group_colour,
+			current_message_id: group.current_message_id,
+		};// Save everything but the avatar
 		if (typeof window !== 'undefined') {
-			localStorage.setItem(`${STORAGE_KEY_GROUPS_PREFIX}${group.group_id}`, JSON.stringify(group));
+			localStorage.setItem(`${STORAGE_KEY_GROUPS_PREFIX}${group.group_id}`, JSON.stringify(GroupToStore));
 		}
 	}
 
@@ -264,8 +284,15 @@ function createGroupStore() {
 						};
 						saveGroupToStorage(updatedGroup);
 						update((state) => {
-							const newGroups = state.groups.filter((g) => g.group_id !== groupId);
-							return { ...state, groups: [...newGroups, updatedGroup] };
+							const oldGroup = state.groups.find((g) => g.group_id === groupId);
+							if (!oldGroup) {
+								return { ...state, groups:[...state.groups, updatedGroup]}
+							} else {
+								oldGroup.group_name = updatedGroup.group_name;
+								oldGroup.group_description = updatedGroup.group_description;
+								oldGroup.group_colour = updatedGroup.group_colour;
+								return { ...state, groups: [...state.groups] };
+							}
 						});
 					}
 					return true;

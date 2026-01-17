@@ -251,6 +251,8 @@ async function retrieveMissingGroups(groupIds: number[], accessToken: string): P
 
 				const storedGroup = groupStore.getStoredGroup(groupData.group_id);
 
+				console.log("compare stored group with avatar version");
+				console.log(storedGroup);
 				if (storedGroup) {
 					if (storedGroup.avatar_version !== userGroup.avatar_version) {
 						avatarStore.setShouldUpdateGroupAvatarForGroup(userGroup.group_id, true);
@@ -261,7 +263,7 @@ async function retrieveMissingGroups(groupIds: number[], accessToken: string): P
 					avatarStore.setShouldUpdateAvatarForUser(userGroup.group_id, true);
 				}
 
-				groupStore.updateGroup(groupData);
+				groupStore.updateGroup(userGroup);
 			}
 		}
 	} catch (error) {
@@ -340,8 +342,6 @@ function createAuthStore() {
 		console.log('going over groups');
 		loginResult.groups.forEach((groupLogin) => {
 			const storedGroup = groupStore.getStoredGroup(groupLogin.group_id);
-			console.log(groupLogin);
-			console.log(storedGroup);
 
 			// Only create group entry if we have stored data with matching version
 			if (storedGroup && storedGroup.group_version === groupLogin.group_version) {
@@ -351,6 +351,29 @@ function createAuthStore() {
 				// Mark group for retrieval
 				console.log('added to group retrieve', groupLogin.group_id);
 				groupIdsToRetrieve.push(groupLogin.group_id);
+				// Make sure a group entry exists.
+				if (storedGroup) {
+					groups.push(storedGroup);
+				} else {
+					const group: Group = {
+						group_id: groupLogin.group_id,
+						group_version: 0,
+						unread_messages: 0,
+						mute: false,
+						mute_timestamp: null,
+						message_version: 0,
+						avatar_version: 0,
+						last_message_read_id: 0,
+						user_ids: [],
+						admin_ids: [],
+						group_name: "",
+						private: false,
+						group_description: "",
+						group_colour: "",
+						current_message_id: 0
+					}
+					groups.push(group);
+				}				
 			}
 		});
 

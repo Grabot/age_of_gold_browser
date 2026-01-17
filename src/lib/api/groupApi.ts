@@ -169,3 +169,25 @@ export async function getGroupAvatarVersion(
 		body: { group_id: groupId }
 	});
 }
+
+export async function changeGroupAvatar(
+	accessToken: string,
+	groupId: number,
+	newAvatar: File | null,
+	useDefaultAvatar: boolean = false
+): Promise<ApiResponse<unknown>> {
+	const formData = new FormData();
+
+	if (!useDefaultAvatar && newAvatar) {
+		formData.append('avatar', newAvatar);
+	}
+
+	formData.append('group_id', groupId.toString());
+
+	return makeRequest({
+		method: 'PATCH',
+		endpoint: API.groupEndpoints.changeGroupAvatar,
+		accessToken,
+		body: formData
+	});
+}

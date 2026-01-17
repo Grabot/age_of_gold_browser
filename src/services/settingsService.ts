@@ -4,7 +4,7 @@ import { type ApiResult } from '$lib/api/apiClient';
 import { get } from 'svelte/store';
 import { userAvatar, userDetail } from '../stores/authStore';
 import type { User } from '../types/user';
-import { getGroupAvatar, getGroupAvatarVersion } from '$lib/api/groupApi';
+import { getGroupAvatar, getGroupAvatarVersion, changeGroupAvatar } from '$lib/api/groupApi';
 
 export async function handleChangeUsername(
 	accessToken: string,
@@ -167,6 +167,31 @@ export async function handleDeleteAccount(accessToken: string): Promise<ApiResul
 		return {
 			success: false,
 			message: (err as Error).message || 'An error occurred during account deletion.'
+		};
+	}
+}
+
+export async function handleChangeGroupAvatar(
+	accessToken: string,
+	groupId: number,
+	newAvatar: File | null,
+	useDefaultAvatar: boolean = false
+): Promise<ApiResult> {
+	try {
+		const response: ApiResult = await changeGroupAvatar(
+			accessToken,
+			groupId,
+			newAvatar,
+			useDefaultAvatar
+		);
+		if (!response.success) {
+			throw new Error(response.message || 'Failed to change group avatar.');
+		}
+		return { success: true };
+	} catch (err) {
+		return {
+			success: false,
+			message: (err as Error).message || 'An error occurred during group avatar change.'
 		};
 	}
 }
