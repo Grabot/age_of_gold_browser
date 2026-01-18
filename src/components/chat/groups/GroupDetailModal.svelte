@@ -22,7 +22,9 @@ import {
 	handleGetGroupAvatar
 } from '../../../services/settingsService';
 import { onMount, onDestroy } from 'svelte';
-import EditGroupAvatar from './EditGroupAvatar.svelte';
+import EditGroupAvatar from './edit_group/EditGroupAvatar.svelte';
+import EditGroupModal from './edit_group/EditGroupModal.svelte';
+import MuteGroupModal from './MuteGroupModal.svelte';
 import { updateGroup } from '$lib/api/groupApi';
 import ColorPicker from 'svelte-awesome-color-picker';
 
@@ -45,7 +47,7 @@ import ColorPicker from 'svelte-awesome-color-picker';
 	let showAddMemberModal = false;
 	let showEditGroupModal = false;
 	let showEditAvatarModal = false;
-	let showMuteOptions = false;
+	let showMuteGroupModal = false;
 	let muteDurationHours: number | null = null;
 
 	// Form fields for editing group
@@ -270,13 +272,13 @@ import ColorPicker from 'svelte-awesome-color-picker';
 		}
 	}
 
-	async function handleMuteGroup() {
+		async function handleMuteGroup() {
 		try {
 			const mute = !group.mute;
 			const success = await groupStore.muteGroup(group.group_id, mute, muteDurationHours);
 			if (success) {
 				successToast(mute ? 'Group muted' : 'Group unmuted');
-				showMuteOptions = false;
+				showMuteGroupModal = false;
 				// Refresh the group data
 				const updatedGroup = groupStore.getStoredGroup(group.group_id);
 				if (updatedGroup) {
@@ -433,7 +435,7 @@ import ColorPicker from 'svelte-awesome-color-picker';
 				</div>
 
 				<div class="group-actions">
-					{#if isCurrentUserAdmin}
+				{#if isCurrentUserAdmin}
 					<button class="action-btn" on:click={() => (showEditAvatarModal = true)} style="background-color: {groupColor}; color: {textColor};">
 						Edit Avatar
 					</button>
@@ -443,41 +445,11 @@ import ColorPicker from 'svelte-awesome-color-picker';
 					<button class="action-btn" on:click={() => (showEditGroupModal = true)} style="background-color: #3498db; color: white;">
 						Edit Group
 					</button>
-					{/if}
-				<button class="action-btn" on:click={() => (showMuteOptions = !showMuteOptions)} style="background-color: #f39c12; color: white;">
+				{/if}
+				<button class="action-btn" on:click={() => (showMuteGroupModal = true)} style="background-color: #f39c12; color: white;">
 					{group.mute ? 'Unmute Group' : 'Mute Group'}
 				</button>
-				</div>
-
-				{#if showMuteOptions}
-					<div class="mute-options">
-						<h4>Mute Options</h4>
-						<div class="mute-duration">
-							<label>
-								<input
-									type="radio"
-									name="muteDuration"
-									bind:group={muteDurationHours}
-									value={null}
-								/>
-								Mute Indefinitely
-							</label>
-							<label>
-								<input type="radio" name="muteDuration" bind:group={muteDurationHours} value={1} />
-								Mute for 1 hour
-							</label>
-							<label>
-								<input type="radio" name="muteDuration" bind:group={muteDurationHours} value={4} />
-								Mute for 4 hours
-							</label>
-							<label>
-								<input type="radio" name="muteDuration" bind:group={muteDurationHours} value={8} />
-								Mute for 8 hours
-							</label>
-						</div>
-						<button class="confirm-btn" on:click={handleMuteGroup} style="background-color: {groupColor}; color: {textColor};"> Confirm Mute </button>
-					</div>
-				{/if}
+			</div>
 
 				<div class="group-members">
 					<h3>Members</h3>
@@ -636,56 +608,35 @@ import ColorPicker from 'svelte-awesome-color-picker';
 					</div>
 				</div>
 			</div>
-		{/if}
+        {/if}
 
-		{#if showEditGroupModal}
-			<div
-				class="edit-group-modal"
-				on:click|stopPropagation={(e) => {
-					if (e.target === e.currentTarget) {
-						showEditGroupModal = false;
-					}
-				}}
-				on:keydown={(e) => {
-					if (e.key === 'Escape') {
-						showEditGroupModal = false;
-					}
-				}}
-				role="dialog"
-				aria-modal="true"
-				aria-label="Edit Group"
-				tabindex="0"
-			>
-				<div class="edit-group-content">
-				<div class="modal-header" style="background-color: {groupColor}; color: {textColor};">
-					<h3>Edit Group</h3>
-					<button class="close-btn" on:click={() => (showEditGroupModal = false)}>×</button>
-				</div>
-					<form on:submit|preventDefault={handleUpdateGroup}>
-						<div class="form-group">
-							<label for="editGroupName">Group Name</label>
-							<input id="editGroupName" type="text" bind:value={editGroupName} required />
-						</div>
-
-						<div class="form-group">
-							<label for="editGroupDescription">Description</label>
-							<textarea id="editGroupDescription" bind:value={editGroupDescription}></textarea>
-						</div>
-
-							<div class="form-group">
-								<label for="editGroupColour">Group Color</label>
-								<ColorPicker bind:hex={editGroupColour} />
-							</div>
-
-						<div class="form-actions">
-							<button type="submit" class="save-btn" style="background-color: #2ecc71; color: white;">Save Changes</button>
-							<button type="button" class="cancel-btn" on:click={() => (showEditGroupModal = false)}
-								>Cancel</button
-							>
-						</div>
-					</form>
-				</div>
-			</div>
+        <!-- Edit Group Modal -->
+        {#if showEditGroupModal}
+            <EditGroupModal
+                group={group}
+                onClose={() => (showEditGroupModal = false)}
+                onSave={async (updatedGroup) => {
+                    try {
+                        const success = await groupStore.updateGroupDetails(
+                            group.group_id,
+                            updatedGroup.groupName,
+                            updatedGroup.groupDescription,
+                            updatedGroup.groupColour
+                        );
+                        if (success) {
+                            successToast('Group updated successfully');
+                            const updatedGroupData = groupStore.getStoredGroup(group.group_id);
+                            if (updatedGroupData) {
+                                updatedGroupData.avatar = group.avatar;
+                                group = updatedGroupData;
+                            }
+                        }
+                    } catch (error) {
+                        errorToast(error instanceof Error ? error.message : 'Unknown error');
+                    }
+                }}
+                textColor={textColor}
+            />
         {/if}
 
         <!-- Edit Group Avatar Modal -->
@@ -693,7 +644,9 @@ import ColorPicker from 'svelte-awesome-color-picker';
             <EditGroupAvatar
                 groupId={group.group_id}
                 groupName={group.group_name}
-				groupAvatar={group.avatar}
+                groupAvatar={group.avatar}
+                groupColor={groupColor}
+                textColor={textColor}
                 onClose={() => (showEditAvatarModal = false)}
                 onSave={async (data) => {
                     const accessToken = get(accessTokenValue);
@@ -719,6 +672,16 @@ import ColorPicker from 'svelte-awesome-color-picker';
                         }
                     }
                 }}
+            />
+        {/if}
+
+        <!-- Mute Group Modal -->
+        {#if showMuteGroupModal}
+            <MuteGroupModal
+                group={group}
+                onClose={() => (showMuteGroupModal = false)}
+                groupColor={groupColor}
+                textColor={textColor}
             />
         {/if}
 
@@ -809,18 +772,7 @@ import ColorPicker from 'svelte-awesome-color-picker';
 		border: 2px solid rgba(255, 255, 255, 0.3);
 	}
 
-	.group-avatar.placeholder {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: white;
-		font-weight: bold;
-		font-size: 1.5rem;
-		width: 60px;
-		height: 60px;
-		border-radius: 50%;
-		cursor: pointer;
-	}
+
 
 	.group-avatar-container {
 		position: relative;
@@ -864,26 +816,11 @@ import ColorPicker from 'svelte-awesome-color-picker';
 		filter: brightness(0.9);
 	}
 
-	.mute-options {
-		background: #f5f5f5;
-		padding: 1rem;
-		border-radius: 8px;
-		margin: 1rem 0;
-	}
 
-	.mute-duration {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin: 1rem 0;
-	}
 
-	.confirm-btn {
-		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-	}
+
+
+
 
 	.group-members {
 		margin-top: 1rem;
@@ -1126,49 +1063,7 @@ import ColorPicker from 'svelte-awesome-color-picker';
 		margin-top: 1.5rem;
 	}
 
-	.form-group {
-		margin-bottom: 1rem;
-	}
 
-	.form-group label {
-		display: block;
-		margin-bottom: 0.5rem;
-		font-weight: 600;
-	}
-
-	.form-group input[type='text'],
-	.form-group textarea {
-		width: 100%;
-		padding: 0.5rem;
-		border: 1px solid #ddd;
-		border-radius: 4px;
-	}
-
-	.form-group textarea {
-		min-height: 100px;
-		resize: vertical;
-	}
-
-	.form-group input[type='color'] {
-		width: 50px;
-		height: 50px;
-		padding: 0;
-		border: 1px solid #ddd;
-		border-radius: 4px;
-	}
-
-	.form-actions {
-		display: flex;
-		gap: 1rem;
-		margin-top: 1rem;
-	}
-
-	.save-btn {
-		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-	}
 
 	.modal-footer {
 		display: flex;
@@ -1236,40 +1131,5 @@ import ColorPicker from 'svelte-awesome-color-picker';
 		border-radius: 4px;
 		font-size: 0.7rem;
 		margin-left: 0.5rem;
-	}
-	.member-item {
-		display: flex;
-		align-items: center;
-		padding: 0.5rem;
-		border-bottom: 1px solid #eee;
-		width: 100%;
-	}
-
-	.member-avatar-container {
-		width: 2.5rem;
-		height: 2.5rem;
-		flex-shrink: 0;
-		margin-right: 1rem;
-	}
-
-	.member-username-container {
-		flex: 1;
-		text-align: center; /* Center the username */
-	}
-
-	.member-actions-container {
-		width: 120px; /* Fixed width for alignment */
-		flex-shrink: 0;
-		display: flex;
-		gap: 0.5rem;
-		justify-content: flex-end; /* Align actions to the right */
-	}
-
-	.you-badge {
-		padding: 0.2rem 0.5rem;
-		background-color: #3498db;
-		color: white;
-		border-radius: 4px;
-		font-size: 0.7rem;
 	}
 </style>

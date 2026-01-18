@@ -1,17 +1,42 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { accessTokenValue } from '../../../stores/authStore';
+	import { accessTokenValue } from '../../../../stores/authStore';
 	import Cropper from 'svelte-easy-crop';
-	import { handleGetGroupAvatar } from '../../../services/settingsService';
+	import { handleGetGroupAvatar } from '../../../../services/settingsService';
 	import { onDestroy, onMount } from 'svelte';
-	import { errorToast } from '../../../utils/toast';
-	import { avatarStore } from '../../../stores/avatarStore';
+	import { errorToast } from '../../../../utils/toast';
+	import { avatarStore } from '../../../../stores/avatarStore';
 
 	export let onSave: (data: { avatar?: File | null; defaultAvatar?: boolean | null }) => void;
 	export let onClose: () => void;
 	export let groupId: number;
 	export let groupName: string;
 	export let groupAvatar: string | undefined;
+	export let groupColor: string = '#0b9476';
+	export let textColor: string = 'white';
+
+	// Function to determine text color based on background color brightness
+	function getTextColorForBackground(bgColor: string): string {
+		// Remove # if present
+		const color = bgColor.startsWith('#') ? bgColor.substring(1) : bgColor;
+
+		// Parse hex color
+		const r = parseInt(color.substring(0, 2), 16) / 255;
+		const g = parseInt(color.substring(2, 4), 16) / 255;
+		const b = parseInt(color.substring(4, 6), 16) / 255;
+
+		// Calculate relative luminance using the formula:
+		// L = 0.2126*R + 0.7152*G + 0.0722*B
+		const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+		// Use white text for dark backgrounds, black text for light backgrounds
+		// Threshold of 0.5 is commonly used for accessibility
+		return luminance > 0.5 ? 'black' : 'white';
+	}
+
+	$: {
+		textColor = getTextColorForBackground(groupColor);
+	}
 
 	let resetDefault = false;
 	let defaultAvatar = false;
@@ -221,8 +246,11 @@
 	role="dialog"
 	aria-modal="true"
 >
-	<div class="modal-content">
-		<h2>Edit Group Avatar</h2>
+  <div class="modal-content">
+		<div class="modal-header" style="background-color: {groupColor}; color: {textColor};">
+			<h2>Edit Group Avatar</h2>
+			<button class="close-btn" on:click={onClose}>×</button>
+		</div>
 		<div class="avatar-section">
 			<div class="avatar-edit-container">
 				<div
@@ -339,19 +367,39 @@
 
 	.modal-content {
 		background: white;
-		padding: 2rem;
-		border-radius: 8px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		padding: 0;
+		border-radius: 12px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 		width: 90%;
 		max-width: 400px;
 		text-align: center;
 		position: relative;
 		z-index: 1;
+		overflow: hidden;
 	}
 
-	.modal-content h2 {
-		margin-top: 0;
-		color: #2c3e50;
+	.modal-header {
+		padding: 1rem 1.5rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-radius: 12px 12px 0 0;
+		margin: 0;
+	}
+
+	.modal-header h2 {
+		margin: 0;
+		font-size: 1.2rem;
+	}
+
+	.close-btn {
+		background: none;
+		border: none;
+		color: white;
+		font-size: 1.5rem;
+		cursor: pointer;
+		padding: 0;
+		line-height: 1;
 	}
 
 	.avatar-section {
@@ -359,6 +407,7 @@
 		display: flex;
 		justify-content: center;
 		margin: 1rem auto;
+		padding: 1rem;
 	}
 
 	.avatar-edit-container {
