@@ -7,7 +7,7 @@ import {
 	API,
 	type ApiResult
 } from './apiClient';
-import type { Group } from '../../types/groups';
+import type { Group } from '$lib/types/groups';
 
 const CreateGroupResponseSchema = z.object({
 	success: z.boolean(),

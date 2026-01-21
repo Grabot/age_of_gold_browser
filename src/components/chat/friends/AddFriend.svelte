@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { handleSearchFriend } from '../../../services/friendsService';
-	import { handleGetAvatar } from '../../../services/settingsService';
-	import { accessTokenValue } from '../../../stores/authStore';
-	import { friendStore } from '../../../stores/friendStore';
-	import { errorToast } from '../../../utils/toast';
+	import { handleSearchFriend } from '$lib/services/friendsService';
+	import { handleGetAvatar } from '$lib/services/settingsService';
+	import { accessTokenValue } from '$lib/stores/authStore';
+	import { friendStore } from '$lib/stores/friendStore';
+	import { errorToast } from '$lib/utils/toast';
 
 	export let getRandomColor: (username: string) => string;
 	export let getInitial: (username: string) => string;

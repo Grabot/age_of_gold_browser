@@ -7,20 +7,20 @@
 		avatarVersionValue,
 		userAvatar,
 		userDetail
-	} from '../../stores/authStore';
+	} from '$lib/stores/authStore';
 	import {
 		handleChangeAvatar,
 		handleChangeUsername,
 		handleDeleteAccount,
 		handleGetAvatar
-	} from '../../services/settingsService';
+	} from '$lib/services/settingsService';
 	import EditProfileUsername from '../../components/edit_profile/EditProfileUsername.svelte';
 	import EditProfileAvatar from '../../components/edit_profile/EditProfileAvatar.svelte';
 	import { get } from 'svelte/store';
 	import EditProfilePassword from '../../components/edit_profile/EditProfilePassword.svelte';
 	import DeleteAccount from '../../components/edit_profile/DeleteAccount.svelte';
 	import { resetPassword } from '$lib/api/authApi';
-	import { errorToast, successToast } from '../../utils/toast';
+	import { errorToast, successToast } from '$lib/utils/toast';
 
 	let showModalAvatar = false;
 	let showModalUsername = false;

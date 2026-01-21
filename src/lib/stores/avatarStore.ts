@@ -64,6 +64,20 @@ function createAvatarStore() {
 		});
 	}
 
+	function removeAvatarFromStorage(userId: number) {
+		if (typeof window !== 'undefined') {
+			localStorage.removeItem(`${STORAGE_KEY_AVATAR_PREFIX}${userId}`);
+			localStorage.removeItem(`${STORAGE_KEY_SHOULD_UPDATE_AVATAR_PREFIX}${userId}`);
+		}
+	}
+
+	function removeGroupAvatarFromStorage(groupId: number) {
+		if (typeof window !== 'undefined') {
+			localStorage.removeItem(`${STORAGE_KEY_GROUP_AVATAR_PREFIX}${groupId}`);
+			localStorage.removeItem(`${STORAGE_KEY_SHOULD_UPDATE_GROUP_AVATAR_PREFIX}${groupId}`);
+		}
+	}
+
 	function getAvatar(userId: number): string | null {
 		return localStorage.getItem(`${STORAGE_KEY_AVATAR_PREFIX}${userId}`);
 	}
@@ -176,7 +190,9 @@ function createAvatarStore() {
 		getGroupAvatar,
 		setShouldUpdateGroupAvatarForGroup,
 		getShouldUpdateGroupAvatarForGroup,
-		updateGroupAvatarVersion
+		updateGroupAvatarVersion,
+		removeAvatarFromStorage,
+		removeGroupAvatarFromStorage
 	};
 }
 

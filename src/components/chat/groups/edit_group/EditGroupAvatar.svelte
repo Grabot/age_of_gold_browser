@@ -1,39 +1,22 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { accessTokenValue } from '../../../../stores/authStore';
+	import { accessTokenValue } from '$lib/stores/authStore';
 	import Cropper from 'svelte-easy-crop';
-	import { handleGetGroupAvatar } from '../../../../services/settingsService';
+	import { handleGetGroupAvatar } from '$lib/services/settingsService';
 	import { onDestroy, onMount } from 'svelte';
-	import { errorToast } from '../../../../utils/toast';
-	import { avatarStore } from '../../../../stores/avatarStore';
+	import { errorToast } from '$lib/utils/toast';
+	import { avatarStore } from '$lib/stores/avatarStore';
+	import { getTextColorForBackground } from '$lib/utils/groupUtils';
+	import { updateGroupAvatar } from '$lib/utils/avatarUtils';
+	import type { Group } from '$lib/types/groups';
 
 	export let onSave: (data: { avatar?: File | null; defaultAvatar?: boolean | null }) => void;
 	export let onClose: () => void;
 	export let groupId: number;
-	export let groupName: string;
 	export let groupAvatar: string | undefined;
 	export let groupColor: string = '#0b9476';
 	export let textColor: string = 'white';
-
-	// Function to determine text color based on background color brightness
-	function getTextColorForBackground(bgColor: string): string {
-		// Remove # if present
-		const color = bgColor.startsWith('#') ? bgColor.substring(1) : bgColor;
-
-		// Parse hex color
-		const r = parseInt(color.substring(0, 2), 16) / 255;
-		const g = parseInt(color.substring(2, 4), 16) / 255;
-		const b = parseInt(color.substring(4, 6), 16) / 255;
-
-		// Calculate relative luminance using the formula:
-		// L = 0.2126*R + 0.7152*G + 0.0722*B
-		const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-
-		// Use white text for dark backgrounds, black text for light backgrounds
-		// Threshold of 0.5 is commonly used for accessibility
-		return luminance > 0.5 ? 'black' : 'white';
-	}
-
+	export let group: Group;
 	$: {
 		textColor = getTextColorForBackground(groupColor);
 	}
@@ -69,14 +52,12 @@
 			if (currentGroupAvatar) {
 				groupAvatar = currentGroupAvatar;
 			} else {
-				// TODO: Retrieve avatar?
+				updateGroupAvatar(group);
 			}
 		}
 		if (groupAvatar) {
 			imageToCrop = groupAvatar;
 			croppedImage = imageToCrop;
-		} else {
-			// TODO: What do we do here? random colour avatar?
 		}
 	});
 
@@ -246,7 +227,7 @@
 	role="dialog"
 	aria-modal="true"
 >
-  <div class="modal-content">
+	<div class="modal-content">
 		<div class="modal-header" style="background-color: {groupColor}; color: {textColor};">
 			<h2>Edit Group Avatar</h2>
 			<button class="close-btn" on:click={onClose}>×</button>
@@ -482,6 +463,7 @@
 		justify-content: center;
 		gap: 0.5rem;
 		margin-top: 1.5rem;
+		margin-bottom: 1.5rem;
 	}
 
 	.modal-actions button {

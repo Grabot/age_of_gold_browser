@@ -5,8 +5,8 @@
 		signInWithGithub,
 		signInWithReddit
 	} from '$lib/authLib/oauth2';
-	import { authStore } from '../stores/authStore';
-	import { errorToast } from '../utils/toast';
+	import { authStore } from '$lib/stores/authStore';
+	import { errorToast } from '$lib/utils/toast';
 
 	const googleLogin = googleProvider.useGoogleLogin({
 		flow: 'implicit',

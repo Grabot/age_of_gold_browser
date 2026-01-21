@@ -1,10 +1,13 @@
 <script lang="ts">
-import { groupStore } from '../../../stores/groupStore';
-import { friendStore } from '../../../stores/friendStore';
-import { errorToast, successToast } from '../../../utils/toast';
-import { onMount } from 'svelte';
-import { authStore } from '../../../stores/authStore';
-import ColorPicker from 'svelte-awesome-color-picker';
+	import { groupStore } from '$lib/stores/groupStore';
+	import { friendStore } from '$lib/stores/friendStore';
+	import { errorToast, successToast } from '$lib/utils/toast';
+	import { onMount } from 'svelte';
+	import { accessTokenValue, authStore } from '$lib/stores/authStore';
+	import ColorPicker from 'svelte-awesome-color-picker';
+	import { getRandomColor } from '$lib/utils/groupUtils';
+	import { handleGetGroupAvatar } from '$lib/services/settingsService';
+	import { get } from 'svelte/store';
 
 	export let onClose: () => void;
 
@@ -14,21 +17,6 @@ import ColorPicker from 'svelte-awesome-color-picker';
 	let groupColour: string = getRandomColor('Group');
 	let selectedFriends: number[] = [];
 
-	// Generate random color for new groups
-	function getRandomColor(seed: string): string {
-		let hash = 0;
-		for (let i = 0; i < seed.length; i++) {
-			hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-		}
-		const colors = [
-			'#FF6B6B', '#FF8E53', '#FFC154', '#48CF85', '#4299E1', '#5677FC',
-			'#9013FE', '#ED64A6', '#F6AD55', '#FC8181', '#667EEA', '#764BA2',
-			'#F093FB', '#4FACFE', '#00C9A7', '#8BD3DD', '#A5DD9B', '#F9D71C'
-		];
-		return colors[Math.abs(hash) % colors.length];
-	}
-
-	// Get available friends (accepted friends only)
 	$: availableFriends = $friendStore.friends.filter((f) => f.accepted === true && f.user);
 
 	function handleOverlayClick(event: MouseEvent) {
@@ -83,7 +71,7 @@ import ColorPicker from 'svelte-awesome-color-picker';
 
 			if (success) {
 				successToast('Group created successfully!');
-				setTimeout(() => {
+				setTimeout(async () => {
 					resetForm();
 					onClose();
 				}, 1500);
@@ -128,7 +116,7 @@ import ColorPicker from 'svelte-awesome-color-picker';
 			<button class="close-btn" on:click={onClose}>x</button>
 		</div>
 
-		<div class="modal-body">
+		<div class="modal-body-scrollable">
 			<div class="form-group">
 				<label for="groupName">Group Name *</label>
 				<input
@@ -150,10 +138,10 @@ import ColorPicker from 'svelte-awesome-color-picker';
 				></textarea>
 			</div>
 
-				<div class="form-group">
-					<label for="groupColour">Group Colour</label>
-					<ColorPicker bind:hex={groupColour} />
-				</div>
+			<div class="form-group">
+				<label for="groupColour">Group Colour</label>
+				<ColorPicker bind:hex={groupColour} />
+			</div>
 
 			<div class="form-group">
 				<legend>Select Friends to Add</legend>
@@ -205,9 +193,9 @@ import ColorPicker from 'svelte-awesome-color-picker';
 	.modal-content {
 		background: white;
 		width: 80%;
-		height: 70%;
-		max-width: 800px;
-		max-height: 600px;
+		height: 80%;
+		max-width: 1100px;
+		max-height: 800px;
 		border-radius: 12px;
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 		display: flex;
@@ -238,6 +226,12 @@ import ColorPicker from 'svelte-awesome-color-picker';
 		cursor: pointer;
 	}
 
+	.modal-body-scrollable {
+		overflow-y: auto;
+		padding: 1rem;
+		flex: 1;
+	}
+
 	.form-group {
 		margin-bottom: 1rem;
 	}
@@ -263,18 +257,8 @@ import ColorPicker from 'svelte-awesome-color-picker';
 		min-height: 80px;
 	}
 
-	.color-picker {
-		width: 50px;
-		height: 50px;
-		padding: 2px;
-		border: 2px solid #ddd;
-		border-radius: 4px;
-		cursor: pointer;
-	}
-
 	.friends-selection {
-		max-height: 200px;
-		overflow-y: auto;
+		max-height: none;
 		border: 1px solid #eee;
 		border-radius: 4px;
 		padding: 0.5rem;

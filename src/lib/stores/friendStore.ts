@@ -8,7 +8,7 @@ import {
 } from '$lib/api/friendApi';
 import type { ApiResponse } from '$lib/api/apiClient';
 import type { User } from '../types/user';
-import type { Friend } from '../types/user';
+import type { Friend } from '../types/friend';
 import { accessTokenValue } from './authStore';
 import { userStore } from './userStore';
 import { avatarStore } from './avatarStore';

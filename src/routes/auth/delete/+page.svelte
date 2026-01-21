@@ -3,9 +3,9 @@
 	import { deleteAccountRequest, confirmDeleteAccount } from '$lib/api/authApi';
 	import { onMount } from 'svelte';
 	import { getTokenFromUrl } from '$lib/authLib';
-	import { accessTokenValue, authStore } from '../../../stores/authStore';
+	import { accessTokenValue, authStore } from '$lib/stores/authStore';
 	import { get } from 'svelte/store';
-	import { errorToast, successToast } from '../../../utils/toast';
+	import { errorToast, successToast } from '$lib/utils/toast';
 
 	let email = '';
 	let loading = false;

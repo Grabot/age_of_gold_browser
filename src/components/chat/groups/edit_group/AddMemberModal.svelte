@@ -1,13 +1,15 @@
 <script lang="ts">
-import { friendStore } from '../../../../stores/friendStore';
-import { authStore } from '../../../../stores/authStore';
-import { get } from 'svelte/store';
-import type { User } from '../../../../types/user';
+	import { friendStore } from '$lib/stores/friendStore';
+	import { authStore } from '$lib/stores/authStore';
+	import { get } from 'svelte/store';
+	import type { User } from '$lib/types/user';
+	import { getRandomColor, getInitial } from '$lib/utils/groupUtils';
 
 	export let onClose: () => void;
 	export let onAddMember: (userId: number) => void;
-	export let getRandomColor: (username: string) => string;
-	export let getInitial: (username: string) => string;
+	export let group_user_ids: number[];
+	export let groupColor: string = '#0b9476';
+	export let textColor: string = 'white';
 
 	let newMemberUsername: string = '';
 	let filteredFriends: Array<{
@@ -25,10 +27,11 @@ import type { User } from '../../../../types/user';
 
 		// Filter friends that are accepted and not the current user
 		let availableFriends = friends.filter(
-			(friend) => 
-				friend.accepted === true && 
+			(friend) =>
+				friend.accepted === true &&
 				friend.user &&
-				friend.friend_id !== currentUserId
+				friend.friend_id !== currentUserId &&
+				!group_user_ids.includes(friend.friend_id)
 		);
 
 		// If there's a search query, filter by username
@@ -73,7 +76,7 @@ import type { User } from '../../../../types/user';
 	aria-label="Add Member"
 >
 	<div class="modal-content">
-		<div class="modal-header">
+		<div class="modal-header" style="background-color: {groupColor}; color: {textColor};">
 			<h3>Add Member</h3>
 			<button class="close-btn" on:click={onClose}>×</button>
 		</div>
@@ -101,11 +104,7 @@ import type { User } from '../../../../types/user';
 							<li class="friend-item">
 								<div class="friend-avatar-container">
 									{#if friend.avatar}
-										<img
-											class="friend-avatar"
-											src={friend.avatar}
-											alt={friend.username}
-										/>
+										<img class="friend-avatar" src={friend.avatar} alt={friend.username} />
 									{:else}
 										<div
 											class="friend-avatar placeholder"
@@ -118,12 +117,7 @@ import type { User } from '../../../../types/user';
 								<div class="friend-info">
 									<span class="friend-username">{friend.username}</span>
 								</div>
-								<button
-									class="add-btn"
-									on:click={() => onAddMember(friend.user_id)}
-								>
-									Add
-								</button>
+								<button class="add-btn" on:click={() => onAddMember(friend.user_id)}> Add </button>
 							</li>
 						{/each}
 					</ul>
@@ -277,7 +271,6 @@ import type { User } from '../../../../types/user';
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		border-radius: 50%;
 	}
 
 	.friend-avatar.placeholder {
@@ -289,7 +282,6 @@ import type { User } from '../../../../types/user';
 		color: white;
 		font-weight: bold;
 		font-size: 1rem;
-		border-radius: 50%;
 		background-color: #ccc;
 	}
 
@@ -336,6 +328,8 @@ import type { User } from '../../../../types/user';
 
 	.cancel-btn {
 		padding: 0.75rem 1.5rem;
+		margin-bottom: 1.5rem;
+		margin-right: 1.5rem;
 		background-color: #f5f5f5;
 		color: #333;
 		border: none;

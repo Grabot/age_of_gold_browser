@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { groupStore } from '../../../../stores/groupStore';
-	import { errorToast, successToast } from '../../../../utils/toast';
-	import type { Group } from '../../../../types/groups';
+	import { groupStore } from '$lib/stores/groupStore';
+	import { errorToast, successToast } from '$lib/utils/toast';
+	import type { Group } from '$lib/types/groups';
 	import ColorPicker from 'svelte-awesome-color-picker';
+	import { getTextColorForBackground } from '$lib/utils/groupUtils';
 
 	export let group: Group;
 	export let onClose: () => void;
@@ -11,31 +12,12 @@
 		groupDescription: string;
 		groupColour: string;
 	}) => void;
-	
+
 	export let textColor: string = 'white';
 
 	let editGroupName: string = '';
 	let editGroupDescription: string = '';
 	let editGroupColour: string = '';
-
-	// Function to determine text color based on background color brightness
-	function getTextColorForBackground(bgColor: string): string {
-		// Remove # if present
-		const color = bgColor.startsWith('#') ? bgColor.substring(1) : bgColor;
-
-		// Parse hex color
-		const r = parseInt(color.substring(0, 2), 16) / 255;
-		const g = parseInt(color.substring(2, 4), 16) / 255;
-		const b = parseInt(color.substring(4, 6), 16) / 255;
-
-		// Calculate relative luminance using the formula:
-		// L = 0.2126*R + 0.7152*G + 0.0722*B
-		const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-
-		// Use white text for dark backgrounds, black text for light backgrounds
-		// Threshold of 0.5 is commonly used for accessibility
-		return luminance > 0.5 ? 'black' : 'white';
-	}
 
 	$: {
 		textColor = getTextColorForBackground(editGroupColour);
@@ -56,7 +38,6 @@
 				groupColour: editGroupColour
 			};
 			onSave(updatedGroup);
-			successToast('Group updated successfully');
 		} catch (error) {
 			errorToast(error instanceof Error ? error.message : 'Unknown error');
 		}
@@ -84,7 +65,10 @@
 	aria-label="Edit Group"
 >
 	<div class="modal-content">
-		<div class="modal-header" style="background-color: {group.group_colour || '#0b9476'}; color: {textColor};">
+		<div
+			class="modal-header"
+			style="background-color: {group.group_colour || '#0b9476'}; color: {textColor};"
+		>
 			<h3>Edit Group</h3>
 			<button class="close-btn" on:click={onClose}>×</button>
 		</div>
@@ -116,10 +100,15 @@
 					<ColorPicker bind:hex={editGroupColour} />
 				</div>
 
-						<div class="form-actions">
-							<button type="submit" class="save-btn" style="background-color: {group.group_colour || '#0b9476'}; color: {textColor};">Save Changes</button>
-							<button type="button" class="cancel-btn" on:click={() => onClose()}>Cancel</button>
-						</div>
+				<div class="form-actions">
+					<button
+						type="submit"
+						class="save-btn"
+						style="background-color: {group.group_colour || '#0b9476'}; color: {textColor};"
+						>Save Changes</button
+					>
+					<button type="button" class="cancel-btn" on:click={() => onClose()}>Cancel</button>
+				</div>
 			</form>
 		</div>
 	</div>

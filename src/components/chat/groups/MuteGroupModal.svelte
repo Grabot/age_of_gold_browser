@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { groupStore } from '../../../stores/groupStore';
-	import { errorToast, successToast } from '../../../utils/toast';
-	import type { Group } from '../../../types/groups';
+	import { groupStore } from '$lib/stores/groupStore';
+	import { errorToast, successToast } from '$lib/utils/toast';
+	import type { Group } from '$lib/types/groups';
 
 	export let group: Group;
 	export let onClose: () => void;
@@ -54,12 +54,7 @@
 			<div class="mute-options">
 				<div class="mute-duration">
 					<label>
-						<input
-							type="radio"
-							name="muteDuration"
-							bind:group={muteDurationHours}
-							value={null}
-						/>
+						<input type="radio" name="muteDuration" bind:group={muteDurationHours} value={null} />
 						Mute Indefinitely
 					</label>
 					<label>
@@ -75,7 +70,11 @@
 						Mute for 8 hours
 					</label>
 				</div>
-				<button class="confirm-btn" on:click={handleMuteGroup} style="background-color: {groupColor}; color: {textColor};">
+				<button
+					class="confirm-btn"
+					on:click={handleMuteGroup}
+					style="background-color: {groupColor}; color: {textColor};"
+				>
 					Confirm {group.mute ? 'Unmute' : 'Mute'}
 				</button>
 			</div>

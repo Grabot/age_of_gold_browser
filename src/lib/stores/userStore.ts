@@ -22,6 +22,12 @@ function createUserStore() {
 		}
 	}
 
+	function removeUserFromStorage(userId: number) {
+		if (typeof window !== 'undefined') {
+			localStorage.removeItem(`${STORAGE_KEY_USERS_PREFIX}${userId}`);
+		}
+	}
+
 	function updateUser(user: User): void {
 		saveUserToStorage(user);
 	}
@@ -50,7 +56,8 @@ function createUserStore() {
 		subscribe,
 		updateUser,
 		getUser,
-		clear
+		clear,
+		removeUserFromStorage
 	};
 }
 

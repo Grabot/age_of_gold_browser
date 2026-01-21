@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { accessTokenValue, authStore, refreshTokenValue } from '../../stores/authStore';
+import { accessTokenValue, authStore, refreshTokenValue } from '$lib/stores/authStore';
 import { get } from 'svelte/store';
 
 export interface FriendLogin {

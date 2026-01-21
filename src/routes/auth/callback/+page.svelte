@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { getTokenFromUrl } from '$lib/authLib';
-	import { accessTokenValue, authStore } from '../../../stores/authStore';
-	import { errorToast } from '../../../utils/toast';
+	import { accessTokenValue, authStore } from '$lib/stores/authStore';
+	import { errorToast } from '$lib/utils/toast';
 
 	let loading = true;
 	let error = '';

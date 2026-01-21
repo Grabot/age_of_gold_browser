@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
 import type { User } from '../types/user';
-import type { Friend } from '../types/user';
+import type { Friend } from '../types/friend';
 import {
 	loginTokenGoogle,
 	loginUser,
@@ -8,14 +8,19 @@ import {
 	registerUser,
 	validateToken
 } from '$lib/api/authApi';
-import { getUser, getMultipleUsers } from '$lib/api/userApi';
-import { type LoginResponse, type FriendLogin } from '$lib/api/apiClient';
+import { getUser } from '$lib/api/userApi';
+import { type LoginResponse } from '$lib/api/apiClient';
 import { friendStore } from './friendStore';
 import { userStore } from './userStore';
 import { avatarStore } from './avatarStore';
 import { groupStore } from './groupStore';
 import type { Group } from '../types/groups';
 import { errorToast } from '../utils/toast';
+import {
+	retrieveMissingFriends,
+	retrieveMissingGroups,
+	retrieveMissingUsers
+} from '../services/dataRetrievalService';
 
 export const STORAGE_KEY_ACCESS_TOKEN = 'accessToken';
 export const STORAGE_KEY_REFRESH_TOKEN = 'refreshToken';
@@ -140,137 +145,6 @@ const initialState: AuthState = {
 	loading: true
 };
 
-// TODO: Move to seperate file?
-export async function retrieveMissingUsers(userIds: number[], accessToken: string): Promise<void> {
-	if (userIds.length === 0) {
-		return;
-	}
-
-	try {
-		const usersResponse = await getMultipleUsers(accessToken, userIds);
-
-		if (usersResponse.data) {
-			for (const userResponse of usersResponse.data) {
-				const storedUser = userStore.getUser(userResponse.id);
-				const user: User = {
-					id: userResponse.id,
-					username: userResponse.username,
-					avatar_version: userResponse.avatar_version,
-					profile_version: userResponse.profile_version,
-					avatar: undefined
-				};
-				if (storedUser) {
-					if (storedUser.avatar_version !== userResponse.avatar_version) {
-						avatarStore.setShouldUpdateAvatarForUser(userResponse.id, true);
-						// Only update avatar_version when we actually retrieve and update the avatar.
-						user.avatar_version = storedUser.avatar_version;
-					}
-				} else {
-					avatarStore.setShouldUpdateAvatarForUser(userResponse.id, true);
-				}
-				userStore.updateUser(user);
-				const storedFriend = friendStore.getStoredFriend(user.id);
-				if (storedFriend) {
-					storedFriend.user = user;
-					friendStore.updateFriend(storedFriend);
-				}
-			}
-		}
-	} catch (error) {
-		console.error('Failed to retrieve missing users:', error);
-	}
-	return;
-}
-
-async function retrieveMissingFriends(friendIds: number[], accessToken: string): Promise<void> {
-	if (friendIds.length === 0) {
-		return;
-	}
-
-	const friends: Friend[] = [];
-	try {
-		const { fetchFriends } = await import('$lib/api/friendApi');
-		const friendsResponse = await fetchFriends(accessToken, friendIds);
-
-		if (friendsResponse.success && friendsResponse.data) {
-			// Update each friend's data
-			for (const friendData of friendsResponse.data) {
-				const storedUser = userStore.getUser(friendData.friend_id);
-
-				const friend: Friend = {
-					friend_id: friendData.friend_id,
-					accepted: friendData.accepted,
-					friend_version: friendData.friend_version,
-					user: storedUser || undefined
-				};
-
-				friendStore.updateFriend(friend);
-			}
-		}
-	} catch (error) {
-		console.error('Failed to retrieve missing friends data:', error);
-	}
-}
-
-async function retrieveMissingGroups(groupIds: number[], accessToken: string): Promise<void> {
-	console.log('retrieving missing groups');
-	if (groupIds.length === 0) {
-		return;
-	}
-
-	try {
-		const { fetchGroups } = await import('$lib/api/groupApi');
-		console.log('group call');
-		const groupsResponse = await fetchGroups(accessToken, groupIds);
-		console.log('response');
-		console.log(groupsResponse);
-
-		if (groupsResponse.success && groupsResponse.data) {
-			// Update each group's data
-			for (const groupData of groupsResponse.data) {
-				console.log('updating group');
-				console.log(groupData);
-				const userGroup: Group = {
-					group_id: groupData.group_id,
-					unread_messages: groupData.unread_messages,
-					mute: groupData.mute,
-					mute_timestamp: groupData.mute_timestamp,
-					group_version: groupData.group_version,
-					message_version: groupData.message_version,
-					avatar_version: groupData.avatar_version,
-					last_message_read_id: groupData.last_message_read_id,
-					user_ids: groupData.user_ids,
-					admin_ids: groupData.admin_ids,
-					group_name: groupData.group_name,
-					private: groupData.private,
-					group_description: groupData.group_description,
-					group_colour: groupData.group_colour,
-					current_message_id: groupData.current_message_id,
-					avatar: undefined
-				};
-
-				const storedGroup = groupStore.getStoredGroup(groupData.group_id);
-
-				console.log("compare stored group with avatar version");
-				console.log(storedGroup);
-				if (storedGroup) {
-					if (storedGroup.avatar_version !== userGroup.avatar_version) {
-						avatarStore.setShouldUpdateGroupAvatarForGroup(userGroup.group_id, true);
-						// Only update avatar_version when we actually retrieve and update the avatar.
-						userGroup.avatar_version = storedGroup.avatar_version;
-					}
-				} else {
-					avatarStore.setShouldUpdateAvatarForUser(userGroup.group_id, true);
-				}
-
-				groupStore.updateGroup(userGroup);
-			}
-		}
-	} catch (error) {
-		console.error('Failed to retrieve missing groups data:', error);
-	}
-}
-
 function createAuthStore() {
 	const { subscribe, set } = writable<AuthState>(initialState);
 
@@ -341,7 +215,7 @@ function createAuthStore() {
 
 		console.log('going over groups');
 		loginResult.groups.forEach((groupLogin) => {
-			const storedGroup = groupStore.getStoredGroup(groupLogin.group_id);
+			const storedGroup = groupStore.getGroup(groupLogin.group_id);
 
 			// Only create group entry if we have stored data with matching version
 			if (storedGroup && storedGroup.group_version === groupLogin.group_version) {
@@ -366,14 +240,14 @@ function createAuthStore() {
 						last_message_read_id: 0,
 						user_ids: [],
 						admin_ids: [],
-						group_name: "",
+						group_name: '',
 						private: false,
-						group_description: "",
-						group_colour: "",
+						group_description: '',
+						group_colour: '',
 						current_message_id: 0
-					}
+					};
 					groups.push(group);
-				}				
+				}
 			}
 		});
 

@@ -2,13 +2,13 @@
 	import LoginBox from '../components/LoginBox.svelte';
 	import RegisterBox from '../components/RegisterBox.svelte';
 	import UserBox from '../components/UserBox.svelte';
-	import { authStore } from '../stores/authStore';
+	import { authStore } from '$lib/stores/authStore';
 	import { writable } from 'svelte/store';
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import ForgotPasswordModal from '../components/ForgotPasswordModal.svelte';
 	import { forgotPassword } from '$lib/api/authApi';
-	import { errorToast } from '../utils/toast';
+	import { errorToast } from '$lib/utils/toast';
 
 	const usernameOrEmailLogin = writable('');
 	const passwordLogin = writable('');

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { errorToast } from '../../../utils/toast';
-	import { friendStore } from '../../../stores/friendStore';
-	import type { Friend } from '../../../types/user';
+	import { errorToast } from '$lib/utils/toast';
+	import { friendStore } from '$lib/stores/friendStore';
+	import type { Friend } from '$lib/types/friend';
 
 	export let friend: Friend;
 	export let onClose: () => void;

@@ -1,73 +1,16 @@
 <script lang="ts">
-import { groupStore } from '../../../stores/groupStore';
-import GroupDetailModal from './GroupDetailModal.svelte';
-import type { Group } from '../../../types/groups';
-import { onMount, afterUpdate } from 'svelte';
-	import { avatarStore } from '../../../stores/avatarStore';
-	import { accessTokenValue } from '../../../stores/authStore';
-	import {
-		handleGetGroupAvatar,
-		handleGetGroupAvatarVersion
-	} from '../../../services/settingsService';
-	import { errorToast } from '../../../utils/toast';
-
-	export let getRandomColor: (username: string) => string;
-	export let getInitial: (username: string) => string;
+	import { groupStore } from '$lib/stores/groupStore';
+	import GroupDetailModal from './GroupDetailModal.svelte';
+	import type { Group } from '$lib/types/groups';
+	import { onMount, onDestroy } from 'svelte';
+	import { avatarStore } from '$lib/stores/avatarStore';
+	import { getRandomColor, getInitial, getTextColorForBackground } from '$lib/utils/groupUtils';
+	import { updateGroupAvatar } from '$lib/utils/avatarUtils';
+	import { socketEventStore } from '$lib/stores/socketEventStore';
 
 	let selectedGroup: Group | null = null;
 	let showDetailModal = false;
-
-	// Function to determine text color based on background color brightness
-	function getTextColorForBackground(bgColor: string): string {
-		// Remove # if present
-		const color = bgColor.startsWith('#') ? bgColor.substring(1) : bgColor;
-
-		// Parse hex color
-		const r = parseInt(color.substring(0, 2), 16) / 255;
-		const g = parseInt(color.substring(2, 4), 16) / 255;
-		const b = parseInt(color.substring(4, 6), 16) / 255;
-
-		// Calculate relative luminance using the formula:
-		// L = 0.2126*R + 0.7152*G + 0.0722*B
-		const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-
-		// Use white text for dark backgrounds, black text for light backgrounds
-		// Threshold of 0.5 is commonly used for accessibility
-		return luminance > 0.5 ? 'black' : 'white';
-	}
-
-	// Helper function to get button style based on group color
-	function getGroupItemStyle(group: Group): string {
-		if (group.group_colour) {
-			const textColor = getTextColorForBackground(group.group_colour);
-			return `background-color: ${group.group_colour}; color: ${textColor};`;
-		} else {
-			return `background-color: ${getRandomColor('Group')}; color: white;`;
-		}
-	}
-
-	async function updateGroupAvatar(group: Group) {
-		const accessToken = $accessTokenValue;
-		if (accessToken && group) {
-			const avatarResponse = await handleGetGroupAvatar(accessToken, group.group_id, false);
-			if (avatarResponse.success && avatarResponse.avatar) {
-				group.avatar = avatarResponse.avatar;
-				avatarStore.updateGroupAvatar(group.group_id, avatarResponse.avatar);
-				const avatarVersionResponse = await handleGetGroupAvatarVersion(
-					accessToken,
-					group.group_id
-				);
-				if (avatarVersionResponse.success && avatarVersionResponse.avatarVersion) {
-					console.log("updating avatar version", avatarVersionResponse.avatarVersion);
-					group.avatar_version = avatarVersionResponse.avatarVersion;
-				}
-				groupStore.updateGroup(group);
-				avatarStore.setShouldUpdateGroupAvatarForGroup(group.group_id, false);
-			} else {
-				errorToast('Failed to fetch avatar');
-			}
-		}
-	}
+	let socketEventUnsubscribe: (() => void) | null = null;
 
 	async function checkGroupAvatar(group: Group) {
 		console.log('Checking group avatar for group:', group.group_id);
@@ -75,7 +18,7 @@ import { onMount, afterUpdate } from 'svelte';
 			const avatarGroup = avatarStore.getGroupAvatar(group.group_id);
 			if (avatarGroup) {
 				group.avatar = avatarGroup;
-				groupStore.updateGroup(group);
+				groupStore.updateGroupNotSave(group);
 			} else {
 				console.log('No avatar found for group:', group.group_id);
 				await updateGroupAvatar(group);
@@ -89,7 +32,7 @@ import { onMount, afterUpdate } from 'svelte';
 				console.log('Processing groups:', storeState.groups);
 				storeState.groups.forEach(async (group) => {
 					if (avatarStore.getShouldUpdateGroupAvatarForGroup(group.group_id)) {
-						console.log("it is decided that it should update the avatar!");
+						console.log('it is decided that it should update the avatar!');
 						await updateGroupAvatar(group);
 					} else {
 						await checkGroupAvatar(group);
@@ -98,10 +41,30 @@ import { onMount, afterUpdate } from 'svelte';
 			}
 		});
 
-		return () => unsubscribe();
+		socketEventUnsubscribe = socketEventStore.subscribe((events) => {
+			events.forEach(async (event) => {
+				console.log('socket event', event);
+				if (event.type === 'group_avatar_updated') {
+					const group = $groupStore.groups.find((g) => g.group_id === event.data?.group_id);
+					if (group) {
+						if (group.avatar_version !== event.data.avatar_version) {
+							const newGroup = await updateGroupAvatar(group);
+							if (newGroup) {
+								groupStore.updateGroup(newGroup);
+							}
+						}
+					}
+				}
+			});
+		});
+
+		return () => {
+			unsubscribe();
+			if (socketEventUnsubscribe) {
+				socketEventUnsubscribe();
+			}
+		};
 	});
-
-
 </script>
 
 <div class="groups-list">
@@ -118,7 +81,10 @@ import { onMount, afterUpdate } from 'svelte';
 				}}
 				type="button"
 				aria-label="View details for group {group.group_id}"
-				style="background-color: {group.group_colour || getRandomColor('Group')}; color: {group.group_colour ? getTextColorForBackground(group.group_colour) : getTextColorForBackground(getRandomColor('Group'))};"
+				style="background-color: {group.group_colour ||
+					getRandomColor('Group')}; color: {group.group_colour
+					? getTextColorForBackground(group.group_colour)
+					: getTextColorForBackground(getRandomColor('Group'))};"
 			>
 				<div class="avatar-container">
 					{#if group.avatar}
@@ -126,7 +92,9 @@ import { onMount, afterUpdate } from 'svelte';
 					{:else}
 						<div
 							class="group-avatar placeholder"
-							style="background-color: {getRandomColor(group.group_name || '')}; color: {getTextColorForBackground(getRandomColor(group.group_name || ''))}"
+							style="background-color: {getRandomColor(
+								group.group_name || ''
+							)}; color: {getTextColorForBackground(getRandomColor(group.group_name || ''))}"
 						>
 							{getInitial(group.group_name || '')}
 						</div>
@@ -139,7 +107,6 @@ import { onMount, afterUpdate } from 'svelte';
 					{/if}
 				</div>
 			</button>
-
 		{/each}
 	{:else}
 		<p class="no-groups">You don't have any groups yet. Create a group to get started!</p>
@@ -147,12 +114,7 @@ import { onMount, afterUpdate } from 'svelte';
 
 	<!-- Group Detail Modal -->
 	{#if showDetailModal && selectedGroup}
-		<GroupDetailModal
-			group={selectedGroup}
-			onClose={() => (showDetailModal = false)}
-			{getRandomColor}
-			{getInitial}
-		/>
+		<GroupDetailModal group={selectedGroup} onClose={() => (showDetailModal = false)} />
 	{/if}
 </div>
 

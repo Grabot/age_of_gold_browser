@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { userDetail } from '../../stores/authStore';
+	import { userDetail } from '$lib/stores/authStore';
 
 	export let onSave: (data: { username?: string }) => void;
 	export let onClose: () => void;

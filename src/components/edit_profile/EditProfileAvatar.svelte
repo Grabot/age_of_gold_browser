@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { accessTokenValue, userAvatar } from '../../stores/authStore';
+	import { accessTokenValue, userAvatar } from '$lib/stores/authStore';
 	import Cropper from 'svelte-easy-crop';
-	import { handleGetAvatar } from '../../services/settingsService';
+	import { handleGetAvatar } from '$lib/services/settingsService';
 	import { onDestroy, onMount } from 'svelte';
-	import { errorToast } from '../../utils/toast';
+	import { errorToast } from '$lib/utils/toast';
 
 	export let onSave: (data: { avatar?: File | null; defaultAvatar?: boolean | null }) => void;
 	export let onClose: () => void;

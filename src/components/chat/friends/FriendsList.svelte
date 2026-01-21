@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { friendStore } from '../../../stores/friendStore';
-	import { errorToast } from '../../../utils/toast';
+	import { friendStore } from '$lib/stores/friendStore';
+	import { errorToast } from '$lib/utils/toast';
 	import FriendDetailModal from './FriendDetailModal.svelte';
-	import type { Friend } from '../../../types/user';
+	import type { Friend } from '$lib/types/friend';
 
 	export let getRandomColor: (username: string) => string;
 	export let getInitial: (username: string) => string;

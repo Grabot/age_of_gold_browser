@@ -198,7 +198,6 @@ export function onGroupMemberLeftEvent(
 	}
 }
 
-// TODO: Do an interface for all socket calls? How to structure this?
 export interface GroupAdminChangedEventData {
 	group_id: number;
 	user_id: number;
@@ -271,6 +270,7 @@ export interface GroupAvatarChangedEventData {
 	user_id: number;
 }
 export function onGroupAvatarChangedEvent(callback: (data: GroupAvatarChangedEventData) => void) {
+	console.log('on group avatar updated');
 	if (socket) {
 		socket.on('group_avatar_updated', callback);
 	}

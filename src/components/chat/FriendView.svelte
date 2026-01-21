@@ -2,15 +2,14 @@
 	import AddFriend from './friends/AddFriend.svelte';
 	import FriendsList from './friends/FriendsList.svelte';
 	import GroupsTab from './groups/GroupsTab.svelte';
-	import { groupStore } from '../../stores/groupStore';
 	import { onMount } from 'svelte';
-	import { avatarStore } from '../../stores/avatarStore';
-	import { accessTokenValue } from '../../stores/authStore';
-	import { friendStore } from '../../stores/friendStore';
-	import type { Friend, User } from '../../types/user';
-	import { userStore } from '../../stores/userStore';
-	import { handleGetAvatar, handleGetAvatarVersion } from '../../services/settingsService';
-	import { errorToast } from '../../utils/toast';
+	import { avatarStore } from '$lib/stores/avatarStore';
+	import { accessTokenValue } from '$lib/stores/authStore';
+	import { friendStore } from '$lib/stores/friendStore';
+	import type { User } from '$lib/types/user';
+	import type { Friend } from '$lib/types/friend';
+	import { userStore } from '$lib/stores/userStore';
+	import { updateUserAvatar } from '$lib/utils/avatarUtils';
 	import { getUser } from '$lib/api/userApi';
 
 	export let onClose: () => void;
@@ -24,27 +23,6 @@
 	let searched = false;
 	let lastSearchedQuery: string | null = null;
 	let isLoading = false;
-
-	async function updateUserAvatar(user: User) {
-		const accessToken = $accessTokenValue;
-		if (accessToken && user) {
-			const avatarResponse = await handleGetAvatar(accessToken, user.id, false);
-			if (avatarResponse.success && avatarResponse.avatar) {
-				user.avatar = avatarResponse.avatar;
-				avatarStore.updateAvatar(user.id, avatarResponse.avatar);
-				const avatarVersionResponse = await handleGetAvatarVersion(accessToken, user.id);
-				if (avatarVersionResponse.success && avatarVersionResponse.avatarVersion) {
-					user.avatar_version = avatarVersionResponse.avatarVersion;
-				}
-				userStore.updateUser(user);
-				avatarStore.setShouldUpdateAvatarForUser(user.id, false);
-			} else {
-				errorToast('Failed to fetch avatar');
-			}
-			return user;
-		}
-		return null;
-	}
 
 	async function checkUserAvatar(friend: Friend) {
 		if (friend.user) {

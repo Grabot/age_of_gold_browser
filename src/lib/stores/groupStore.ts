@@ -13,6 +13,7 @@ import {
 import type { ApiResponse } from '$lib/api/apiClient';
 import type { Group } from '../types/groups';
 import { accessTokenValue } from './authStore';
+import { avatarStore } from './avatarStore';
 
 export const STORAGE_KEY_GROUPS_PREFIX = 'group_';
 
@@ -46,7 +47,7 @@ function createGroupStore() {
 			const groupData = localStorage.getItem(key);
 			if (groupData) {
 				try {
-					console.log("GroupData");
+					console.log('GroupData');
 					console.log(groupData);
 					const group: Group = JSON.parse(groupData);
 					groups.push(group);
@@ -76,10 +77,13 @@ function createGroupStore() {
 			private: group.private,
 			group_description: group.group_description,
 			group_colour: group.group_colour,
-			current_message_id: group.current_message_id,
-		};// Save everything but the avatar
+			current_message_id: group.current_message_id
+		}; // Save everything but the avatar
 		if (typeof window !== 'undefined') {
-			localStorage.setItem(`${STORAGE_KEY_GROUPS_PREFIX}${group.group_id}`, JSON.stringify(GroupToStore));
+			localStorage.setItem(
+				`${STORAGE_KEY_GROUPS_PREFIX}${group.group_id}`,
+				JSON.stringify(GroupToStore)
+			);
 		}
 	}
 
@@ -146,6 +150,15 @@ function createGroupStore() {
 				return false;
 			}
 		},
+		removeGroup: async (groupId: number): Promise<boolean> => {
+			removeGroupFromStorage(groupId);
+			avatarStore.removeGroupAvatarFromStorage(groupId);
+			update((state) => {
+				const updatedGroups = state.groups.filter((g) => g.group_id !== groupId);
+				return { ...state, groups: updatedGroups };
+			});
+			return true;
+		},
 		leaveGroup: async (groupId: number): Promise<boolean> => {
 			try {
 				const accessToken = get(accessTokenValue);
@@ -153,6 +166,7 @@ function createGroupStore() {
 				if (response.success) {
 					// Remove group from local storage and store
 					removeGroupFromStorage(groupId);
+					avatarStore.removeGroupAvatarFromStorage(groupId);
 					update((state) => {
 						const updatedGroups = state.groups.filter((g) => g.group_id !== groupId);
 						return { ...state, groups: updatedGroups };
@@ -171,7 +185,7 @@ function createGroupStore() {
 				const response: ApiResponse = await addGroupMember(accessToken, groupId, userId);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getStoredGroup(groupId);
+					const group = groupStore.getGroup(groupId);
 					if (group) {
 						const updatedGroup: Group = {
 							...group,
@@ -197,7 +211,7 @@ function createGroupStore() {
 				const response: ApiResponse = await removeGroupMember(accessToken, groupId, userId);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getStoredGroup(groupId);
+					const group = groupStore.getGroup(groupId);
 					if (group) {
 						const updatedGroup: Group = {
 							...group,
@@ -225,7 +239,7 @@ function createGroupStore() {
 				const response: ApiResponse = await promoteAdmin(accessToken, groupId, userId, isAdmin);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getStoredGroup(groupId);
+					const group = groupStore.getGroup(groupId);
 					if (group) {
 						let updatedAdminIds = [...group.admin_ids];
 						if (isAdmin) {
@@ -273,7 +287,7 @@ function createGroupStore() {
 				);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getStoredGroup(groupId);
+					const group = groupStore.getGroup(groupId);
 					if (group) {
 						const updatedGroup: Group = {
 							...group,
@@ -286,7 +300,7 @@ function createGroupStore() {
 						update((state) => {
 							const oldGroup = state.groups.find((g) => g.group_id === groupId);
 							if (!oldGroup) {
-								return { ...state, groups:[...state.groups, updatedGroup]}
+								return { ...state, groups: [...state.groups, updatedGroup] };
 							} else {
 								oldGroup.group_name = updatedGroup.group_name;
 								oldGroup.group_description = updatedGroup.group_description;
@@ -318,7 +332,7 @@ function createGroupStore() {
 				);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getStoredGroup(groupId);
+					const group = groupStore.getGroup(groupId);
 					if (group) {
 						const updatedGroup: Group = {
 							...group,
@@ -349,8 +363,13 @@ function createGroupStore() {
 				return { ...state, groups: [...newGroups, group] };
 			});
 		},
-		// TODO: Rename to `getGroup`? To match the userstore?
-		getStoredGroup: (groupId: number): Group | null => {
+		updateGroupNotSave: (group: Group): void => {
+			update((state) => {
+				const newGroups = state.groups.filter((g) => g.group_id !== group.group_id);
+				return { ...state, groups: [...newGroups, group] };
+			});
+		},
+		getGroup: (groupId: number): Group | null => {
 			const groupData = localStorage.getItem(`${STORAGE_KEY_GROUPS_PREFIX}${groupId}`);
 			if (groupData) {
 				try {

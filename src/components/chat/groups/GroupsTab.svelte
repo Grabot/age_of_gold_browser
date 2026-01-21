@@ -1,36 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { authStore } from '../../../stores/authStore';
+	import { authStore } from '$lib/stores/authStore';
 	import CreateGroupModal from './CreateGroupModal.svelte';
 	import GroupsList from './GroupsList.svelte';
 
 	let showCreateGroupModal = false;
-
-	// Helper functions for UI
-	function getRandomColor(username: string): string {
-		// Simple hash function to generate consistent colors
-		let hash = 0;
-		for (let i = 0; i < username.length; i++) {
-			hash = username.charCodeAt(i) + ((hash << 5) - hash);
-		}
-
-		const colors = [
-			'#e74c3c',
-			'#3498db',
-			'#2ecc71',
-			'#f39c12',
-			'#9b59b6',
-			'#1abc9c',
-			'#d35400',
-			'#34495e'
-		];
-
-		return colors[Math.abs(hash) % colors.length];
-	}
-
-	function getInitial(username: string): string {
-		return username.charAt(0).toUpperCase();
-	}
 </script>
 
 <div class="groups-tab">
@@ -42,7 +16,7 @@
 	</div>
 
 	<div class="tab-content">
-		<GroupsList {getRandomColor} {getInitial} />
+		<GroupsList />
 	</div>
 
 	<!-- Create Group Modal -->

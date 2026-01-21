@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { authStore } from '../../stores/authStore';
+	import { authStore } from '$lib/stores/authStore';
 
 	onMount(() => {
 		const unsubscribe = authStore.subscribe((state) => {

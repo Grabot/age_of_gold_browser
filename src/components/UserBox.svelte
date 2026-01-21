@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { authStore } from '../stores/authStore';
+	import { authStore } from '$lib/stores/authStore';
 
 	function handleLogout() {
 		authStore.logout();
