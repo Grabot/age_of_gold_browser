@@ -175,8 +175,8 @@
 		}, 1000);
 	}
 
-	function handleGroupMemberLeftEvent(data: any) {
-		const group = groupStore.getGroup(data.group_id);
+	async function handleGroupMemberLeftEvent(data: any) {
+		const group = await groupStore.getGroup(data.group_id);
 		if (!group) {
 			console.error(`Group not found in storage.`);
 			return false;
@@ -196,8 +196,8 @@
 		});
 	}
 
-	function handleGroupAdminChangedEvent(data: GroupAdminChangedEventData) {
-		const group = groupStore.getGroup(data.group_id);
+	async function handleGroupAdminChangedEvent(data: GroupAdminChangedEventData) {
+		const group = await groupStore.getGroup(data.group_id);
 		if (!group) {
 			throw new Error(`Group not found in storage.`);
 		}
@@ -217,8 +217,8 @@
 		});
 	}
 
-	function handleGroupUpdateEvent(data: GroupUpdateEventData) {
-		const group = groupStore.getGroup(data.group_id);
+	async function handleGroupUpdateEvent(data: GroupUpdateEventData) {
+		const group = await groupStore.getGroup(data.group_id);
 		if (!group) {
 			throw new Error(`Group not found in storage.`);
 		}
@@ -251,8 +251,8 @@
 		});
 	}
 
-	function handleGroupMemberRemovedEvent(data: GroupMemberRemovedEventData) {
-		const group = groupStore.getGroup(data.group_id);
+	async function handleGroupMemberRemovedEvent(data: GroupMemberRemovedEventData) {
+		const group = await groupStore.getGroup(data.group_id);
 		if (!group) {
 			throw new Error(`Group not found in storage.`);
 		}
@@ -287,8 +287,8 @@
 		});
 	}
 
-	function handleGroupMemberAddedEvent(data: GroupMemberAddedEventData) {
-		const group = groupStore.getGroup(data.group_id);
+	async function handleGroupMemberAddedEvent(data: GroupMemberAddedEventData) {
+		const group = await groupStore.getGroup(data.group_id);
 		if (!group) {
 			throw new Error(`Group not found in storage.`);
 		}

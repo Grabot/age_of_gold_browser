@@ -51,7 +51,8 @@
 			console.log('Already retrieved group members, skipping...');
 			return;
 		}
-		group_members = [];
+		console.log("getting group member");
+		let newMembers = [];
 
 		const authState = get(authStore);
 		let myUserId: number | null = null;
@@ -59,60 +60,82 @@
 			myUserId = authState.user.id;
 			const myUsername = authState.user.username;
 			const myUserAvatar = get(userAvatar);
-			group_members.push({
+			newMembers.push({
 				user_id: myUserId,
 				username: myUsername,
 				avatar: myUserAvatar
 			});
 		}
+
 		let userIdsToRetrieve = [];
 		let avatarIdsToRetrieve = [];
 		for (const userId of group.user_ids) {
-			if (myUserId == userId) {
-				continue;
-			}
+			if (myUserId === userId) continue;
+
 			const groupUser = await userStore.getUser(userId);
 			const avatarUser = await avatarStore.getAvatar(userId);
+
 			if (groupUser && avatarUser) {
-				group_members.push({
-					user_id: groupUser.id,
-					username: groupUser.username,
-					avatar: avatarUser
-				});
+				if (!newMembers.some(member => member.user_id === groupUser.id)) {
+					newMembers.push({
+						user_id: groupUser.id,
+						username: groupUser.username,
+						avatar: avatarUser
+					});
+				}
 			} else if (groupUser && !avatarUser) {
 				avatarIdsToRetrieve.push(userId);
-				group_members.push({
-					user_id: groupUser.id,
-					username: groupUser.username,
-					avatar: null
-				});
+				if (!newMembers.some(member => member.user_id === groupUser.id)) {
+					newMembers.push({
+						user_id: groupUser.id,
+						username: groupUser.username,
+						avatar: null
+					});
+				}
 			} else if (!groupUser && avatarUser) {
 				userIdsToRetrieve.push(userId);
-				group_members.push({
-					user_id: userId,
-					username: 'User',
-					avatar: avatarUser
-				});
+				if (!newMembers.some(member => member.user_id === userId)) {
+					newMembers.push({
+						user_id: userId,
+						username: 'User',
+						avatar: avatarUser
+					});
+				}
 			} else {
 				userIdsToRetrieve.push(userId);
 				avatarIdsToRetrieve.push(userId);
-				group_members.push({
-					user_id: userId,
-					username: 'User',
-					avatar: null
-				});
+				if (!newMembers.some(member => member.user_id === userId)) {
+					newMembers.push({
+						user_id: userId,
+						username: 'User',
+						avatar: null
+					});
+				}
 			}
 		}
+
+		group_members = newMembers;
+		console.log("group Meberms size ", group_members.length);
 		const accessToken = get(accessTokenValue);
 		if (userIdsToRetrieve.length > 0 && accessToken) {
 			retrieveMissingUsers(userIdsToRetrieve, accessToken).then(async (_) => {
 				for (const userId of avatarIdsToRetrieve) {
 					const user = await userStore.getUser(userId);
 					if (user) {
-						await updateUserAvatar(user);
+						const updatedUser = await updateUserAvatar(user);
+						if (updatedUser) {
+							group_members = group_members.map(member =>
+								member.user_id === updatedUser.id
+									? {
+										...member,
+										username: updatedUser.username,
+										avatar: updatedUser.avatar ?? null
+									}
+									: member
+							);
+						}
 					}
 				}
-				getGroupMembers();
 				isDoneRetrievingGroupMembers = true;
 			});
 		}
@@ -190,7 +213,7 @@
 			const success = await groupStore.removeGroupMember(group.group_id, userId);
 			if (success) {
 				successToast('Member removed successfully');
-				const updatedGroup = groupStore.getGroup(group.group_id);
+				const updatedGroup = await groupStore.getGroup(group.group_id);
 				if (updatedGroup) {
 					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
@@ -213,7 +236,7 @@
 			const success = await groupStore.promoteAdmin(group.group_id, userId, isAdmin);
 			if (success) {
 				successToast(isAdmin ? 'User promoted to admin' : 'User demoted from admin');
-				const updatedGroup = groupStore.getGroup(group.group_id);
+				const updatedGroup = await groupStore.getGroup(group.group_id);
 				if (updatedGroup) {
 					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
@@ -236,7 +259,7 @@
 				showAddMemberModal = false;
 				newMemberUsername = '';
 				filteredFriends = [];
-				const updatedGroup = groupStore.getGroup(group.group_id);
+				const updatedGroup = await groupStore.getGroup(group.group_id);
 				if (updatedGroup) {
 					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
@@ -257,9 +280,15 @@
 			events.forEach(async (event) => {
 				console.log('socket event', event);
 				if (event.type === 'group_avatar_updated') {
+					// It is updated in the group list view, we wait a bit and update it here by taking what is stored.
+					await new Promise((resolve) => setTimeout(resolve, 1000));
+					const updatedAvatar = await avatarStore.getGroupAvatar(group.group_id);
+					if (updatedAvatar) {
+						group.avatar = updatedAvatar;
+					}
 					return;
 				}
-				const updatedGroup = groupStore.getGroup(group.group_id);
+				const updatedGroup = await groupStore.getGroup(group.group_id);
 				if (updatedGroup) {
 					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
@@ -462,7 +491,7 @@
 						);
 						if (success) {
 							successToast('Group updated successfully');
-							const updatedGroupData = groupStore.getGroup(group.group_id);
+							const updatedGroupData = await groupStore.getGroup(group.group_id);
 							if (updatedGroupData) {
 								updatedGroupData.avatar = group.avatar;
 								group = updatedGroupData;
