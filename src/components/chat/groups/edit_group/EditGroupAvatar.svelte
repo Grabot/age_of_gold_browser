@@ -48,7 +48,7 @@
 			}
 		};
 		if (!groupAvatar) {
-			const currentGroupAvatar = avatarStore.getGroupAvatar(groupId);
+			const currentGroupAvatar = await avatarStore.getGroupAvatar(groupId);
 			if (currentGroupAvatar) {
 				groupAvatar = currentGroupAvatar;
 			} else {

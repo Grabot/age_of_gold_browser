@@ -21,21 +21,13 @@
 	import DeleteAccount from '../../components/edit_profile/DeleteAccount.svelte';
 	import { resetPassword } from '$lib/api/authApi';
 	import { errorToast, successToast } from '$lib/utils/toast';
+	import { getRandomColor } from '$lib/utils/groupUtils';
 
 	let showModalAvatar = false;
 	let showModalUsername = false;
 	let showModalPassword = false;
 	let showModalDeleteAccount = false;
 	let showDropdown = false;
-
-	function getRandomColor(username: string): string {
-		let hash = 0;
-		for (let i = 0; i < username.length; i++) {
-			hash = username.charCodeAt(i) + ((hash << 5) - hash);
-		}
-		const hue = Math.abs(hash) % 360;
-		return `hsl(${hue}, 70%, 50%)`;
-	}
 
 	function getInitial(username: string): string {
 		return username.charAt(0).toUpperCase();
@@ -199,10 +191,7 @@
 				{#if $userAvatar}
 					<img src={$userAvatar} alt="User Avatar" class="avatar-box" />
 				{:else}
-					<div
-						class="avatar-box default-avatar"
-						style="background-color: {getRandomColor($userDetail.username)}"
-					>
+					<div class="avatar-box default-avatar" style="background-color: {getRandomColor()}">
 						{getInitial($userDetail.username)}
 					</div>
 				{/if}

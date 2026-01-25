@@ -5,7 +5,7 @@
 	import { friendStore } from '$lib/stores/friendStore';
 	import { errorToast } from '$lib/utils/toast';
 
-	export let getRandomColor: (username: string) => string;
+	export let getRandomColor: () => string;
 	export let getInitial: (username: string) => string;
 	export let searchQuery: string;
 	export let searchResult: { id: number; username: string } | null;
@@ -97,10 +97,7 @@
 						{#if searchResultAvatar}
 							<img class="friend-avatar" src={searchResultAvatar} alt={result.username} />
 						{:else}
-							<div
-								class="friend-avatar placeholder"
-								style="background-color: {getRandomColor(result.username)}"
-							>
+							<div class="friend-avatar placeholder" style="background-color: {getRandomColor()}">
 								{getInitial(result.username)}
 							</div>
 						{/if}

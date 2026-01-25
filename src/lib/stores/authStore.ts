@@ -176,17 +176,12 @@ function createAuthStore() {
 		// Convert FriendLogin to Friend format using stored data
 		const friends: Friend[] = [];
 
-		loginResult.friends.forEach((friendLogin) => {
-			const storedUser = userStore.getUser(friendLogin.friend_id);
-			const storedFriend = friendStore.getStoredFriend(friendLogin.friend_id);
+		for (const friendLogin of loginResult.friends) {
+			const storedUser = await userStore.getUser(friendLogin.friend_id);
+			const storedFriend = await friendStore.getStoredFriend(friendLogin.friend_id);
 
 			// Check if we have stored user data or need to retrieve it
-			let user: User | undefined;
-			if (storedUser) {
-				user = {
-					...storedUser
-				};
-			} else {
+			if (!storedUser) {
 				// Mark user for retrieval
 				userIdsToRetrieve.push(friendLogin.friend_id);
 			}
@@ -197,25 +192,25 @@ function createAuthStore() {
 					friend_id: friendLogin.friend_id,
 					accepted: storedFriend.accepted,
 					friend_version: storedFriend.friend_version,
-					user: user
+					user: storedUser ?? undefined
 				});
 			} else {
 				// Mark friend and user for retrieval and add to friends list later
 				friendIdsToRetrieve.push(friendLogin.friend_id);
 				userIdsToRetrieve.push(friendLogin.friend_id);
 			}
-		});
+		}
 
 		// Update friend store with the converted friends
-		friendStore.setFriends(friends);
+		await friendStore.setFriends(friends);
 
 		// Handle groups similar to friends
 		const groups: Group[] = [];
 		const groupIdsToRetrieve: number[] = [];
 
 		console.log('going over groups');
-		loginResult.groups.forEach((groupLogin) => {
-			const storedGroup = groupStore.getGroup(groupLogin.group_id);
+		for (const groupLogin of loginResult.groups) {
+			const storedGroup = await groupStore.getGroup(groupLogin.group_id);
 
 			// Only create group entry if we have stored data with matching version
 			if (storedGroup && storedGroup.group_version === groupLogin.group_version) {
@@ -228,28 +223,9 @@ function createAuthStore() {
 				// Make sure a group entry exists.
 				if (storedGroup) {
 					groups.push(storedGroup);
-				} else {
-					const group: Group = {
-						group_id: groupLogin.group_id,
-						group_version: 0,
-						unread_messages: 0,
-						mute: false,
-						mute_timestamp: null,
-						message_version: 0,
-						avatar_version: 0,
-						last_message_read_id: 0,
-						user_ids: [],
-						admin_ids: [],
-						group_name: '',
-						private: false,
-						group_description: '',
-						group_colour: '',
-						current_message_id: 0
-					};
-					groups.push(group);
 				}
 			}
-		});
+		}
 
 		// Update group store with the converted groups
 		groupStore.setGroups(groups);

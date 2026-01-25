@@ -57,6 +57,7 @@
 	import { groupStore } from '$lib/stores/groupStore';
 	import type { Group } from '$lib/types/groups';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
+	import { getRandomColor } from '$lib/utils/groupUtils';
 
 	let { children } = $props();
 	const options = {};
@@ -97,15 +98,6 @@
 		}
 	}
 
-	function getRandomColor(username: string): string {
-		let hash = 0;
-		for (let i = 0; i < username.length; i++) {
-			hash = username.charCodeAt(i) + ((hash << 5) - hash);
-		}
-		const hue = Math.abs(hash) % 360;
-		return `hsl(${hue}, 70%, 50%)`;
-	}
-
 	function getInitial(username: string): string {
 		return username.charAt(0).toUpperCase();
 	}
@@ -122,8 +114,8 @@
 		friendStore.addFriendRequest(data);
 	}
 
-	function handleAvatarUpdatedEvent(data: any) {
-		avatarStore.updateAvatarVersion(data.user_id);
+	async function handleAvatarUpdatedEvent(data: any) {
+		await avatarStore.updateAvatarVersion(data.user_id);
 	}
 
 	function handleFriendRequestAcceptedEvent(data: any) {
@@ -512,7 +504,7 @@
 						{:else}
 							<div
 								class="profile-avatar default-avatar"
-								style="background-color: {getRandomColor($userDetail.username)}"
+								style="background-color: {getRandomColor()}"
 							>
 								{getInitial($userDetail.username)}
 							</div>

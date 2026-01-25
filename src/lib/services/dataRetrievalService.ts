@@ -18,7 +18,7 @@ export async function retrieveMissingUsers(userIds: number[], accessToken: strin
 
 		if (usersResponse.data) {
 			for (const userResponse of usersResponse.data) {
-				const storedUser = userStore.getUser(userResponse.id);
+				const storedUser = await userStore.getUser(userResponse.id);
 				const user: User = {
 					id: userResponse.id,
 					username: userResponse.username,
@@ -36,10 +36,10 @@ export async function retrieveMissingUsers(userIds: number[], accessToken: strin
 					avatarStore.setShouldUpdateAvatarForUser(userResponse.id, true);
 				}
 				userStore.updateUser(user);
-				const storedFriend = friendStore.getStoredFriend(user.id);
+				const storedFriend = await friendStore.getStoredFriend(user.id);
 				if (storedFriend) {
 					storedFriend.user = user;
-					friendStore.updateFriend(storedFriend);
+					await friendStore.updateFriend(storedFriend);
 				}
 			}
 		}
@@ -67,7 +67,7 @@ export async function retrieveMissingFriends(
 			console.log(friendsResponse.data);
 			// Update each friend's data
 			for (const friendData of friendsResponse.data) {
-				const storedUser = userStore.getUser(friendData.friend_id);
+				const storedUser = await userStore.getUser(friendData.friend_id);
 
 				const friend: Friend = {
 					friend_id: friendData.friend_id,
@@ -76,7 +76,7 @@ export async function retrieveMissingFriends(
 					user: storedUser || undefined
 				};
 
-				friendStore.updateFriend(friend);
+				await friendStore.updateFriend(friend);
 			}
 		}
 	} catch (error) {
@@ -124,7 +124,7 @@ export async function retrieveMissingGroups(
 					avatar: undefined
 				};
 
-				const storedGroup = groupStore.getGroup(groupData.group_id);
+				const storedGroup = await groupStore.getGroup(groupData.group_id);
 
 				console.log('compare stored group with avatar version');
 				console.log(storedGroup);
@@ -138,7 +138,7 @@ export async function retrieveMissingGroups(
 					avatarStore.setShouldUpdateAvatarForUser(userGroup.group_id, true);
 				}
 
-				groupStore.updateGroup(userGroup);
+				await groupStore.updateGroup(userGroup);
 			}
 		}
 	} catch (error) {

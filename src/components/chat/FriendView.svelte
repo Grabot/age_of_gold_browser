@@ -13,7 +13,7 @@
 	import { getUser } from '$lib/api/userApi';
 
 	export let onClose: () => void;
-	export let getRandomColor: (username: string) => string;
+	export let getRandomColor: () => string;
 	export let getInitial: (username: string) => string;
 
 	let activeTab: 'friends' | 'add' | 'groups' = 'friends';
@@ -27,15 +27,16 @@
 	async function checkUserAvatar(friend: Friend) {
 		if (friend.user) {
 			if (!friend.user.avatar) {
-				const avatarUser = avatarStore.getAvatar(friend.friend_id);
+				const avatarUser = await avatarStore.getAvatar(friend.friend_id);
 				if (avatarUser) {
 					friend.user.avatar = avatarUser;
 					friendStore.updateFriend(friend);
 					userStore.updateUser(friend.user);
 				} else {
-					const friendUser: User | null = await updateUserAvatar(friend.user);
-					if (friendUser) {
-						friend.user = friendUser;
+					console.log('No avatar found for user:', friend.friend_id);
+					const updatedUser = await updateUserAvatar(friend.user);
+					if (updatedUser) {
+						friend.user = updatedUser;
 						friendStore.updateFriend(friend);
 					}
 				}
@@ -44,7 +45,7 @@
 	}
 
 	async function emergencyFallback(friend: Friend) {
-		const storedUser = userStore.getUser(friend.friend_id);
+		const storedUser = await userStore.getUser(friend.friend_id);
 		if (!storedUser) {
 			const accessToken = $accessTokenValue;
 			if (accessToken) {
@@ -59,27 +60,22 @@
 	}
 
 	onMount(() => {
-		const unsubscribe = friendStore.subscribe((storeState) => {
+		const unsubscribe = friendStore.subscribe(async (storeState) => {
 			if (!storeState.loading) {
-				storeState.friends.forEach(async (friend) => {
-					if (avatarStore.getShouldUpdateAvatarForUser(friend.friend_id)) {
+				for (const friend of storeState.friends) {
+					const shouldUpdate = await avatarStore.getShouldUpdateAvatarForUser(friend.friend_id);
+					if (shouldUpdate) {
 						if (friend.user) {
 							const friendUser: User | null = await updateUserAvatar(friend.user);
 							if (friendUser) {
 								friend.user = friendUser;
 								friendStore.updateFriend(friend);
 							}
-						} else {
-							emergencyFallback(friend);
 						}
 					} else {
-						if (friend.user) {
-							checkUserAvatar(friend);
-						} else {
-							emergencyFallback(friend);
-						}
+						await checkUserAvatar(friend);
 					}
-				});
+				}
 			}
 		});
 

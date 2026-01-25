@@ -2,7 +2,7 @@
 	import { groupStore } from '$lib/stores/groupStore';
 	import { errorToast, successToast } from '$lib/utils/toast';
 	import { getRandomColor, getInitial, getTextColorForBackground } from '$lib/utils/groupUtils';
-	import { updateGroupAvatar, updateUserAvatar } from '$lib/utils/avatarUtils';
+	import { updateUserAvatar } from '$lib/utils/avatarUtils';
 	import { authStore, accessTokenValue, userAvatar } from '$lib/stores/authStore';
 	import { retrieveMissingUsers } from '$lib/services/dataRetrievalService';
 	import { get } from 'svelte/store';
@@ -46,7 +46,7 @@
 	let group_members: Array<{ user_id: number; username: string; avatar: string | null }> = [];
 	let isDoneRetrievingGroupMembers = false;
 
-	function getGroupMembers() {
+	async function getGroupMembers() {
 		if (isDoneRetrievingGroupMembers) {
 			console.log('Already retrieved group members, skipping...');
 			return;
@@ -71,8 +71,8 @@
 			if (myUserId == userId) {
 				continue;
 			}
-			const groupUser = userStore.getUser(userId);
-			const avatarUser = avatarStore.getAvatar(userId);
+			const groupUser = await userStore.getUser(userId);
+			const avatarUser = await avatarStore.getAvatar(userId);
 			if (groupUser && avatarUser) {
 				group_members.push({
 					user_id: groupUser.id,
@@ -107,7 +107,7 @@
 		if (userIdsToRetrieve.length > 0 && accessToken) {
 			retrieveMissingUsers(userIdsToRetrieve, accessToken).then(async (_) => {
 				for (const userId of avatarIdsToRetrieve) {
-					const user = userStore.getUser(userId);
+					const user = await userStore.getUser(userId);
 					if (user) {
 						await updateUserAvatar(user);
 					}
@@ -306,7 +306,7 @@
 					{:else}
 						<div
 							class="group-avatar"
-							style="background-color: {group.group_colour || getRandomColor('Group')}"
+							style="background-color: {group.group_colour || getRandomColor()}"
 						>
 							{getInitial(group.group_name || 'G')}
 						</div>
@@ -385,7 +385,7 @@
 									{:else}
 										<div
 											class="member-avatar placeholder"
-											style="background-color: {getRandomColor(group_member.username)}"
+											style="background-color: {getRandomColor()}"
 										>
 											{getInitial(group_member.username)}
 										</div>
@@ -503,10 +503,10 @@
 						if (result.success) {
 							successToast('Group avatar updated successfully!');
 							const reader = new FileReader();
-							reader.onload = () => {
+							reader.onload = async () => {
 								const newAvatar = reader.result as string;
 								group.avatar = newAvatar;
-								avatarStore.updateGroupAvatar(group.group_id, newAvatar);
+								await avatarStore.updateGroupAvatar(group.group_id, newAvatar);
 								groupStore.updateGroup(group);
 								showEditAvatarModal = false;
 							};

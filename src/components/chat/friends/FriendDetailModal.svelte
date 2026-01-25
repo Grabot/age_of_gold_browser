@@ -5,7 +5,7 @@
 
 	export let friend: Friend;
 	export let onClose: () => void;
-	export let getRandomColor: (username: string) => string;
+	export let getRandomColor: () => string;
 	export let getInitial: (username: string) => string;
 
 	async function handleRemoveFriend() {
@@ -56,10 +56,7 @@
 				{#if friend.user?.avatar}
 					<img class="friend-avatar-large" src={friend.user.avatar} alt={friend.user.username} />
 				{:else}
-					<div
-						class="friend-avatar-large placeholder"
-						style="background-color: {getRandomColor(friend.user?.username || '')}"
-					>
+					<div class="friend-avatar-large placeholder" style="background-color: {getRandomColor()}">
 						{getInitial(friend.user?.username || '')}
 					</div>
 				{/if}

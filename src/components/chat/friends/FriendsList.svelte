@@ -4,7 +4,7 @@
 	import FriendDetailModal from './FriendDetailModal.svelte';
 	import type { Friend } from '$lib/types/friend';
 
-	export let getRandomColor: (username: string) => string;
+	export let getRandomColor: () => string;
 	export let getInitial: (username: string) => string;
 
 	let selectedFriend: Friend | null = null;
@@ -90,7 +90,7 @@
 										{:else}
 											<div
 												class="friend-avatar placeholder"
-												style="background-color: {getRandomColor(friend.user?.username || '')}"
+												style="background-color: {getRandomColor()}"
 											>
 												{getInitial(friend.user?.username || '')}
 											</div>
@@ -157,9 +157,7 @@
 										{:else}
 											<div
 												class="friend-avatar placeholder pending-placeholder"
-												style="background-color: {getRandomColor(
-													friend.user?.username || 'Pending'
-												)}"
+												style="background-color: {getRandomColor()}"
 											>
 												{getInitial(friend.user?.username || 'P')}
 											</div>
@@ -227,7 +225,7 @@
 									{:else}
 										<div
 											class="friend-avatar placeholder"
-											style="background-color: {getRandomColor(friend.user?.username || '')}"
+											style="background-color: {getRandomColor()}"
 										>
 											{getInitial(friend.user?.username || '')}
 										</div>

@@ -2,14 +2,9 @@
 
 /**
  * Generate a random color for groups based on a seed
- * @param seed - String to use for generating consistent random color
  * @returns Hex color code
  */
-export function getRandomColor(seed: string): string {
-	let hash = 0;
-	for (let i = 0; i < seed.length; i++) {
-		hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-	}
+export function getRandomColor(): string {
 	const colors = [
 		'#FF6B6B',
 		'#FF8E53',
@@ -30,7 +25,7 @@ export function getRandomColor(seed: string): string {
 		'#A5DD9B',
 		'#F9D71C'
 	];
-	return colors[Math.abs(hash) % colors.length];
+	return colors[Math.floor(Math.random() * colors.length)];
 }
 
 /**

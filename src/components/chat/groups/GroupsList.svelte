@@ -15,7 +15,7 @@
 	async function checkGroupAvatar(group: Group) {
 		console.log('Checking group avatar for group:', group.group_id);
 		if (!group.avatar) {
-			const avatarGroup = avatarStore.getGroupAvatar(group.group_id);
+			const avatarGroup = await avatarStore.getGroupAvatar(group.group_id);
 			if (avatarGroup) {
 				group.avatar = avatarGroup;
 				groupStore.updateGroupNotSave(group);
@@ -27,17 +27,18 @@
 	}
 
 	onMount(() => {
-		const unsubscribe = groupStore.subscribe((storeState) => {
+		const unsubscribe = groupStore.subscribe(async (storeState) => {
 			if (!storeState.loading) {
 				console.log('Processing groups:', storeState.groups);
-				storeState.groups.forEach(async (group) => {
-					if (avatarStore.getShouldUpdateGroupAvatarForGroup(group.group_id)) {
+				for (const group of storeState.groups) {
+					const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(group.group_id);
+					if (shouldUpdate) {
 						console.log('it is decided that it should update the avatar!');
 						await updateGroupAvatar(group);
 					} else {
 						await checkGroupAvatar(group);
 					}
-				});
+				}
 			}
 		});
 
@@ -82,9 +83,9 @@
 				type="button"
 				aria-label="View details for group {group.group_id}"
 				style="background-color: {group.group_colour ||
-					getRandomColor('Group')}; color: {group.group_colour
+					getRandomColor()}; color: {group.group_colour
 					? getTextColorForBackground(group.group_colour)
-					: getTextColorForBackground(getRandomColor('Group'))};"
+					: getTextColorForBackground(getRandomColor())};"
 			>
 				<div class="avatar-container">
 					{#if group.avatar}
@@ -92,9 +93,9 @@
 					{:else}
 						<div
 							class="group-avatar placeholder"
-							style="background-color: {getRandomColor(
-								group.group_name || ''
-							)}; color: {getTextColorForBackground(getRandomColor(group.group_name || ''))}"
+							style="background-color: {getRandomColor()}; color: {getTextColorForBackground(
+								getRandomColor()
+							)}"
 						>
 							{getInitial(group.group_name || '')}
 						</div>

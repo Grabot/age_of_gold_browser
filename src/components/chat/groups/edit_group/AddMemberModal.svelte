@@ -2,7 +2,6 @@
 	import { friendStore } from '$lib/stores/friendStore';
 	import { authStore } from '$lib/stores/authStore';
 	import { get } from 'svelte/store';
-	import type { User } from '$lib/types/user';
 	import { getRandomColor, getInitial } from '$lib/utils/groupUtils';
 
 	export let onClose: () => void;
@@ -108,7 +107,7 @@
 									{:else}
 										<div
 											class="friend-avatar placeholder"
-											style="background-color: {getRandomColor(friend.username)}"
+											style="background-color: {getRandomColor()}"
 										>
 											{getInitial(friend.username)}
 										</div>

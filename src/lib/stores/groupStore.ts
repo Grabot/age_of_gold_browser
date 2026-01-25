@@ -14,6 +14,7 @@ import type { ApiResponse } from '$lib/api/apiClient';
 import type { Group } from '../types/groups';
 import { accessTokenValue } from './authStore';
 import { avatarStore } from './avatarStore';
+import { indexedDBHelper } from './indexedDBHelper';
 
 export const STORAGE_KEY_GROUPS_PREFIX = 'group_';
 
@@ -36,33 +37,61 @@ function createGroupStore() {
 		loadGroupsFromStorage();
 	}
 
-	function loadGroupsFromStorage() {
-		const keys = Object.keys(localStorage);
-		const groupKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_GROUPS_PREFIX));
+	async function loadGroupsFromStorage() {
+		// Try IndexedDB first
+		let groups: Group[] = [];
+		try {
+			groups = await indexedDBHelper.getAllGroups() as Group[];
+		} catch (error) {
+			console.error('Error loading groups from IndexedDB:', error);
+		}
 
-		const groups: Group[] = [];
+		// If no groups in IndexedDB, try localStorage for migration
+		if (groups.length === 0) {
+			const keys = Object.keys(localStorage);
+			const groupKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_GROUPS_PREFIX));
 
-		groupKeys.forEach((key) => {
-			const groupId = parseInt(key.replace(STORAGE_KEY_GROUPS_PREFIX, ''));
-			const groupData = localStorage.getItem(key);
-			if (groupData) {
-				try {
-					console.log('GroupData');
-					console.log(groupData);
-					const group: Group = JSON.parse(groupData);
-					groups.push(group);
-				} catch (error) {
-					console.error(`Failed to parse group data for group ${groupId}:`, error);
+			groupKeys.forEach((key) => {
+				const groupId = parseInt(key.replace(STORAGE_KEY_GROUPS_PREFIX, ''));
+				const groupData = localStorage.getItem(key);
+				if (groupData) {
+					try {
+						console.log('GroupData');
+						console.log(groupData);
+						const group: Group = JSON.parse(groupData);
+						groups.push(group);
+						// Migrate to IndexedDB
+						const GroupToStore: Group = {
+							group_id: group.group_id,
+							unread_messages: group.unread_messages,
+							mute: group.mute,
+							mute_timestamp: group.mute_timestamp,
+							group_version: group.group_version,
+							message_version: group.message_version,
+							avatar_version: group.avatar_version,
+							last_message_read_id: group.last_message_read_id,
+							user_ids: group.user_ids,
+							admin_ids: group.admin_ids,
+							group_name: group.group_name,
+							private: group.private,
+							group_description: group.group_description,
+							group_colour: group.group_colour,
+							current_message_id: group.current_message_id
+						}; // Save everything but the avatar
+						indexedDBHelper.saveGroup(GroupToStore);
+					} catch (error) {
+						console.error(`Failed to parse group data for group ${groupId}:`, error);
+					}
 				}
-			}
-		});
+			});
+		}
 
 		update((state) => ({ ...state, groups }));
 	}
 
-	function saveGroupToStorage(group: Group) {
+	async function saveGroupToStorage(group: Group) {
 		// Only store group data without avatar
-		const GroupToStore: Group = {
+		const GroupToStore = {
 			group_id: group.group_id,
 			unread_messages: group.unread_messages,
 			mute: group.mute,
@@ -80,23 +109,23 @@ function createGroupStore() {
 			current_message_id: group.current_message_id
 		}; // Save everything but the avatar
 		if (typeof window !== 'undefined') {
-			localStorage.setItem(
-				`${STORAGE_KEY_GROUPS_PREFIX}${group.group_id}`,
-				JSON.stringify(GroupToStore)
-			);
+			await indexedDBHelper.saveGroup(GroupToStore);
 		}
 	}
 
-	function removeGroupFromStorage(groupId: number) {
+	async function removeGroupFromStorage(groupId: number) {
 		if (typeof window !== 'undefined') {
+			await indexedDBHelper.removeGroup(groupId);
 			localStorage.removeItem(`${STORAGE_KEY_GROUPS_PREFIX}${groupId}`);
 		}
 	}
 
 	return {
 		subscribe,
-		setGroups: (groups: Group[]) => {
-			groups.forEach((group) => saveGroupToStorage(group));
+		setGroups: async (groups: Group[]) => {
+			for (const group of groups) {
+				await saveGroupToStorage(group);
+			}
 			set({ groups, loading: false, error: null });
 		},
 		createGroup: async (groupData: {
@@ -105,7 +134,7 @@ function createGroupStore() {
 			groupColour: string;
 			friendIds: number[];
 			meId: number;
-		}): Promise<boolean> => {
+		}): Promise<number | null> => {
 			try {
 				console.log('Starting group creation process');
 				const accessToken = get(accessTokenValue);
@@ -140,19 +169,19 @@ function createGroupStore() {
 					console.log('Group object created:', group);
 					groupStore.updateGroup(group);
 					console.log('Group saved to storage');
-					return true;
+					return response.data;
 				}
 				console.log('Group creation not successful');
-				return false;
+				return null;
 			} catch (err) {
 				console.error('Error during group creation:', err);
 				errorToast(err instanceof Error ? err.message : 'Unknown error');
-				return false;
+				return null;
 			}
 		},
 		removeGroup: async (groupId: number): Promise<boolean> => {
-			removeGroupFromStorage(groupId);
-			avatarStore.removeGroupAvatarFromStorage(groupId);
+			await removeGroupFromStorage(groupId);
+			await avatarStore.removeGroupAvatarFromStorage(groupId);
 			update((state) => {
 				const updatedGroups = state.groups.filter((g) => g.group_id !== groupId);
 				return { ...state, groups: updatedGroups };
@@ -165,8 +194,8 @@ function createGroupStore() {
 				const response: ApiResponse = await leaveGroup(accessToken, groupId);
 				if (response.success) {
 					// Remove group from local storage and store
-					removeGroupFromStorage(groupId);
-					avatarStore.removeGroupAvatarFromStorage(groupId);
+					await removeGroupFromStorage(groupId);
+					await avatarStore.removeGroupAvatarFromStorage(groupId);
 					update((state) => {
 						const updatedGroups = state.groups.filter((g) => g.group_id !== groupId);
 						return { ...state, groups: updatedGroups };
@@ -185,13 +214,13 @@ function createGroupStore() {
 				const response: ApiResponse = await addGroupMember(accessToken, groupId, userId);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getGroup(groupId);
+					const group = await groupStore.getGroup(groupId);
 					if (group) {
 						const updatedGroup: Group = {
 							...group,
 							user_ids: [...group.user_ids, userId]
 						};
-						saveGroupToStorage(updatedGroup);
+						await saveGroupToStorage(updatedGroup);
 						update((state) => {
 							const newGroups = state.groups.filter((g) => g.group_id !== groupId);
 							return { ...state, groups: [...newGroups, updatedGroup] };
@@ -211,14 +240,14 @@ function createGroupStore() {
 				const response: ApiResponse = await removeGroupMember(accessToken, groupId, userId);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getGroup(groupId);
+					const group = await groupStore.getGroup(groupId);
 					if (group) {
 						const updatedGroup: Group = {
 							...group,
 							user_ids: group.user_ids.filter((id) => id !== userId),
 							admin_ids: group.admin_ids.filter((id) => id !== userId)
 						};
-						saveGroupToStorage(updatedGroup);
+						await saveGroupToStorage(updatedGroup);
 						update((state) => {
 							const newGroups = state.groups.filter((g) => g.group_id !== groupId);
 							return { ...state, groups: [...newGroups, updatedGroup] };
@@ -239,7 +268,7 @@ function createGroupStore() {
 				const response: ApiResponse = await promoteAdmin(accessToken, groupId, userId, isAdmin);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getGroup(groupId);
+					const group = await groupStore.getGroup(groupId);
 					if (group) {
 						let updatedAdminIds = [...group.admin_ids];
 						if (isAdmin) {
@@ -256,7 +285,7 @@ function createGroupStore() {
 							...group,
 							admin_ids: updatedAdminIds
 						};
-						saveGroupToStorage(updatedGroup);
+						await saveGroupToStorage(updatedGroup);
 						update((state) => {
 							const newGroups = state.groups.filter((g) => g.group_id !== groupId);
 							return { ...state, groups: [...newGroups, updatedGroup] };
@@ -287,7 +316,7 @@ function createGroupStore() {
 				);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getGroup(groupId);
+					const group = await groupStore.getGroup(groupId);
 					if (group) {
 						const updatedGroup: Group = {
 							...group,
@@ -296,7 +325,7 @@ function createGroupStore() {
 								groupDescription !== null ? groupDescription : group.group_description,
 							group_colour: groupColour !== null ? groupColour : group.group_colour
 						};
-						saveGroupToStorage(updatedGroup);
+						await saveGroupToStorage(updatedGroup);
 						update((state) => {
 							const oldGroup = state.groups.find((g) => g.group_id === groupId);
 							if (!oldGroup) {
@@ -332,7 +361,7 @@ function createGroupStore() {
 				);
 				if (response.success) {
 					// Update the group in local storage and store
-					const group = groupStore.getGroup(groupId);
+					const group = await groupStore.getGroup(groupId);
 					if (group) {
 						const updatedGroup: Group = {
 							...group,
@@ -342,7 +371,7 @@ function createGroupStore() {
 									? new Date(Date.now() + muteDurationHours * 60 * 60 * 1000).toISOString()
 									: null
 						};
-						saveGroupToStorage(updatedGroup);
+						await saveGroupToStorage(updatedGroup);
 						update((state) => {
 							const newGroups = state.groups.filter((g) => g.group_id !== groupId);
 							return { ...state, groups: [...newGroups, updatedGroup] };
@@ -356,8 +385,8 @@ function createGroupStore() {
 				return false;
 			}
 		},
-		updateGroup: (group: Group): void => {
-			saveGroupToStorage(group);
+		updateGroup: async (group: Group): Promise<void> => {
+			await saveGroupToStorage(group);
 			update((state) => {
 				const newGroups = state.groups.filter((g) => g.group_id !== group.group_id);
 				return { ...state, groups: [...newGroups, group] };
@@ -369,11 +398,21 @@ function createGroupStore() {
 				return { ...state, groups: [...newGroups, group] };
 			});
 		},
-		getGroup: (groupId: number): Group | null => {
+		getGroup: async (groupId: number): Promise<Group | null> => {
+			// Try IndexedDB first
+			let group = await indexedDBHelper.getGroup(groupId) as Group | null;
+			if (group) {
+				return group;
+			}
+
+			// Fallback to localStorage for migration purposes
 			const groupData = localStorage.getItem(`${STORAGE_KEY_GROUPS_PREFIX}${groupId}`);
 			if (groupData) {
 				try {
-					return JSON.parse(groupData) as Group;
+					const parsedGroup = JSON.parse(groupData) as Group;
+					// Migrate to IndexedDB
+					await indexedDBHelper.saveGroup(parsedGroup);
+					return parsedGroup;
 				} catch (error) {
 					console.error(`Failed to parse stored group data for group ${groupId}:`, error);
 					return null;
@@ -381,9 +420,12 @@ function createGroupStore() {
 			}
 			return null;
 		},
-		clear: () => {
+		clear: async () => {
 			set(initialState);
 			if (typeof window !== 'undefined') {
+				await indexedDBHelper.clearGroups();
+				
+				// Clear localStorage as fallback
 				const keys = Object.keys(localStorage);
 				const groupKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_GROUPS_PREFIX));
 				groupKeys.forEach((key) => localStorage.removeItem(key));

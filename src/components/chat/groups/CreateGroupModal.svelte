@@ -8,13 +8,14 @@
 	import { getRandomColor } from '$lib/utils/groupUtils';
 	import { handleGetGroupAvatar } from '$lib/services/settingsService';
 	import { get } from 'svelte/store';
+	import { avatarStore } from '$lib/stores/avatarStore';
 
 	export let onClose: () => void;
 
 	let myUserId: number | null = null;
 	let groupName: string = '';
 	let groupDescription: string = '';
-	let groupColour: string = getRandomColor('Group');
+	let groupColour: string = getRandomColor();
 	let selectedFriends: number[] = [];
 
 	$: availableFriends = $friendStore.friends.filter((f) => f.accepted === true && f.user);
@@ -61,7 +62,7 @@
 		}
 
 		try {
-			const success = await groupStore.createGroup({
+			const successGroupId = await groupStore.createGroup({
 				groupName: groupName.trim(),
 				groupDescription: groupDescription.trim(),
 				groupColour: groupColour,
@@ -69,9 +70,16 @@
 				meId: myUserId
 			});
 
-			if (success) {
+			if (successGroupId) {
 				successToast('Group created successfully!');
 				setTimeout(async () => {
+					const accessToken = get(accessTokenValue);
+					if (accessToken) {
+						const avatarResponse = await handleGetGroupAvatar(accessToken, successGroupId, false);
+						if (avatarResponse.success && avatarResponse.avatar) {
+							await avatarStore.updateGroupAvatar(successGroupId, avatarResponse.avatar);
+						}
+					}
 					resetForm();
 					onClose();
 				}, 1500);

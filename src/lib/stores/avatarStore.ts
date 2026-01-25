@@ -1,8 +1,7 @@
-import { writable, get } from 'svelte/store';
+import { writable } from 'svelte/store';
+import { indexedDBHelper, SHOULD_UPDATE_USER_AVATAR_STORE, SHOULD_UPDATE_GROUP_AVATAR_STORE } from './indexedDBHelper';
 
-export const STORAGE_KEY_AVATAR_PREFIX = 'avatar_';
 export const STORAGE_KEY_SHOULD_UPDATE_AVATAR_PREFIX = 'shouldUpdateAvatar_';
-export const STORAGE_KEY_GROUP_AVATAR_PREFIX = 'avatar_group_';
 export const STORAGE_KEY_SHOULD_UPDATE_GROUP_AVATAR_PREFIX = 'shouldUpdateGroupAvatar_';
 
 export interface AvatarState {
@@ -18,41 +17,63 @@ const initialState: AvatarState = {
 function createAvatarStore() {
 	const { subscribe, update, set } = writable<AvatarState>(initialState);
 
-	function saveAvatarToStorage(userId: number, avatar: string) {
-		if (typeof window !== 'undefined') {
-			localStorage.setItem(`${STORAGE_KEY_AVATAR_PREFIX}${userId}`, avatar);
+	// Load initial state from IndexedDB
+	if (typeof window !== 'undefined') {
+		loadShouldUpdateFlagsFromStorage();
+	}
+
+	async function loadShouldUpdateFlagsFromStorage() {
+		try {
+			// Load user avatar update flags from IndexedDB
+			const userShouldUpdateFlags = await indexedDBHelper.getAll(SHOULD_UPDATE_USER_AVATAR_STORE);
+			const shouldUpdateAvatarForUser = new Map<number, boolean>();
+			userShouldUpdateFlags.forEach((flag: any) => {
+				shouldUpdateAvatarForUser.set(flag.userId, flag.shouldUpdate);
+			});
+
+			// Load group avatar update flags from IndexedDB
+			const groupShouldUpdateFlags = await indexedDBHelper.getAll(SHOULD_UPDATE_GROUP_AVATAR_STORE);
+			const shouldUpdateAvatarForGroup = new Map<number, boolean>();
+			groupShouldUpdateFlags.forEach((flag: any) => {
+				shouldUpdateAvatarForGroup.set(flag.groupId, flag.shouldUpdate);
+			});
+
+			update((state) => ({
+				...state,
+				shouldUpdateAvatarForUser,
+				shouldUpdateAvatarForGroup
+			}));
+		} catch (error) {
+			console.error('Error loading shouldUpdate flags from IndexedDB:', error);
 		}
 	}
 
-	function saveGroupAvatarToStorage(groupId: number, avatar: string) {
+	async function saveAvatarToStorage(userId: number, avatar: string): Promise<void> {
 		if (typeof window !== 'undefined') {
-			localStorage.setItem(`${STORAGE_KEY_GROUP_AVATAR_PREFIX}${groupId}`, avatar);
+			await indexedDBHelper.saveUserAvatar(userId, avatar);
 		}
 	}
 
-	function saveShouldUpdateAvatarToStorage(userId: number, shouldUpdate: boolean) {
+	async function saveGroupAvatarToStorage(groupId: number, avatar: string): Promise<void> {
 		if (typeof window !== 'undefined') {
-			localStorage.setItem(
-				`${STORAGE_KEY_SHOULD_UPDATE_AVATAR_PREFIX}${userId}`,
-				shouldUpdate.toString()
-			);
+			await indexedDBHelper.saveGroupAvatar(groupId, avatar);
 		}
 	}
 
-	function saveShouldUpdateGroupAvatarToStorage(groupId: number, shouldUpdate: boolean) {
+	async function saveShouldUpdateAvatarToStorage(userId: number, shouldUpdate: boolean) {
 		if (typeof window !== 'undefined') {
-			localStorage.setItem(
-				`${STORAGE_KEY_SHOULD_UPDATE_GROUP_AVATAR_PREFIX}${groupId}`,
-				shouldUpdate.toString()
-			);
+			await indexedDBHelper.saveShouldUpdateUserAvatar(userId, shouldUpdate);
 		}
 	}
 
-	function updateAvatar(userId: number, avatar: string): void {
+	async function saveShouldUpdateGroupAvatarToStorage(groupId: number, shouldUpdate: boolean) {
+		if (typeof window !== 'undefined') {
+			await indexedDBHelper.saveShouldUpdateGroupAvatar(groupId, shouldUpdate);
+		}
+	}
+
+	async function updateAvatar(userId: number, avatar: string): Promise<void> {
 		update((state) => {
-			saveAvatarToStorage(userId, avatar);
-
-			// Clear the shouldUpdate flag when avatar is updated
 			const newShouldUpdateAvatarForUser = new Map(state.shouldUpdateAvatarForUser);
 			newShouldUpdateAvatarForUser.set(userId, false);
 			saveShouldUpdateAvatarToStorage(userId, false);
@@ -62,119 +83,132 @@ function createAvatarStore() {
 				shouldUpdateAvatarForUser: newShouldUpdateAvatarForUser
 			};
 		});
+
+		// Save avatar to IndexedDB
+		await saveAvatarToStorage(userId, avatar);
 	}
 
-	function removeAvatarFromStorage(userId: number) {
+	async function removeAvatarFromStorage(userId: number): Promise<void> {
 		if (typeof window !== 'undefined') {
-			localStorage.removeItem(`${STORAGE_KEY_AVATAR_PREFIX}${userId}`);
-			localStorage.removeItem(`${STORAGE_KEY_SHOULD_UPDATE_AVATAR_PREFIX}${userId}`);
+			await indexedDBHelper.removeUserAvatar(userId);
+			await indexedDBHelper.removeShouldUpdateUserAvatar(userId);
 		}
 	}
 
-	function removeGroupAvatarFromStorage(groupId: number) {
+	async function removeGroupAvatarFromStorage(groupId: number): Promise<void> {
 		if (typeof window !== 'undefined') {
-			localStorage.removeItem(`${STORAGE_KEY_GROUP_AVATAR_PREFIX}${groupId}`);
-			localStorage.removeItem(`${STORAGE_KEY_SHOULD_UPDATE_GROUP_AVATAR_PREFIX}${groupId}`);
+			await indexedDBHelper.removeGroupAvatar(groupId);
+			await indexedDBHelper.removeShouldUpdateGroupAvatar(groupId);
 		}
 	}
 
-	function getAvatar(userId: number): string | null {
-		return localStorage.getItem(`${STORAGE_KEY_AVATAR_PREFIX}${userId}`);
+	async function getAvatar(userId: number): Promise<string | null> {
+		if (typeof window !== 'undefined') {
+			const avatar = (await indexedDBHelper.getUserAvatar(userId)) as { userId: number; avatar: string } | null;
+			if (avatar && avatar.avatar) {
+				return avatar.avatar;
+			}
+		}
+		return null;
 	}
 
-	function setShouldUpdateAvatarForUser(userId: number, shouldUpdate: boolean): void {
+	async function setShouldUpdateAvatarForUser(
+		userId: number,
+		shouldUpdate: boolean
+	): Promise<void> {
 		update((state) => {
 			const newShouldUpdateAvatarForUser = new Map(state.shouldUpdateAvatarForUser);
 			newShouldUpdateAvatarForUser.set(userId, shouldUpdate);
-			saveShouldUpdateAvatarToStorage(userId, shouldUpdate);
 			return { ...state, shouldUpdateAvatarForUser: newShouldUpdateAvatarForUser };
 		});
+
+		await indexedDBHelper.saveShouldUpdateUserAvatar(userId, shouldUpdate);
 	}
 
-	function getShouldUpdateAvatarForUser(userId: number): boolean {
-		const store = { subscribe };
-		const state = get(store) as AvatarState;
-		return state.shouldUpdateAvatarForUser.get(userId) || false;
+	async function getShouldUpdateAvatarForUser(userId: number): Promise<boolean> {
+		if (typeof window !== 'undefined') {
+			return await indexedDBHelper.getShouldUpdateUserAvatar(userId);
+		}
+		return false;
 	}
 
-	function updateAvatarVersion(userId: number): void {
+	async function updateAvatarVersion(userId: number): Promise<void> {
 		update((state) => {
 			const newShouldUpdateAvatarForUser = new Map(state.shouldUpdateAvatarForUser);
 			newShouldUpdateAvatarForUser.set(userId, true);
-			saveShouldUpdateAvatarToStorage(userId, true);
 			return { ...state, shouldUpdateAvatarForUser: newShouldUpdateAvatarForUser };
 		});
+
+		await indexedDBHelper.saveShouldUpdateUserAvatar(userId, true);
 	}
 
-	function updateGroupAvatar(groupId: number, avatar: string): void {
+	async function updateGroupAvatar(groupId: number, avatar: string): Promise<void> {
 		update((state) => {
-			saveGroupAvatarToStorage(groupId, avatar);
-
 			// Clear the shouldUpdate flag when avatar is updated
 			const newShouldUpdateAvatarForGroup = new Map(state.shouldUpdateAvatarForGroup);
 			newShouldUpdateAvatarForGroup.set(groupId, false);
-			saveShouldUpdateGroupAvatarToStorage(groupId, false);
-
 			return {
 				...state,
 				shouldUpdateAvatarForGroup: newShouldUpdateAvatarForGroup
 			};
 		});
+
+		// Save group avatar to IndexedDB
+		await saveGroupAvatarToStorage(groupId, avatar);
 	}
 
-	function getGroupAvatar(groupId: number): string | null {
-		return localStorage.getItem(`${STORAGE_KEY_GROUP_AVATAR_PREFIX}${groupId}`);
+	async function getGroupAvatar(groupId: number): Promise<string | null> {
+		if (typeof window !== 'undefined') {
+			const avatar = (await indexedDBHelper.getGroupAvatar(groupId)) as { groupId: number; avatar: string } | null;
+			if (avatar && avatar.avatar) {
+				return avatar.avatar;
+			}
+		}
+		return null;
 	}
 
-	function setShouldUpdateGroupAvatarForGroup(groupId: number, shouldUpdate: boolean): void {
+	async function setShouldUpdateGroupAvatarForGroup(
+		groupId: number,
+		shouldUpdate: boolean
+	): Promise<void> {
 		update((state) => {
 			const newShouldUpdateAvatarForGroup = new Map(state.shouldUpdateAvatarForGroup);
 			newShouldUpdateAvatarForGroup.set(groupId, shouldUpdate);
-			saveShouldUpdateGroupAvatarToStorage(groupId, shouldUpdate);
 			return { ...state, shouldUpdateAvatarForGroup: newShouldUpdateAvatarForGroup };
 		});
+
+		await indexedDBHelper.saveShouldUpdateGroupAvatar(groupId, shouldUpdate);
 	}
 
-	function getShouldUpdateGroupAvatarForGroup(groupId: number): boolean {
-		const store = { subscribe };
-		const state = get(store) as AvatarState;
-		return state.shouldUpdateAvatarForGroup.get(groupId) || false;
+	async function getShouldUpdateGroupAvatarForGroup(groupId: number): Promise<boolean> {
+		if (typeof window !== 'undefined') {
+			return await indexedDBHelper.getShouldUpdateGroupAvatar(groupId);
+		}
+		return false;
 	}
 
-	function updateGroupAvatarVersion(groupId: number): void {
+	async function updateGroupAvatarVersion(groupId: number): Promise<void> {
 		update((state) => {
 			const newShouldUpdateAvatarForGroup = new Map(state.shouldUpdateAvatarForGroup);
 			newShouldUpdateAvatarForGroup.set(groupId, true);
-			saveShouldUpdateGroupAvatarToStorage(groupId, true);
 			return { ...state, shouldUpdateAvatarForGroup: newShouldUpdateAvatarForGroup };
 		});
+
+		await indexedDBHelper.saveShouldUpdateGroupAvatar(groupId, true);
 	}
 
-	function clear(): void {
+	async function clear(): Promise<void> {
 		update((state) => ({
 			...state,
-			avatars: new Map(),
 			shouldUpdateAvatarForUser: new Map(),
 			shouldUpdateAvatarForGroup: new Map()
 		}));
 
 		if (typeof window !== 'undefined') {
-			const keys = Object.keys(localStorage);
-			const avatarKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_AVATAR_PREFIX));
-			avatarKeys.forEach((key) => localStorage.removeItem(key));
-
-			const shouldUpdateKeys = keys.filter((key) =>
-				key.startsWith(STORAGE_KEY_SHOULD_UPDATE_AVATAR_PREFIX)
-			);
-			shouldUpdateKeys.forEach((key) => localStorage.removeItem(key));
-
-			const groupAvatarKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_GROUP_AVATAR_PREFIX));
-			groupAvatarKeys.forEach((key) => localStorage.removeItem(key));
-
-			const shouldUpdateGroupKeys = keys.filter((key) =>
-				key.startsWith(STORAGE_KEY_SHOULD_UPDATE_GROUP_AVATAR_PREFIX)
-			);
-			shouldUpdateGroupKeys.forEach((key) => localStorage.removeItem(key));
+			await indexedDBHelper.clearUserAvatars();
+			await indexedDBHelper.clearGroupAvatars();
+			await indexedDBHelper.clearShouldUpdateUserAvatars();
+			await indexedDBHelper.clearShouldUpdateGroupAvatars();
 		}
 	}
 
