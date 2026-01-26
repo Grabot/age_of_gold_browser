@@ -53,6 +53,9 @@
 	import { errorToast, successToast } from '$lib/utils/toast';
 	import ChatView from '../components/chat/ChatView.svelte';
 	import FriendView from '../components/chat/FriendView.svelte';
+	import AddFriend from '../components/chat/friends/AddFriend.svelte';
+	import FloatingActionButton from '../components/ui/FloatingActionButton.svelte';
+	import CreateGroupModal from '../components/chat/groups/CreateGroupModal.svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { groupStore } from '$lib/stores/groupStore';
 	import type { Group } from '$lib/types/groups';
@@ -68,7 +71,21 @@
 	let showProfileDropdown = $state(false);
 	let showChatModal = $state(false);
 	let showFriendModal = $state(false);
+	let showAddFriendModal = $state(false);
+	let showCreateGroupModal = $state(false);
+	let searchQuery = $state('');
+	let searchResult = $state<{ id: number; username: string } | null>(null);
+	let searchResultAvatar = $state<string | null>(null);
+	let searched = $state(false);
+	let lastSearchedQuery = $state<string | null>(null);
+	let isLoading = $state(false);
 	let dropdownRef: HTMLDivElement | null = $state(null);
+
+	function handleAddFriendModalClick(event: MouseEvent) {
+		if (event.target === event.currentTarget) {
+			showAddFriendModal = false;
+		}
+	}
 
 	function toggleProfileDropdown() {
 		showProfileDropdown = !showProfileDropdown;
@@ -543,13 +560,47 @@
 	{/if}
 
 	{#if showFriendModal}
-		<FriendView onClose={() => (showFriendModal = false)} {getRandomColor} {getInitial} />
+		<FriendView 
+			onClose={() => (showFriendModal = false)} 
+			{getRandomColor} 
+			{getInitial}
+			onAddFriendClick={() => (showAddFriendModal = true)}
+			onCreateGroupClick={() => (showCreateGroupModal = true)}
+		/>
+	{/if}
+	
+	{#if showAddFriendModal}
+		<div class="modal-overlay" onclick={handleAddFriendModalClick}>
+			<div class="modal-content-friend">
+				<div class="modal-header-friend">
+					<h3>Add New Friend</h3>
+					<button class="close-btn" onclick={() => (showAddFriendModal = false)}>×</button>
+				</div>
+				<AddFriend
+					{getRandomColor}
+					{getInitial}
+					bind:searchQuery
+					bind:searchResult
+					bind:searchResultAvatar
+					bind:searched
+					bind:lastSearchedQuery
+					bind:isLoading
+					onClose={() => (showAddFriendModal = false)}
+				/>
+			</div>
+		</div>
+	{/if}
+	
+	{#if showCreateGroupModal}
+		<CreateGroupModal onClose={() => (showCreateGroupModal = false)} />
 	{/if}
 	{#if showChatModal}
 		<ChatView onClose={() => (showChatModal = false)} />
 	{/if}
 
 	{@render children?.()}
+	
+
 </div>
 
 <SvelteToast {options} />
@@ -716,4 +767,68 @@
 		color: white;
 		font-size: 1.5rem;
 	}
+
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.6);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+	}
+
+	.modal-content-friend {
+		background: white;
+		width: 80%;
+		max-width: 500px;
+		border-radius: 12px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+		padding: 2rem;
+		position: relative;
+		max-height: 80vh;
+		overflow-y: auto;
+	}
+
+	.close-btn {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		cursor: pointer;
+		color: #666;
+		width: 30px;
+		height: 30px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.close-btn:hover {
+		color: #333;
+	}
+
+	.modal-header-friend {
+		background: #0b9476;
+		color: white;
+		padding: 1rem 1.5rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-top-left-radius: 12px;
+		border-top-right-radius: 12px;
+		margin: -2rem -2rem 1rem -2rem;
+	}
+
+	.modal-header-friend h3 {
+		margin: 0;
+		font-size: 1.5rem;
+	}
+
+
 </style>

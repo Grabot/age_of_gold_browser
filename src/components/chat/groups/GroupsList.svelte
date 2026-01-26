@@ -70,67 +70,58 @@
 
 <div class="groups-list">
 	{#if $groupStore.groups.length > 0}
-		<div class="section-separator-top">
-			<span>Your Groups</span>
-		</div>
 		{#each $groupStore.groups as group (group.group_id)}
-			<button
-				class="group-item"
-				on:click={() => {
-					selectedGroup = group;
-					showDetailModal = true;
-				}}
-				type="button"
-				aria-label="View details for group {group.group_id}"
-				style="background-color: {group.group_colour ||
-					getRandomColor()}; color: {group.group_colour
-					? getTextColorForBackground(group.group_colour)
-					: getTextColorForBackground(getRandomColor())};"
-			>
-				<div class="avatar-container">
-					{#if group.avatar}
-						<img class="group-avatar" src={group.avatar} alt={group.group_name} />
-					{:else}
-						<div
-							class="group-avatar placeholder"
-							style="background-color: {getRandomColor()}; color: {getTextColorForBackground(
-								getRandomColor()
-							)}"
-						>
-							{getInitial(group.group_name || '')}
-						</div>
-					{/if}
-				</div>
-				<div class="group-text">
-					<span class="group-name">{group.group_name || 'Unnamed Group'}</span>
-					{#if group.unread_messages > 0}
-						<span class="unread-badge">{group.unread_messages}</span>
-					{/if}
-				</div>
-			</button>
-		{/each}
-	{:else}
-		<p class="no-groups">You don't have any groups yet. Create a group to get started!</p>
-	{/if}
+		<button
+			class="group-item"
+			on:click={() => {
+				selectedGroup = group;
+				showDetailModal = true;
+			}}
+			type="button"
+			aria-label="View details for group {group.group_id}"
+			style="background-color: {group.group_colour ||
+				getRandomColor()}; color: {group.group_colour
+				? getTextColorForBackground(group.group_colour)
+				: getTextColorForBackground(getRandomColor())};"
+		>
+			<div class="avatar-container">
+				{#if group.avatar}
+					<img class="group-avatar" src={group.avatar} alt={group.group_name} />
+				{:else}
+					<div
+						class="group-avatar placeholder"
+						style="background-color: {getRandomColor()}; color: {getTextColorForBackground(
+							getRandomColor()
+						)}"
+					>
+						{getInitial(group.group_name || '')}
+					</div>
+				{/if}
+			</div>
+			<div class="group-text">
+				<span class="group-name">{group.group_name || 'Unnamed Group'}</span>
+				{#if group.unread_messages > 0}
+					<span class="unread-badge">{group.unread_messages}</span>
+				{/if}
+			</div>
+		</button>
+	{/each}
+{:else}
+	<p class="no-groups">You don't have any groups yet. Create a group to get started!</p>
+{/if}
 
-	<!-- Group Detail Modal -->
-	{#if showDetailModal && selectedGroup}
-		<GroupDetailModal group={selectedGroup} onClose={() => (showDetailModal = false)} />
-	{/if}
+<!-- Group Detail Modal -->
+{#if showDetailModal && selectedGroup}
+	<GroupDetailModal group={selectedGroup} onClose={() => (showDetailModal = false)} />
+{/if}
 </div>
 
 <style>
 	.groups-list {
 		display: flex;
+		padding: 1.5rem;
 		flex-direction: column;
 		gap: 0.75rem;
-	}
-
-	.section-separator-top {
-		font-size: 0.9rem;
-		color: #7f8c8d;
-		font-weight: 500;
-		padding: 1rem 0 0.5rem 0;
 	}
 
 	.group-item {

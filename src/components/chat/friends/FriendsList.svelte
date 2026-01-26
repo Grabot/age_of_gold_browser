@@ -3,8 +3,8 @@
 	import { errorToast } from '$lib/utils/toast';
 	import FriendDetailModal from './FriendDetailModal.svelte';
 	import type { Friend } from '$lib/types/friend';
+	import { getRandomColor } from '$lib/utils/groupUtils';
 
-	export let getRandomColor: () => string;
 	export let getInitial: (username: string) => string;
 
 	let selectedFriend: Friend | null = null;
@@ -250,7 +250,8 @@
 	.friends-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.75rem;
+		padding: 1.5rem;
 	}
 
 	.friend-item {

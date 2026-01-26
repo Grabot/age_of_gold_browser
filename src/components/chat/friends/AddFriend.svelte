@@ -13,6 +13,7 @@
 	export let searched: boolean;
 	export let lastSearchedQuery: string | null;
 	export let isLoading: boolean;
+	export let onClose: () => void = () => {};
 
 	async function handleSearch() {
 		if (searchQuery) {
@@ -54,12 +55,13 @@
 
 			const success = await friendStore.sendFriendRequest(friendData);
 
-			if (success) {
-				searchResult = null;
-				searchResultAvatar = null;
-				searched = false;
-				searchQuery = '';
-			}
+				if (success) {
+					searchResult = null;
+					searchResultAvatar = null;
+					searched = false;
+					searchQuery = '';
+					onClose();
+				}
 		}
 	}
 </script>

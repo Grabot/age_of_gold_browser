@@ -1,7 +1,8 @@
 <script lang="ts">
-	import AddFriend from './friends/AddFriend.svelte';
+
 	import FriendsList from './friends/FriendsList.svelte';
 	import GroupsTab from './groups/GroupsTab.svelte';
+	import FloatingActionButton from '../ui/FloatingActionButton.svelte';
 	import { onMount } from 'svelte';
 	import { avatarStore } from '$lib/stores/avatarStore';
 	import { accessTokenValue } from '$lib/stores/authStore';
@@ -16,13 +17,10 @@
 	export let getRandomColor: () => string;
 	export let getInitial: (username: string) => string;
 
-	let activeTab: 'friends' | 'add' | 'groups' = 'friends';
-	let searchQuery: string = '';
-	let searchResult: { id: number; username: string } | null = null;
-	let searchResultAvatar: string | null = null;
-	let searched = false;
-	let lastSearchedQuery: string | null = null;
-	let isLoading = false;
+	let activeTab: 'friends' | 'groups' = 'friends';
+	export let onAddFriendClick: () => void = () => {};
+	export let onCreateGroupClick: () => void = () => {};
+
 
 	async function checkUserAvatar(friend: Friend) {
 		if (friend.user) {
@@ -88,14 +86,8 @@
 		}
 	}
 
-	function setActiveTab(tab: 'friends' | 'add' | 'groups') {
+	function setActiveTab(tab: 'friends' | 'groups') {
 		activeTab = tab;
-		searchQuery = '';
-		searchResult = null;
-		searchResultAvatar = null;
-		searched = false;
-		lastSearchedQuery = null;
-		isLoading = false;
 	}
 </script>
 
@@ -131,32 +123,27 @@
 			>
 				Groups
 			</button>
-
-			<button class={activeTab === 'add' ? 'active' : ''} on:click={() => setActiveTab('add')}>
-				Add New Friend
-			</button>
 		</div>
 
-		<div class="tab-content">
+			<div class="tab-content">
+				{#if activeTab === 'friends'}
+					<FriendsList {getInitial} />
+				{:else if activeTab === 'groups'}
+					<GroupsTab onCreateGroupClick={onCreateGroupClick} />
+				{/if}
+			</div>
+			
 			{#if activeTab === 'friends'}
-				<FriendsList {getRandomColor} {getInitial} />
-			{:else if activeTab === 'groups'}
-				<GroupsTab />
-			{:else if activeTab === 'add'}
-				<AddFriend
-					{getRandomColor}
-					{getInitial}
-					bind:searchQuery
-					bind:searchResult
-					bind:searchResultAvatar
-					bind:searched
-					bind:lastSearchedQuery
-					bind:isLoading
-				/>
+				<div class="fab-container">
+					<FloatingActionButton 
+						onClick={onAddFriendClick} 
+						icon="👤"
+						label="Add Friend"
+					/>
+				</div>
 			{/if}
 		</div>
 	</div>
-</div>
 
 <style>
 	.modal {
@@ -233,7 +220,8 @@
 
 	.tab-content {
 		flex: 1;
-		padding: 1.5rem;
 		overflow-y: auto;
+		position: relative;
 	}
+
 </style>

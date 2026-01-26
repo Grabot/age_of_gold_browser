@@ -155,21 +155,26 @@
 				<legend>Select Friends to Add</legend>
 				<div class="friends-selection">
 					{#if availableFriends.length > 0}
-						{#each availableFriends as friend (friend.friend_id)}
-							<div class="friend-item">
-								<input
-									type="checkbox"
-									id={`friend-${friend.friend_id}`}
-									checked={selectedFriends.includes(friend.friend_id)}
-									on:change={() => toggleFriendSelection(friend.friend_id)}
-								/>
-								<label for={`friend-${friend.friend_id}`}>
-									{#if friend.user}
-										{friend.user.username}
-									{/if}
-								</label>
-							</div>
-						{/each}
+								{#each availableFriends as friend (friend.friend_id)}
+									<div 
+										class="friend-item"
+										on:click={() => toggleFriendSelection(friend.friend_id)}
+										class:selected={selectedFriends.includes(friend.friend_id)}
+									>
+										<input
+											type="checkbox"
+											id={`friend-${friend.friend_id}`}
+											checked={selectedFriends.includes(friend.friend_id)}
+											on:change={() => toggleFriendSelection(friend.friend_id)}
+											on:click|stopPropagation
+										/>
+										<span class="friend-name">
+											{#if friend.user}
+												{friend.user.username}
+											{/if}
+										</span>
+									</div>
+									{/each}
 					{:else}
 						<p class="no-friends">No friends available to add to group. Add some friends first!</p>
 					{/if}
@@ -275,11 +280,31 @@
 	.friend-item {
 		display: flex;
 		align-items: center;
-		padding: 0.5rem 0;
+		padding: 0.75rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		margin-bottom: 0.5rem;
+	}
+
+	.friend-item:hover {
+		background-color: #f5f5f5;
+	}
+
+	.friend-item.selected {
+		background-color: #e8f5e9;
+		border: 1px solid #0b9476;
 	}
 
 	.friend-item input[type='checkbox'] {
-		margin-right: 0.5rem;
+		margin-right: 0.75rem;
+		cursor: pointer;
+	}
+
+	.friend-name {
+		flex: 1;
+		color: #333;
+		font-size: 1rem;
 	}
 
 	.no-friends {
