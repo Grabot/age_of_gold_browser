@@ -74,9 +74,18 @@
 						<div
 							class="friend-item incoming"
 							style="--user-colour: {getBackgroundColor(friend)}"
-							on:click={() => {
-							selectedFriend = friend;
-							showDetailModal = true;
+							role="button"
+							tabindex="0"
+							aria-label={`View details for ${friend.user?.username || 'Unknown User'}`}
+							onclick={() => {
+								selectedFriend = friend;
+								showDetailModal = true;
+							}}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									selectedFriend = friend;
+									showDetailModal = true;
+								}
 							}}
 						>
 							<!-- Avatar on the far left -->
@@ -100,19 +109,19 @@
 							<div class="request-actions">
 							<button
 								class="accept-btn"
-								on:click|stopPropagation={() => handleAcceptFriend(friend.friend_id)}
+								onclick={() => handleAcceptFriend(friend.friend_id)}
 							>
 								✓ Accept
 							</button>
 							<button
 								class="reject-btn"
-								on:click|stopPropagation={() => handleRejectFriend(friend.friend_id)}
+								onclick={() => handleRejectFriend(friend.friend_id)}
 							>
 								✗ Reject
 							</button>
 							</div>
 						</div>
-						</div>
+					</div>
                 {/if}
             {/each}
         {/if}
@@ -138,7 +147,7 @@
                             <div class="status-tab"></div>
                             <button
                                 class="friend-button"
-                                on:click={() => {
+                                onclick={() => {
                                     selectedFriend = friend;
                                     showDetailModal = true;
                                 }}
@@ -167,7 +176,7 @@
                             <div class="request-actions">
                                 <button
                                     class="cancel-btn"
-                                    on:click|stopPropagation={() => handleCancelFriendRequest(friend.friend_id)}
+                                    onclick={() => handleCancelFriendRequest(friend.friend_id)}
                                 >
                                     <span>✗</span> Cancel
                                 </button>
@@ -195,7 +204,7 @@
                     >
                         <button
                             class="friend-button"
-                            on:click={() => {
+                            onclick={() => {
                                 selectedFriend = friend;
                                 showDetailModal = true;
                             }}

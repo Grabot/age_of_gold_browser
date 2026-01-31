@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { userDetail } from '$lib/stores/authStore';
-	import { get } from 'svelte/store';
-	import ColourPicker from '$lib/components/ColourPicker.svelte';
+	import ColourPicker from './ColourPicker.svelte';
 
-	export let onSave: (data: { colour: string }) => void;
+	export let initialColour: string = '#ff0000';
+	export let onSave: (colour: string) => void;
 	export let onClose: () => void;
-	export let initialColour: string = get(userDetail).colour;
 
 	let selectedColour: string = initialColour;
 
@@ -13,14 +11,14 @@
 		selectedColour = colour;
 	}
 
+	function handleSaveClick() {
+		onSave(selectedColour);
+	}
+
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
 			onClose();
 		}
-	}
-
-	function handleSave() {
-		onSave({ colour: selectedColour });
 	}
 </script>
 
@@ -42,7 +40,7 @@
 			<h2>Choose Colour</h2>
 			<button class="close-btn" on:click={onClose}>×</button>
 		</div>
-		<div class="modal-body-scrollable">
+		<div class="modal-body">
 			<ColourPicker 
 				initialColour={initialColour} 
 				onColourChange={handleColourChange}
@@ -50,7 +48,7 @@
 		</div>
 		<div class="modal-footer">
 			<div class="modal-actions">
-				<button on:click={handleSave}>Save</button>
+				<button on:click={handleSaveClick}>Save</button>
 				<button on:click={onClose}>Cancel</button>
 			</div>
 		</div>
@@ -68,7 +66,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		z-index: 100;
+		z-index: 1003;
 		border: none;
 		padding: 0;
 		margin: 0;
@@ -121,7 +119,7 @@
 		background: rgba(255, 255, 255, 0.1);
 	}
 
-	.modal-body-scrollable {
+	.modal-body {
 		overflow-y: auto;
 		padding: 2rem 1rem;
 		flex: 1;

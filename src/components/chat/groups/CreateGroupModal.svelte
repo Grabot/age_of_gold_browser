@@ -4,11 +4,11 @@
 	import { errorToast, successToast } from '$lib/utils/toast';
 	import { onMount } from 'svelte';
 	import { accessTokenValue, authStore } from '$lib/stores/authStore';
-	import ColorPicker from 'svelte-awesome-color-picker';
 	import { getRandomColour } from '$lib/utils/groupUtils';
 	import { handleGetGroupAvatar } from '$lib/services/settingsService';
 	import { get } from 'svelte/store';
 	import { avatarStore } from '$lib/stores/avatarStore';
+	import ColourPickerModal from '$lib/components/ColourPickerModal.svelte';
 
 	export let onClose: () => void;
 
@@ -17,6 +17,7 @@
 	let groupDescription: string = '';
 	let groupColour: string = getRandomColour();
 	let selectedFriends: number[] = [];
+	let showColourPicker = false;
 
 	$: availableFriends = $friendStore.friends.filter((f) => f.accepted === true && f.user);
 
@@ -148,33 +149,55 @@
 
 			<div class="form-group">
 				<label for="groupColour">Group Colour</label>
-				<ColorPicker bind:hex={groupColour} />
+				<div class="colour-picker-trigger" on:click={() => showColourPicker = true} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && (showColourPicker = true)}>
+					<div class="colour-preview" style="background-color: {groupColour}"></div>
+					<span class="colour-label">{groupColour}</span>
+				</div>
 			</div>
+
+			{#if showColourPicker}
+				<ColourPickerModal 
+					initialColour={groupColour}
+					onSave={(colour) => {
+						groupColour = colour;
+						showColourPicker = false;
+					}}
+					onClose={() => showColourPicker = false}
+				/>
+			{/if}
 
 			<div class="form-group">
 				<legend>Select Friends to Add</legend>
 				<div class="friends-selection">
 					{#if availableFriends.length > 0}
-								{#each availableFriends as friend (friend.friend_id)}
-									<div 
-										class="friend-item"
-										on:click={() => toggleFriendSelection(friend.friend_id)}
-										class:selected={selectedFriends.includes(friend.friend_id)}
-									>
-										<input
-											type="checkbox"
-											id={`friend-${friend.friend_id}`}
-											checked={selectedFriends.includes(friend.friend_id)}
-											on:change={() => toggleFriendSelection(friend.friend_id)}
-											on:click|stopPropagation
-										/>
-										<span class="friend-name">
-											{#if friend.user}
-												{friend.user.username}
-											{/if}
-										</span>
-									</div>
-									{/each}
+						{#each availableFriends as friend (friend.friend_id)}
+							<div
+								class="friend-item"
+								class:selected={selectedFriends.includes(friend.friend_id)}
+								on:click={() => toggleFriendSelection(friend.friend_id)}
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										toggleFriendSelection(friend.friend_id);
+									}
+								}}
+								role="button"
+								tabindex="0"
+								aria-pressed={selectedFriends.includes(friend.friend_id)}
+							>
+								<input
+									type="checkbox"
+									id={`friend-${friend.friend_id}`}
+									checked={selectedFriends.includes(friend.friend_id)}
+									on:change={() => toggleFriendSelection(friend.friend_id)}
+									on:click|stopPropagation
+								/>
+								<span class="friend-name">
+									{#if friend.user}
+										{friend.user.username}
+									{/if}
+								</span>
+							</div>
+						{/each}
 					{:else}
 						<p class="no-friends">No friends available to add to group. Add some friends first!</p>
 					{/if}
@@ -268,6 +291,36 @@
 	.form-group textarea {
 		resize: vertical;
 		min-height: 80px;
+	}
+
+	.colour-picker-trigger {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.5rem;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.colour-picker-trigger:hover {
+		background-color: #f5f5f5;
+		border-color: #ccc;
+	}
+
+	.colour-preview {
+		width: 40px;
+		height: 40px;
+		border-radius: 4px;
+		border: 2px solid #ddd;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+
+	.colour-label {
+		font-family: monospace;
+		font-size: 0.9rem;
+		color: #666;
 	}
 
 	.friends-selection {

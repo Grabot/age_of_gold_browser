@@ -2,8 +2,8 @@
 	import { groupStore } from '$lib/stores/groupStore';
 	import { errorToast, successToast } from '$lib/utils/toast';
 	import type { Group } from '$lib/types/groups';
-	import ColorPicker from 'svelte-awesome-color-picker';
 	import { getTextColorForBackground } from '$lib/utils/groupUtils';
+	import ColourPickerModal from '$lib/components/ColourPickerModal.svelte';
 
 	export let group: Group;
 	export let onClose: () => void;
@@ -18,6 +18,7 @@
 	let editGroupName: string = '';
 	let editGroupDescription: string = '';
 	let editGroupColour: string = '';
+	let showColourPicker = false;
 
 	$: {
 		textColor = getTextColorForBackground(editGroupColour);
@@ -38,6 +39,7 @@
 				groupColour: editGroupColour
 			};
 			onSave(updatedGroup);
+			onClose();
 		} catch (error) {
 			errorToast(error instanceof Error ? error.message : 'Unknown error');
 		}
@@ -97,8 +99,22 @@
 
 				<div class="form-group">
 					<label for="editGroupColour">Group Color</label>
-					<ColorPicker bind:hex={editGroupColour} />
+					<div class="colour-picker-trigger" on:click={() => showColourPicker = true} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && (showColourPicker = true)}>
+						<div class="colour-preview" style="background-color: {editGroupColour}"></div>
+						<span class="colour-label">{editGroupColour}</span>
+					</div>
 				</div>
+
+				{#if showColourPicker}
+					<ColourPickerModal 
+						initialColour={editGroupColour}
+						onSave={(colour) => {
+							editGroupColour = colour;
+							showColourPicker = false;
+						}}
+						onClose={() => showColourPicker = false}
+					/>
+				{/if}
 
 				<div class="form-actions">
 					<button
@@ -209,6 +225,36 @@
 		min-height: 100px;
 		resize: vertical;
 		font-family: inherit;
+	}
+
+	.colour-picker-trigger {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.5rem;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.colour-picker-trigger:hover {
+		background-color: #f5f5f5;
+		border-color: #ccc;
+	}
+
+	.colour-preview {
+		width: 40px;
+		height: 40px;
+		border-radius: 4px;
+		border: 2px solid #ddd;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+
+	.colour-label {
+		font-family: monospace;
+		font-size: 0.9rem;
+		color: #666;
 	}
 
 	.form-actions {

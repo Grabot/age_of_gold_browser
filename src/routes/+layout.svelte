@@ -45,9 +45,7 @@
 		onGroupAvatarChangedEvent,
 		type GroupAvatarChangedEventData,
 		offGroupAvatarChangedEvent,
-
 		onColourUpdatedEvent
-
 	} from '$lib/socket';
 	import { handleGetAvatar } from '$lib/services/settingsService';
 	import { goto } from '$app/navigation';
@@ -140,7 +138,7 @@
 		}
 		friendStore.updateFriendUsername(data.user_id, data.new_username, data.profile_version);
 	}
-	
+
 	function handleColourUpdatedEvent(data: any) {
 		if ($authStore.user) {
 			if ($authStore.user.id === data.user_id) {
@@ -532,7 +530,7 @@
 				<button class="nav-btn" onclick={() => toggleChat()}>💬 Chat</button>
 			</div>
 			<div class="nav-right">
-				<button class="notification-btn">🔔</button>
+				<button class="notification-btn" onclick={() => {}}>🔔</button>
 				<div class="profile-dropdown-container" bind:this={dropdownRef}>
 					<button
 						class="profile-btn"
@@ -560,15 +558,13 @@
 								onclick={() => {
 									goto('/profile');
 									showProfileDropdown = false;
-								}}>Profile</button
-							>
+								}}>Profile</button>
 							<button
 								class="dropdown-item"
 								onclick={() => {
 									authStore.logout();
 									showProfileDropdown = false;
-								}}>Logout</button
-							>
+								}}>Logout</button>
 						</div>
 					{/if}
 				</div>
@@ -585,33 +581,50 @@
 	{/if}
 
     {#if showSocialModal}
-        <SocialView 
+        <SocialView
             onClose={() => (showSocialModal = false)}
             onAddFriendClick={() => (showAddFriendModal = true)}
             onCreateGroupClick={() => (showCreateGroupModal = true)}
         />
     {/if}
-	
+
     {#if showAddFriendModal}
-        <div class="modal-overlay" onclick={handleAddFriendModalClick}>
-            <div class="modal-content-friend">
-                <div class="modal-header-friend">
-                    <h3>Add New Social</h3>
-                    <button class="close-btn" onclick={() => (showAddFriendModal = false)}>×</button>
-                </div>
-                <AddFriend
-                    bind:searchQuery
-                    bind:searchResult
-                    bind:searchResultAvatar
-                    bind:searched
-                    bind:lastSearchedQuery
-                    bind:isLoading
-                    onClose={() => (showAddFriendModal = false)}
-                />
-            </div>
-        </div>
+		<div
+			class="modal-overlay"
+			onclick={handleAddFriendModalClick}
+			onkeydown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					handleAddFriendModalClick(e as unknown as MouseEvent);
+				}
+			}}
+			role="button"
+			tabindex="0"
+			aria-label="Close modal"
+		>
+			<div class="modal-content-friend">
+				<div class="modal-header-friend">
+					<h3>Add New Social</h3>
+					<button
+						class="close-btn"
+						onclick={() => (showAddFriendModal = false)}
+						aria-label="Close"
+					>
+						×
+					</button>
+				</div>
+				<AddFriend
+					bind:searchQuery
+					bind:searchResult
+					bind:searchResultAvatar
+					bind:searched
+					bind:lastSearchedQuery
+					bind:isLoading
+					onClose={() => (showAddFriendModal = false)}
+				/>
+			</div>
+		</div>
     {/if}
-	
+
 	{#if showCreateGroupModal}
 		<CreateGroupModal onClose={() => (showCreateGroupModal = false)} />
 	{/if}
@@ -620,8 +633,6 @@
 	{/if}
 
 	{@render children?.()}
-	
-
 </div>
 
 <SvelteToast {options} />
@@ -850,6 +861,4 @@
 		margin: 0;
 		font-size: 1.5rem;
 	}
-
-
 </style>
