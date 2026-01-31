@@ -22,6 +22,7 @@ export async function retrieveMissingUsers(userIds: number[], accessToken: strin
 				const user: User = {
 					id: userResponse.id,
 					username: userResponse.username,
+					colour: userResponse.colour,
 					avatar_version: userResponse.avatar_version,
 					profile_version: userResponse.profile_version,
 					avatar: undefined

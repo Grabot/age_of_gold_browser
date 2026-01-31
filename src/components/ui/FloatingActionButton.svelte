@@ -19,10 +19,10 @@
 		z-index: 10;
 	}
 
-	.fab-button {
-		background: #0b9476;
-		color: white;
-		border: none;
+    .fab-button {
+        background: var(--primary-colour);
+        color: white;
+        border: none;
 		border-radius: 50%;
 		width: 60px;
 		height: 60px;
@@ -38,7 +38,7 @@
 	}
 
 	.fab-button:hover {
-		background: #095c39;
+        background: var(--primary-colour-dark);
 		transform: scale(1.05);
 	}
 

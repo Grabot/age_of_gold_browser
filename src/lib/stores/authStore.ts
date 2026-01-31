@@ -21,6 +21,7 @@ import {
 	retrieveMissingGroups,
 	retrieveMissingUsers
 } from '../services/dataRetrievalService';
+import { updatePrimaryColour } from '$lib/utils/colourUtils';
 
 export const STORAGE_KEY_ACCESS_TOKEN = 'accessToken';
 export const STORAGE_KEY_REFRESH_TOKEN = 'refreshToken';
@@ -161,6 +162,7 @@ function createAuthStore() {
 		} else {
 			loginResultUser = get(userDetail);
 		}
+		updatePrimaryColour(loginResultUser.colour);
 
 		if (get(avatarVersionValue) != loginResult.avatar_version) {
 			shouldUpdateAvatar.set(true);

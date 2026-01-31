@@ -27,7 +27,7 @@
 	$: {
 		editGroupName = group.group_name || '';
 		editGroupDescription = group.group_description || '';
-		editGroupColour = group.group_colour || '#0b9476';
+        editGroupColour = group.group_colour || 'var(--primary-colour)';
 	}
 
 	async function handleSave() {
@@ -158,7 +158,7 @@
 	.close-btn {
 		background: none;
 		border: none;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 		cursor: pointer;
 		padding: 0;
@@ -198,7 +198,7 @@
 
 	.form-input:focus {
 		outline: none;
-		border-color: #0b9476;
+        border-color: var(--primary-colour);
 	}
 
 	.form-textarea {

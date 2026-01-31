@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { groupStore } from '$lib/stores/groupStore';
 	import { errorToast, successToast } from '$lib/utils/toast';
-	import { getRandomColor, getInitial, getTextColorForBackground } from '$lib/utils/groupUtils';
+	import { getRandomColour, getInitial, getTextColorForBackground } from '$lib/utils/groupUtils';
 	import { updateUserAvatar } from '$lib/utils/avatarUtils';
 	import { authStore, accessTokenValue, userAvatar } from '$lib/stores/authStore';
 	import { retrieveMissingUsers } from '$lib/services/dataRetrievalService';
@@ -33,7 +33,7 @@
 	let editGroupName: string = '';
 	let editGroupDescription: string = '';
 	let editGroupColour: string = '';
-	let groupColor: string = '#0b9476';
+	let groupColor: string = 'var(--primary-colour)';
 	let textColor: string = 'white';
 
 	let newMemberUsername: string = '';
@@ -153,8 +153,8 @@
 		// Initialize edit form fields
 		editGroupName = group.group_name || '';
 		editGroupDescription = group.group_description || '';
-		editGroupColour = group.group_colour || '#0b9476';
-		groupColor = group.group_colour || '#0b9476';
+        editGroupColour = group.group_colour || 'var(--primary-colour)';
+        groupColor = group.group_colour || 'var(--primary-colour)';
 		textColor = getTextColorForBackground(groupColor);
 	}
 
@@ -335,7 +335,7 @@
 					{:else}
 						<div
 							class="group-avatar"
-							style="background-color: {group.group_colour || getRandomColor()}"
+							style="background-color: {group.group_colour || getRandomColour()}"
 						>
 							{getInitial(group.group_name || 'G')}
 						</div>
@@ -414,7 +414,7 @@
 									{:else}
 										<div
 											class="member-avatar placeholder"
-											style="background-color: {getRandomColor()}"
+											style="background-color: {getRandomColour()}"
 										>
 											{getInitial(group_member.username)}
 										</div>
@@ -435,7 +435,7 @@
 											<button
 												class="demote-btn"
 												on:click={() => handlePromoteAdmin(group_member.user_id, false)}
-												style="background-color: #f39c12; color: white;"
+												style="background-color: #f39c12; color: var(--text-colour-on-primary);"
 											>
 												Demote
 											</button>
@@ -443,7 +443,7 @@
 											<button
 												class="promote-btn"
 												on:click={() => handlePromoteAdmin(group_member.user_id, true)}
-												style="background-color: #2ecc71; color: white;"
+												style="background-color: #2ecc71; color: var(--text-colour-on-primary);"
 											>
 												Promote
 											</button>
@@ -451,7 +451,7 @@
 										<button
 											class="remove-btn"
 											on:click={() => handleRemoveMember(group_member.user_id)}
-											style="background-color: #e74c3c; color: white;"
+											style="background-color: #e74c3c; color: var(--text-colour-on-primary);"
 										>
 											Remove
 										</button>
@@ -615,7 +615,7 @@
 	.header-close-btn {
 		background: none;
 		border: none;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 		cursor: pointer;
 		padding: 0;
@@ -849,7 +849,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-weight: bold;
 		font-size: 1rem;
 		background-color: #ccc;
@@ -884,7 +884,7 @@
 	.you-badge {
 		padding: 0.2rem 0.5rem;
 		background-color: #3498db;
-		color: white;
+		color: var(--text-colour-on-primary);
 		border-radius: 4px;
 		font-size: 0.7rem;
 		margin-left: 0.5rem;

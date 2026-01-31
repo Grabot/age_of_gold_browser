@@ -2,12 +2,12 @@
 	import { friendStore } from '$lib/stores/friendStore';
 	import { authStore } from '$lib/stores/authStore';
 	import { get } from 'svelte/store';
-	import { getRandomColor, getInitial } from '$lib/utils/groupUtils';
+	import { getRandomColour, getInitial } from '$lib/utils/groupUtils';
 
 	export let onClose: () => void;
 	export let onAddMember: (userId: number) => void;
 	export let group_user_ids: number[];
-	export let groupColor: string = '#0b9476';
+	export let groupColor: string = 'var(--primary-colour)';
 	export let textColor: string = 'white';
 
 	let newMemberUsername: string = '';
@@ -107,7 +107,7 @@
 									{:else}
 										<div
 											class="friend-avatar placeholder"
-											style="background-color: {getRandomColor()}"
+											style="background-color: {getRandomColour()}"
 										>
 											{getInitial(friend.username)}
 										</div>
@@ -161,13 +161,13 @@
 		position: relative;
 	}
 
-	.modal-header {
-		background: #0b9476;
-		color: white;
-		padding: 1rem 1.5rem;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
+    .modal-header {
+        background: var(--primary-colour);
+        color: var(--text-colour-on-primary);
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
 		border-radius: 12px 12px 0 0;
 	}
 
@@ -179,7 +179,7 @@
 	.close-btn {
 		background: none;
 		border: none;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 		cursor: pointer;
 		padding: 0;
@@ -278,7 +278,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-weight: bold;
 		font-size: 1rem;
 		background-color: #ccc;
@@ -298,7 +298,7 @@
 	.add-btn {
 		padding: 0.5rem 1rem;
 		background-color: #2ecc71;
-		color: white;
+		color: var(--text-colour-on-primary);
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;

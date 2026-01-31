@@ -15,6 +15,7 @@ function createUserStore() {
 		const userToSave = {
 			id: user.id,
 			username: user.username,
+			colour: user.colour,
 			avatar_version: user.avatar_version,
 			profile_version: user.profile_version
 		};

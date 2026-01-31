@@ -81,12 +81,27 @@ export function offUsernameUpdatedEvent() {
 	}
 }
 
+export function onColourUpdatedEvent(
+	callback: (data: { user_id: number; new_colour: string; profile_version: number }) => void
+) {
+	if (socket) {
+		socket.on('colour_updated', callback);
+	}
+}
+
+export function offColourUpdatedEvent() {
+	if (socket) {
+		socket.off('colour_updated');
+	}
+}
+
 export function onFriendRequestReceivedEvent(
 	callback: (data: {
 		friend_id: number;
 		username: string;
 		avatar_version: number;
 		profile_version: number;
+		colour: string;
 	}) => void
 ) {
 	if (socket) {
@@ -118,6 +133,7 @@ export function onFriendRequestAcceptedEvent(
 		username: string;
 		avatar_version: number;
 		profile_version: number;
+		colour: string;
 		accepted: boolean;
 		friend_version: number;
 	}) => void

@@ -5,7 +5,8 @@ const UserResponseSchema = z.object({
 	id: z.number(),
 	username: z.string(),
 	avatar_version: z.number(),
-	profile_version: z.number()
+	profile_version: z.number(),
+	colour: z.string()
 });
 
 const MultipleUsersResponseSchema = z.object({
@@ -17,6 +18,7 @@ export interface UserResponse {
 	username: string;
 	avatar_version: number;
 	profile_version: number;
+	colour: string;
 }
 
 export interface MultipleUsersResponse {
@@ -25,6 +27,7 @@ export interface MultipleUsersResponse {
 		username: string;
 		avatar_version: number;
 		profile_version: number;
+		colour: string;
 	}>;
 }
 
@@ -37,6 +40,18 @@ export async function changeUsername(
 		endpoint: API.userEndpoints.changeUsername,
 		accessToken,
 		body: { new_username: newUsername }
+	});
+}
+
+export async function changeColour(
+	accessToken: string,
+	newColour: string
+): Promise<ApiResponse<unknown>> {
+	return makeRequest({
+		method: 'PATCH',
+		endpoint: API.userEndpoints.changeColour,
+		accessToken,
+		body: { new_colour: newColour }
 	});
 }
 

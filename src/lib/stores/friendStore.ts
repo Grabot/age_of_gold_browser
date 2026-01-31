@@ -122,6 +122,7 @@ function createFriendStore() {
 		sendFriendRequest: async (friendData: {
 			friendId: number;
 			username: string;
+			colour: string;
 			avatar: string | undefined;
 		}) => {
 			try {
@@ -137,6 +138,7 @@ function createFriendStore() {
 						username: friendData.username,
 						avatar_version: 0,
 						profile_version: 0,
+						colour: friendData.colour,
 						avatar: friendData.avatar || undefined
 					};
 
@@ -208,9 +210,40 @@ function createFriendStore() {
 				return { ...state, friends: updatedFriends };
 			});
 		},
+		updateFriendColour: async (
+			userId: number,
+			newColour: string,
+			profileVersion: number
+		): Promise<void> => {
+			update((state) => {
+				const updatedFriends = state.friends.map((friend) => {
+					if (friend.friend_id === userId) {
+						// Update the friend version and user info
+						const updatedFriend = {
+							...friend,
+							friend_version: friend.friend_version + 1,
+							user: friend.user
+								? {
+										...friend.user,
+										colour: newColour,
+										profile_version: profileVersion
+									}
+								: undefined
+						};
+						// Save the updated friend to storage
+						saveFriendToStorage(updatedFriend);
+						return updatedFriend;
+					}
+
+					return friend;
+				});
+				return { ...state, friends: updatedFriends };
+			});
+		},
 		addFriendRequest: async (friendData: {
 			friend_id: number;
 			username: string;
+			colour: string;
 			avatar_version: number;
 			profile_version: number;
 		}): Promise<void> => {
@@ -226,6 +259,7 @@ function createFriendStore() {
 				const user: User = {
 					id: friendData.friend_id,
 					username: friendData.username,
+					colour: friendData.colour,
 					avatar_version: friendData.avatar_version,
 					profile_version: friendData.profile_version
 				};

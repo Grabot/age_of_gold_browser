@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 	import { accessTokenValue, authStore } from '$lib/stores/authStore';
 	import ColorPicker from 'svelte-awesome-color-picker';
-	import { getRandomColor } from '$lib/utils/groupUtils';
+	import { getRandomColour } from '$lib/utils/groupUtils';
 	import { handleGetGroupAvatar } from '$lib/services/settingsService';
 	import { get } from 'svelte/store';
 	import { avatarStore } from '$lib/stores/avatarStore';
@@ -15,7 +15,7 @@
 	let myUserId: number | null = null;
 	let groupName: string = '';
 	let groupDescription: string = '';
-	let groupColour: string = getRandomColor();
+	let groupColour: string = getRandomColour();
 	let selectedFriends: number[] = [];
 
 	$: availableFriends = $friendStore.friends.filter((f) => f.accepted === true && f.user);
@@ -94,7 +94,7 @@
 	function resetForm() {
 		groupName = '';
 		groupDescription = '';
-		groupColour = '#0b9476';
+        groupColour = 'var(--primary-colour)';
 		selectedFriends = [];
 	}
 
@@ -218,8 +218,8 @@
 	}
 
 	.modal-header {
-		background: #0b9476;
-		color: white;
+        background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
 		padding: 1rem 1.5rem;
 		display: flex;
 		justify-content: space-between;
@@ -234,7 +234,7 @@
 	.close-btn {
 		background: none;
 		border: none;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 		cursor: pointer;
 	}
@@ -293,7 +293,7 @@
 
 	.friend-item.selected {
 		background-color: #e8f5e9;
-		border: 1px solid #0b9476;
+        border: 1px solid var(--primary-colour);
 	}
 
 	.friend-item input[type='checkbox'] {
@@ -336,14 +336,14 @@
 
 	.create-btn {
 		padding: 0.5rem 1rem;
-		background-color: #0b9476;
-		color: white;
+        background-color: var(--primary-colour);
+		color: var(--text-colour-on-primary);
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
 	}
 
 	.create-btn:hover {
-		background-color: #095c39;
+        background-color: var(--primary-colour-dark);
 	}
 </style>

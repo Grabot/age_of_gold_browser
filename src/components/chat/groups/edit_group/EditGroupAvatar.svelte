@@ -14,7 +14,7 @@
 	export let onClose: () => void;
 	export let groupId: number;
 	export let groupAvatar: string | undefined;
-	export let groupColor: string = '#0b9476';
+	export let groupColor: string = 'var(--primary-colour)';
 	export let textColor: string = 'white';
 	export let group: Group;
 	$: {
@@ -376,7 +376,7 @@
 	.close-btn {
 		background: none;
 		border: none;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 		cursor: pointer;
 		padding: 0;
@@ -403,7 +403,7 @@
 		height: 100%;
 		object-fit: cover;
 		background: #3498db;
-		color: white;
+		color: var(--text-colour-on-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -438,7 +438,7 @@
 
 	.browse-button {
 		background: #3498db;
-		color: white;
+		color: var(--text-colour-on-primary);
 		border: none;
 		padding: 0.5rem 1rem;
 		border-radius: 4px;
@@ -468,7 +468,7 @@
 
 	.modal-actions button {
 		background: #3498db;
-		color: white;
+		color: var(--text-colour-on-primary);
 		border: none;
 		padding: 0.5rem 1rem;
 		border-radius: 4px;
@@ -551,7 +551,7 @@
 
 	.spinner-container {
 		text-align: center;
-		color: white;
+		color: var(--text-colour-on-primary);
 		background: rgba(0, 0, 0, 0.8);
 		padding: 2rem;
 		border-radius: 8px;

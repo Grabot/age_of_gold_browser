@@ -4,7 +4,7 @@
  * Generate a random color for groups based on a seed
  * @returns Hex color code
  */
-export function getRandomColor(): string {
+export function getRandomColour(): string {
 	const colors = [
 		'#FF6B6B',
 		'#FF8E53',

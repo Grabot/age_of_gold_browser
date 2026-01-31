@@ -3,6 +3,7 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount, onDestroy } from 'svelte';
+	import { initializeTextColour } from '$lib/utils/colourUtils';
 	import { authStore, shouldUpdateAvatar, userAvatar, userDetail } from '$lib/stores/authStore';
 	import { friendStore } from '$lib/stores/friendStore';
 	import { avatarStore } from '$lib/stores/avatarStore';
@@ -43,7 +44,10 @@
 		type GroupMemberAddedEventData,
 		onGroupAvatarChangedEvent,
 		type GroupAvatarChangedEventData,
-		offGroupAvatarChangedEvent
+		offGroupAvatarChangedEvent,
+
+		onColourUpdatedEvent
+
 	} from '$lib/socket';
 	import { handleGetAvatar } from '$lib/services/settingsService';
 	import { goto } from '$app/navigation';
@@ -52,15 +56,14 @@
 	import { get } from 'svelte/store';
 	import { errorToast, successToast } from '$lib/utils/toast';
 	import ChatView from '../components/chat/ChatView.svelte';
-	import FriendView from '../components/chat/FriendView.svelte';
+	import SocialView from '../components/chat/SocialView.svelte';
 	import AddFriend from '../components/chat/friends/AddFriend.svelte';
-	import FloatingActionButton from '../components/ui/FloatingActionButton.svelte';
 	import CreateGroupModal from '../components/chat/groups/CreateGroupModal.svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { groupStore } from '$lib/stores/groupStore';
 	import type { Group } from '$lib/types/groups';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
-	import { getRandomColor } from '$lib/utils/groupUtils';
+	import { getRandomColour } from '$lib/utils/groupUtils';
 
 	let { children } = $props();
 	const options = {};
@@ -70,11 +73,11 @@
 	let hasFetchedAvatar = false;
 	let showProfileDropdown = $state(false);
 	let showChatModal = $state(false);
-	let showFriendModal = $state(false);
+	let showSocialModal = $state(false);
 	let showAddFriendModal = $state(false);
 	let showCreateGroupModal = $state(false);
 	let searchQuery = $state('');
-	let searchResult = $state<{ id: number; username: string } | null>(null);
+	let searchResult = $state<{ id: number; username: string; colour: string } | null>(null);
 	let searchResultAvatar = $state<string | null>(null);
 	let searched = $state(false);
 	let lastSearchedQuery = $state<string | null>(null);
@@ -119,12 +122,33 @@
 		return username.charAt(0).toUpperCase();
 	}
 
+	// Initialize text color based on primary color brightness (client-side only)
+	onMount(() => {
+		initializeTextColour();
+	});
+
 	function handleMessageEvent(message: string) {
 		console.log('socket message:', message);
 	}
 
 	function handleUsernameUpdatedEvent(data: any) {
+		if ($authStore.user) {
+			if ($authStore.user.id === data.user_id) {
+				// I changed my username, the details are already set
+				return;
+			}
+		}
 		friendStore.updateFriendUsername(data.user_id, data.new_username, data.profile_version);
+	}
+	
+	function handleColourUpdatedEvent(data: any) {
+		if ($authStore.user) {
+			if ($authStore.user.id === data.user_id) {
+				// I changed my username, the details are already set
+				return;
+			}
+		}
+		friendStore.updateFriendColour(data.user_id, data.new_colour, data.profile_version);
 	}
 
 	function handleFriendRequestReceivedEvent(data: any) {
@@ -140,7 +164,8 @@
 			id: data.friend_id,
 			username: data.username,
 			avatar_version: data.avatar_version,
-			profile_version: data.profile_version
+			profile_version: data.profile_version,
+			colour: data.colour
 		};
 		const updatedFriend = {
 			friend_id: data.friend_id,
@@ -274,7 +299,6 @@
 			throw new Error(`Group not found in storage.`);
 		}
 		if ($authStore.user) {
-			console.log('test', $authStore.user.id);
 			if ($authStore.user.id === data.user_id) {
 				errorToast('You were removed from a group');
 				groupStore.removeGroup(data.group_id);
@@ -445,6 +469,7 @@
 	function socketOn() {
 		onMessageEvent(handleMessageEvent);
 		onUsernameUpdatedEvent(handleUsernameUpdatedEvent);
+		onColourUpdatedEvent(handleColourUpdatedEvent);
 		onFriendRequestReceivedEvent(handleFriendRequestReceivedEvent);
 		onAvatarUpdatedEvent(handleAvatarUpdatedEvent);
 		onFriendRequestAcceptedEvent(handleFriendRequestAcceptedEvent);
@@ -485,8 +510,8 @@
 		showChatModal = !showChatModal;
 	}
 
-	function toggleFriend() {
-		showFriendModal = !showFriendModal;
+	function toggleSocial() {
+		showSocialModal = !showSocialModal;
 	}
 </script>
 
@@ -503,7 +528,7 @@
 				</button>
 			</div>
 			<div class="nav-center">
-				<button class="nav-btn" onclick={() => toggleFriend()}>🫂 Friends</button>
+				<button class="nav-btn" onclick={() => toggleSocial()}>👥 Socials</button>
 				<button class="nav-btn" onclick={() => toggleChat()}>💬 Chat</button>
 			</div>
 			<div class="nav-right">
@@ -521,7 +546,7 @@
 						{:else}
 							<div
 								class="profile-avatar default-avatar"
-								style="background-color: {getRandomColor()}"
+								style="background-color: {getRandomColour()}"
 							>
 								{getInitial($userDetail.username)}
 							</div>
@@ -559,37 +584,33 @@
 		</nav>
 	{/if}
 
-	{#if showFriendModal}
-		<FriendView 
-			onClose={() => (showFriendModal = false)} 
-			{getRandomColor} 
-			{getInitial}
-			onAddFriendClick={() => (showAddFriendModal = true)}
-			onCreateGroupClick={() => (showCreateGroupModal = true)}
-		/>
-	{/if}
+    {#if showSocialModal}
+        <SocialView 
+            onClose={() => (showSocialModal = false)}
+            onAddFriendClick={() => (showAddFriendModal = true)}
+            onCreateGroupClick={() => (showCreateGroupModal = true)}
+        />
+    {/if}
 	
-	{#if showAddFriendModal}
-		<div class="modal-overlay" onclick={handleAddFriendModalClick}>
-			<div class="modal-content-friend">
-				<div class="modal-header-friend">
-					<h3>Add New Friend</h3>
-					<button class="close-btn" onclick={() => (showAddFriendModal = false)}>×</button>
-				</div>
-				<AddFriend
-					{getRandomColor}
-					{getInitial}
-					bind:searchQuery
-					bind:searchResult
-					bind:searchResultAvatar
-					bind:searched
-					bind:lastSearchedQuery
-					bind:isLoading
-					onClose={() => (showAddFriendModal = false)}
-				/>
-			</div>
-		</div>
-	{/if}
+    {#if showAddFriendModal}
+        <div class="modal-overlay" onclick={handleAddFriendModalClick}>
+            <div class="modal-content-friend">
+                <div class="modal-header-friend">
+                    <h3>Add New Social</h3>
+                    <button class="close-btn" onclick={() => (showAddFriendModal = false)}>×</button>
+                </div>
+                <AddFriend
+                    bind:searchQuery
+                    bind:searchResult
+                    bind:searchResultAvatar
+                    bind:searched
+                    bind:lastSearchedQuery
+                    bind:isLoading
+                    onClose={() => (showAddFriendModal = false)}
+                />
+            </div>
+        </div>
+    {/if}
 	
 	{#if showCreateGroupModal}
 		<CreateGroupModal onClose={() => (showCreateGroupModal = false)} />
@@ -617,8 +638,8 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 0.75rem 1.5rem;
-		background: #0b9476;
-		color: white;
+        background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
 		position: fixed;
 		top: 0;
 		left: 0;
@@ -634,7 +655,7 @@
 
 	.nav-left h1 {
 		margin: 0;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 	}
 
@@ -651,7 +672,7 @@
 
 	.profile-btn {
 		background: transparent;
-		color: white;
+		color: var(--text-colour-on-primary);
 		border: none;
 		padding: 0.5rem;
 		font-size: 1.2rem;
@@ -675,7 +696,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 0.8rem;
 		font-weight: bold;
 	}
@@ -717,7 +738,7 @@
 
 	.notification-btn {
 		background: transparent;
-		color: white;
+		color: var(--text-colour-on-primary);
 		border: none;
 		padding: 0.5rem;
 		border-radius: 50%;
@@ -730,30 +751,30 @@
 		justify-content: center;
 	}
 
-	.notification-btn:hover {
-		background: #095c39;
-	}
+    .notification-btn:hover {
+        background: var(--primary-colour-dark);
+    }
 
-	.nav-btn {
-		background: #048162;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.9rem;
-	}
+    .nav-btn {
+        background: var(--primary-colour);
+        color: var(--text-colour-on-primary);
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
 
-	.nav-btn:hover {
-		background: #095c39;
-	}
+    .nav-btn:hover {
+        background: var(--primary-colour-dark);
+    }
 	.placeholder-nav {
 		background: #979797;
 		justify-content: flex-start;
 	}
 	.nav-title-btn {
 		background: transparent;
-		color: white;
+		color: var(--text-colour-on-primary);
 		border: none;
 		padding: 0;
 		font-size: 1.5rem;
@@ -764,7 +785,7 @@
 
 	.nav-title-btn h1 {
 		margin: 0;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 	}
 
@@ -813,11 +834,11 @@
 		color: #333;
 	}
 
-	.modal-header-friend {
-		background: #0b9476;
-		color: white;
-		padding: 1rem 1.5rem;
-		display: flex;
+    .modal-header-friend {
+        background: var(--primary-colour);
+        color: var(--text-colour-on-primary);
+        padding: 1rem 1.5rem;
+        display: flex;
 		justify-content: space-between;
 		align-items: center;
 		border-top-left-radius: 12px;

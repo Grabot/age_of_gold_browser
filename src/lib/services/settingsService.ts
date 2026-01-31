@@ -1,4 +1,4 @@
-import { changeAvatar, changeUsername, getAvatar, getAvatarVersion } from '$lib/api/userApi';
+import { changeAvatar, changeUsername, changeColour, getAvatar, getAvatarVersion } from '$lib/api/userApi';
 import { deleteAccount } from '$lib/api/authApi';
 import { type ApiResult } from '$lib/api/apiClient';
 import { get } from 'svelte/store';
@@ -22,6 +22,26 @@ export async function handleChangeUsername(
 		return {
 			success: false,
 			message: (err as Error).message || 'An error occurred during username change.'
+		};
+	}
+}
+
+export async function handleChangeColour(
+	accessToken: string,
+	newColour: string
+): Promise<ApiResult> {
+	try {
+		const response: ApiResult = await changeColour(accessToken, newColour);
+		if (!response.success) {
+			throw new Error(response.message || 'Failed to change colour.');
+		}
+		const current_user: User = get(userDetail);
+		userDetail.set({ ...current_user, colour: newColour });
+		return { success: true };
+	} catch (err) {
+		return {
+			success: false,
+			message: (err as Error).message || 'An error occurred during colour change.'
 		};
 	}
 }

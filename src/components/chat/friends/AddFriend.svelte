@@ -3,12 +3,11 @@
 	import { handleGetAvatar } from '$lib/services/settingsService';
 	import { accessTokenValue } from '$lib/stores/authStore';
 	import { friendStore } from '$lib/stores/friendStore';
+	import { getInitial, getRandomColour } from '$lib/utils/groupUtils';
 	import { errorToast } from '$lib/utils/toast';
 
-	export let getRandomColor: () => string;
-	export let getInitial: (username: string) => string;
 	export let searchQuery: string;
-	export let searchResult: { id: number; username: string } | null;
+	export let searchResult: { id: number; username: string; colour: string } | null;
 	export let searchResultAvatar: string | null;
 	export let searched: boolean;
 	export let lastSearchedQuery: string | null;
@@ -27,7 +26,7 @@
 				try {
 					const response = await handleSearchFriend(accessToken, searchQuery);
 					if (response.success && response.data) {
-						searchResult = response.data as { id: number; username: string };
+						searchResult = response.data as { id: number; username: string, colour: string };
 						const avatarResponse = await handleGetAvatar(accessToken, searchResult.id, false);
 						if (avatarResponse.success && avatarResponse.avatar) {
 							searchResultAvatar = avatarResponse.avatar;
@@ -50,6 +49,7 @@
 			const friendData = {
 				friendId: searchResult.id,
 				username: searchResult.username,
+				colour: searchResult.colour,
 				avatar: searchResultAvatar || undefined
 			};
 
@@ -88,24 +88,27 @@
 	{#if isLoading}
 		<div class="loading-container">
 			<div class="spinner"></div>
-			<p class="loading-text">Searching for friends...</p>
+			<p class="loading-text">Searching for Friends...</p>
 		</div>
 	{:else if searchResult}
 		<div class="search-result-container">
 			{#if searchResult}
 				{@const result = searchResult}
-				<div class="search-result">
+				<div
+					class="search-result"
+					style="--user-colour: {result.colour}"
+				>
 					<div class="avatar-container">
 						{#if searchResultAvatar}
 							<img class="friend-avatar" src={searchResultAvatar} alt={result.username} />
 						{:else}
-							<div class="friend-avatar placeholder" style="background-color: {getRandomColor()}">
+							<div class="friend-avatar placeholder" style="background-color: {getRandomColour()}">
 								{getInitial(result.username)}
 							</div>
 						{/if}
 					</div>
 					<span class="username">{result.username}</span>
-					<button class="add-btn" on:click={handleAddFriend}> Add Friend </button>
+					<button class="add-btn" on:click={handleAddFriend}>Add Friend</button>
 				</div>
 			{/if}
 		</div>
@@ -140,17 +143,17 @@
 		cursor: not-allowed;
 	}
 
-	.search-btn {
-		background: #0b9476;
-		color: white;
-		border: none;
-		padding: 0.75rem 1.5rem;
-		border-radius: 4px;
-		cursor: pointer;
-	}
+    .search-btn {
+        background: var(--primary-colour);
+        color: var(--text-colour-on-primary);
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 4px;
+        cursor: pointer;
+    }
 
 	.search-btn:disabled {
-		background: #8bc3a3;
+        background: var(--primary-colour-light);
 		cursor: not-allowed;
 	}
 
@@ -172,7 +175,7 @@
 		height: 40px;
 		border: 4px solid rgba(0, 0, 0, 0.1);
 		border-radius: 50%;
-		border-top-color: #0b9476;
+        border-top-color: var(--primary-colour);
 		animation: spin 1s ease-in-out infinite;
 	}
 
@@ -198,7 +201,19 @@
 		align-items: center;
 		gap: 1rem;
 		width: 100%;
+		padding: 1.5rem;
+		border-radius: 12px;
+		background: color-mix(in srgb, var(--user-colour) 85%, white);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
 	}
+
+	.search-result:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+	}
+
+
 
 	.avatar-container {
 		width: 80px;
@@ -210,7 +225,7 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		color: white;
+		color: var(--text-colour-on-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -231,8 +246,8 @@
 	}
 
 	.add-btn {
-		background: #0b9476;
-		color: white;
+		background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
 		border: none;
 		padding: 0.75rem 1.5rem;
 		border-radius: 4px;
@@ -240,12 +255,12 @@
 		font-size: 1rem;
 		width: 100%;
 		max-width: 150px;
+		transition: background 0.2s ease;
 	}
 
 	.add-btn:hover {
-		background: #095c39;
+		background: var(--primary-colour-dark);
 	}
-
 	.no-result {
 		text-align: center;
 		margin-top: 2rem;

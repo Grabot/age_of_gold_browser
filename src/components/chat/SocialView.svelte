@@ -5,17 +5,13 @@
 	import FloatingActionButton from '../ui/FloatingActionButton.svelte';
 	import { onMount } from 'svelte';
 	import { avatarStore } from '$lib/stores/avatarStore';
-	import { accessTokenValue } from '$lib/stores/authStore';
 	import { friendStore } from '$lib/stores/friendStore';
 	import type { User } from '$lib/types/user';
 	import type { Friend } from '$lib/types/friend';
 	import { userStore } from '$lib/stores/userStore';
 	import { updateUserAvatar } from '$lib/utils/avatarUtils';
-	import { getUser } from '$lib/api/userApi';
 
 	export let onClose: () => void;
-	export let getRandomColor: () => string;
-	export let getInitial: (username: string) => string;
 
 	let activeTab: 'friends' | 'groups' = 'friends';
 	export let onAddFriendClick: () => void = () => {};
@@ -39,21 +35,6 @@
 					}
 				}
 			}
-		}
-	}
-
-	async function emergencyFallback(friend: Friend) {
-		const storedUser = await userStore.getUser(friend.friend_id);
-		if (!storedUser) {
-			const accessToken = $accessTokenValue;
-			if (accessToken) {
-				const userDetail = await getUser(accessToken, friend.friend_id);
-				friend.user = userDetail;
-				await checkUserAvatar(friend);
-			}
-		} else {
-			friend.user = storedUser;
-			await checkUserAvatar(friend);
 		}
 	}
 
@@ -105,40 +86,40 @@
 >
 	<div class="modal-content">
 		<div class="modal-header">
-			<h2>Friends & Groups</h2>
+			<h2>Socials</h2>
 			<button class="close-btn" on:click={onClose}>x</button>
 		</div>
 
-		<div class="tabs">
-			<button
-				class={activeTab === 'friends' ? 'active' : ''}
-				on:click={() => setActiveTab('friends')}
-			>
-				Friends
-			</button>
+        <div class="tabs">
+            <button
+                class={activeTab === 'friends' ? 'active' : ''}
+                on:click={() => setActiveTab('friends')}
+            >
+                Friends
+            </button>
 
-			<button
-				class={activeTab === 'groups' ? 'active' : ''}
-				on:click={() => setActiveTab('groups')}
-			>
-				Groups
-			</button>
-		</div>
+            <button
+                class={activeTab === 'groups' ? 'active' : ''}
+                on:click={() => setActiveTab('groups')}
+            >
+                Groups
+            </button>
+        </div>
 
-			<div class="tab-content">
-				{#if activeTab === 'friends'}
-					<FriendsList {getInitial} />
-				{:else if activeTab === 'groups'}
-					<GroupsTab onCreateGroupClick={onCreateGroupClick} />
-				{/if}
-			</div>
-			
-			{#if activeTab === 'friends'}
-				<div class="fab-container">
+            <div class="tab-content">
+                {#if activeTab === 'friends'}
+                    <FriendsList />
+                {:else if activeTab === 'groups'}
+                    <GroupsTab onCreateGroupClick={onCreateGroupClick} />
+                {/if}
+            </div>
+            
+            {#if activeTab === 'friends'}
+					<div class="fab-container">
 					<FloatingActionButton 
 						onClick={onAddFriendClick} 
 						icon="👤"
-						label="Add Friend"
+						label="Add Social"
 					/>
 				</div>
 			{/if}
@@ -173,14 +154,14 @@
 		position: relative;
 	}
 
-	.modal-header {
-		background: #0b9476;
-		color: white;
-		padding: 1rem 1.5rem;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
+    .modal-header {
+        background: var(--primary-colour);
+        color: var(--text-colour-on-primary);
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 
 	.modal-header h2 {
 		margin: 0;
@@ -190,7 +171,7 @@
 	.close-btn {
 		background: none;
 		border: none;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 		cursor: pointer;
 	}
@@ -212,11 +193,11 @@
 		transition: all 0.2s;
 	}
 
-	.tabs button.active {
-		color: #0b9476;
-		border-bottom-color: #0b9476;
-		font-weight: 500;
-	}
+    .tabs button.active {
+        color: var(--primary-colour);
+        border-bottom-color: var(--primary-colour);
+        font-weight: 500;
+    }
 
 	.tab-content {
 		flex: 1;

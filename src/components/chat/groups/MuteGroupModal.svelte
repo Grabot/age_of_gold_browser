@@ -5,7 +5,7 @@
 
 	export let group: Group;
 	export let onClose: () => void;
-	export let groupColor: string = '#0b9476';
+	export let groupColor: string = 'var(--primary-colour)';
 	export let textColor: string = 'white';
 
 	let muteDurationHours: number | null = null;
@@ -123,7 +123,7 @@
 	.close-btn {
 		background: none;
 		border: none;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 		cursor: pointer;
 		padding: 0;

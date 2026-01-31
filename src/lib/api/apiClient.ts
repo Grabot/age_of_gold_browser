@@ -72,14 +72,15 @@ class ApiConfig {
 		deleteAccountRequest: 'delete/account/request'
 	} as const;
 
-	readonly userEndpoints = {
-		changeUsername: 'user/username',
-		changeAvatar: 'user/avatar',
-		getAvatar: 'user/avatar',
-		getAvatarVersion: 'user/avatar/version',
-		getUser: 'user',
-		getMultipleUsers: 'users'
-	} as const;
+    readonly userEndpoints = {
+        changeUsername: 'user/username',
+        changeColour: 'user/colour',
+        changeAvatar: 'user/avatar',
+        getAvatar: 'user/avatar',
+        getAvatarVersion: 'user/avatar/version',
+        getUser: 'user',
+        getMultipleUsers: 'users'
+    } as const;
 
 	readonly friendEndpoints = {
 		searchFriend: 'friend/search',

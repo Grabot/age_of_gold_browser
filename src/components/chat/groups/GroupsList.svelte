@@ -4,7 +4,7 @@
 	import type { Group } from '$lib/types/groups';
 	import { onMount, onDestroy } from 'svelte';
 	import { avatarStore } from '$lib/stores/avatarStore';
-	import { getRandomColor, getInitial, getTextColorForBackground } from '$lib/utils/groupUtils';
+	import { getRandomColour, getInitial, getTextColorForBackground } from '$lib/utils/groupUtils';
 	import { updateGroupAvatar } from '$lib/utils/avatarUtils';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 
@@ -80,9 +80,9 @@
 			type="button"
 			aria-label="View details for group {group.group_id}"
 			style="background-color: {group.group_colour ||
-				getRandomColor()}; color: {group.group_colour
+				getRandomColour()}; color: {group.group_colour
 				? getTextColorForBackground(group.group_colour)
-				: getTextColorForBackground(getRandomColor())};"
+				: getTextColorForBackground(getRandomColour())};"
 		>
 			<div class="avatar-container">
 				{#if group.avatar}
@@ -90,8 +90,8 @@
 				{:else}
 					<div
 						class="group-avatar placeholder"
-						style="background-color: {getRandomColor()}; color: {getTextColorForBackground(
-							getRandomColor()
+						style="background-color: {getRandomColour()}; color: {getTextColorForBackground(
+							getRandomColour()
 						)}"
 					>
 						{getInitial(group.group_name || '')}
@@ -161,7 +161,7 @@
 
 	.unread-badge {
 		background-color: #e74c3c;
-		color: white;
+		color: var(--text-colour-on-primary);
 		width: 20px;
 		height: 20px;
 		display: flex;
@@ -189,7 +189,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-weight: bold;
 		font-size: 1rem;
 		width: 40px;

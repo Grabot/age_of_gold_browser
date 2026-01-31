@@ -2,11 +2,10 @@
 	import { errorToast } from '$lib/utils/toast';
 	import { friendStore } from '$lib/stores/friendStore';
 	import type { Friend } from '$lib/types/friend';
+	import { getInitial, getRandomColour } from '$lib/utils/groupUtils';
 
 	export let friend: Friend;
 	export let onClose: () => void;
-	export let getRandomColor: () => string;
-	export let getInitial: (username: string) => string;
 
 	async function handleRemoveFriend() {
 		try {
@@ -56,7 +55,7 @@
 				{#if friend.user?.avatar}
 					<img class="friend-avatar-large" src={friend.user.avatar} alt={friend.user.username} />
 				{:else}
-					<div class="friend-avatar-large placeholder" style="background-color: {getRandomColor()}">
+					<div class="friend-avatar-large placeholder" style="background-color: {getRandomColour()}">
 						{getInitial(friend.user?.username || '')}
 					</div>
 				{/if}
@@ -109,11 +108,11 @@
 		position: relative;
 	}
 
-	.modal-header {
-		background: #0b9476;
-		color: white;
-		padding: 1rem 1.5rem;
-		display: flex;
+    .modal-header {
+        background: var(--primary-colour);
+        color: var(--text-colour-on-primary);
+        padding: 1rem 1.5rem;
+        display: flex;
 		justify-content: space-between;
 		align-items: center;
 	}
@@ -126,7 +125,7 @@
 	.close-btn {
 		background: none;
 		border: none;
-		color: white;
+		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 		cursor: pointer;
 	}
@@ -149,7 +148,7 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		color: white;
+		color: var(--text-colour-on-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -199,7 +198,7 @@
 
 	.remove-friend-btn {
 		background: #e74c3c;
-		color: white;
+		color: var(--text-colour-on-primary);
 		border: none;
 		padding: 0.75rem 1.5rem;
 		border-radius: 4px;
