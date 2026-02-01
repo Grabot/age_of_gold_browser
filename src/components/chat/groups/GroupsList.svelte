@@ -4,13 +4,23 @@
 	import type { Group } from '$lib/types/groups';
 	import { onMount, onDestroy } from 'svelte';
 	import { avatarStore } from '$lib/stores/avatarStore';
-	import { getRandomColour, getInitial, getTextColorForBackground } from '$lib/utils/groupUtils';
+	import { getRandomColour, getInitial } from '$lib/utils/groupUtils';
+	import { getTextColourForBackground } from '$lib/utils/colourUtils';
 	import { updateGroupAvatar } from '$lib/utils/avatarUtils';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 
 	let selectedGroup: Group | null = null;
 	let showDetailModal = false;
 	let socketEventUnsubscribe: (() => void) | null = null;
+
+	const colourCache = new Map<number, string>();
+
+	function getBackgroundColor(group: Group) {
+		if (!colourCache.has(group.group_id)) {
+			colourCache.set(group.group_id, group.group_colour || getRandomColour());
+		}
+		return colourCache.get(group.group_id)!;
+	}
 
 	async function checkGroupAvatar(group: Group) {
 		console.log('Checking group avatar for group:', group.group_id);
@@ -71,104 +81,125 @@
 <div class="groups-list">
 	{#if $groupStore.groups.length > 0}
 		{#each $groupStore.groups as group (group.group_id)}
-		<button
-			class="group-item"
-			on:click={() => {
-				selectedGroup = group;
-				showDetailModal = true;
-			}}
-			type="button"
-			aria-label="View details for group {group.group_id}"
-			style="background-color: {group.group_colour ||
-				getRandomColour()}; color: {group.group_colour
-				? getTextColorForBackground(group.group_colour)
-				: getTextColorForBackground(getRandomColour())};"
-		>
-			<div class="avatar-container">
-				{#if group.avatar}
-					<img class="group-avatar" src={group.avatar} alt={group.group_name} />
-				{:else}
-					<div
-						class="group-avatar placeholder"
-						style="background-color: {getRandomColour()}; color: {getTextColorForBackground(
-							getRandomColour()
-						)}"
-					>
-						{getInitial(group.group_name || '')}
-					</div>
-				{/if}
-			</div>
-			<div class="group-text">
-				<span class="group-name">{group.group_name || 'Unnamed Group'}</span>
+			<div
+				class="group-item"
+				style="--bg: {getBackgroundColor(group)}; --text: {getTextColourForBackground(getBackgroundColor(group))}"
+				role="button"
+				tabindex="0"
+				aria-label="View details for group {group.group_name || group.group_id}"
+				onclick={() => {
+					selectedGroup = group;
+					showDetailModal = true;
+				}}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						selectedGroup = group;
+						showDetailModal = true;
+					}
+				}}
+			>
+				<div class="avatar">
+					{#if group.avatar}
+						<img src={group.avatar} alt={group.group_name} />
+					{:else}
+						<span class="initial">{getInitial(group.group_name || '')}</span>
+					{/if}
+				</div>
+				<div class="info">
+					<span class="group-name">{group.group_name || 'Unnamed Group'}</span>
+				</div>
 				{#if group.unread_messages > 0}
-					<span class="unread-badge">{group.unread_messages}</span>
+					<div class="unread-badge">{group.unread_messages}</div>
 				{/if}
 			</div>
-		</button>
-	{/each}
-{:else}
-	<p class="no-groups">You don't have any groups yet. Create a group to get started!</p>
-{/if}
+		{/each}
+	{:else}
+		<p class="no-groups">You don't have any groups yet. Create a group to get started!</p>
+	{/if}
+</div>
 
-<!-- Group Detail Modal -->
 {#if showDetailModal && selectedGroup}
 	<GroupDetailModal group={selectedGroup} onClose={() => (showDetailModal = false)} />
 {/if}
-</div>
 
 <style>
 	.groups-list {
 		display: flex;
-		padding: 1.5rem;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: 0.6rem;
+		padding: 1.5rem;
+		width: 100%;
 	}
 
 	.group-item {
+		position: relative;
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		width: 100%;
-		padding: 12px;
-		border-radius: 8px;
-		text-align: left;
-		border: none;
-		background: transparent;
+		background: var(--bg);
+		border-radius: 12px;
+		padding: 0.7rem 0.85rem;
+		gap: 0.75rem;
 		cursor: pointer;
-		font-weight: bold;
-		transition:
-			transform 0.1s ease,
-			box-shadow 0.1s ease;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		overflow: hidden;
+		border: none;
+		text-align: left;
 	}
-
 	.group-item:hover {
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+		filter: brightness(0.92);
+	}
+	.group-item:focus-visible {
+		outline: 3px solid rgba(255, 255, 255, 0.6);
+		outline-offset: 2px;
 	}
 
-	.group-text {
-		flex: 1;
+	.avatar {
+		width: 42px;
+		height: 42px;
+		flex-shrink: 0;
+		overflow: hidden;
+		background: rgba(255, 255, 255, 0.2);
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		font-weight: 500;
+		justify-content: center;
 	}
-
-	.group-name {
-		font-weight: 500;
+	.avatar img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.initial {
+		color: var(--text);
+		font-weight: 700;
 		font-size: 1rem;
 	}
 
+	.info {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+	}
+	.group-name {
+		color: var(--text);
+		font-weight: 600;
+		font-size: 0.95rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 	.unread-badge {
 		background-color: #e74c3c;
-		color: var(--text-colour-on-primary);
-		width: 20px;
+		color: white;
+		min-width: 20px;
 		height: 20px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		border-radius: 10px;
 		font-size: 0.7rem;
-		font-weight: bold;
+		font-weight: 700;
+		flex-shrink: 0;
 	}
 
 	.no-groups {
@@ -176,27 +207,5 @@
 		padding: 2rem;
 		color: #7f8c8d;
 		font-style: italic;
-	}
-
-	.group-avatar {
-		width: 40px;
-		height: 40px;
-		object-fit: cover;
-		border: 2px solid rgba(255, 255, 255, 0.3);
-	}
-
-	.group-avatar.placeholder {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--text-colour-on-primary);
-		font-weight: bold;
-		font-size: 1rem;
-		width: 40px;
-		height: 40px;
-	}
-
-	.avatar-container {
-		flex-shrink: 0;
 	}
 </style>
