@@ -361,7 +361,6 @@ function openAvatarModal() {
 		border-radius: 50%;
 		font-size: 1.2rem;
 		cursor: pointer;
-		transition: background 0.3s ease;
 		width: 40px;
 		height: 40px;
 		display: flex;

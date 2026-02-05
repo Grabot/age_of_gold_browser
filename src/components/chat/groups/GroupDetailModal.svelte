@@ -17,6 +17,7 @@
 	import AddMemberModal from './edit_group/AddMemberModal.svelte';
 	import MuteGroupModal from './MuteGroupModal.svelte';
 	import { friendStore } from '$lib/stores/friendStore';
+	import { leaveGroup } from '$lib/socket';
 
 	export let group: Group;
 	export let onClose: () => void;
@@ -168,6 +169,7 @@
 		try {
 			const success = await groupStore.leaveGroup(group.group_id);
 			if (success) {
+				leaveGroup(group.group_id);
 				const friendIds: number[] = $friendStore.friends.map((friend) => friend.friend_id);
 
 				for (const userId of group.user_ids) {
@@ -663,7 +665,6 @@
 		border-radius: 50%;
 		font-size: 1.2rem;
 		cursor: pointer;
-		transition: background 0.3s ease;
 		width: 40px;
 		height: 40px;
 		display: flex;
@@ -743,7 +744,6 @@
 		cursor: pointer;
 		font-size: 0.9rem;
 		font-weight: 500;
-		transition: filter 0.3s ease;
 	}
 
 	.add-member-btn:hover {
@@ -819,7 +819,6 @@
 		cursor: pointer;
 		font-size: 0.9rem;
 		font-weight: 500;
-		transition: background-color 0.2s;
 	}
 
 	.footer-close-btn:hover {

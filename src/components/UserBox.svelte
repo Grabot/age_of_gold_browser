@@ -37,9 +37,6 @@
 		border: 1px solid #e0d5c8;
 		max-width: 350px;
 		margin: 0 auto;
-		transition:
-			transform 0.3s ease,
-			box-shadow 0.3s ease;
 		position: relative;
 		overflow: hidden;
 	}

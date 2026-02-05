@@ -205,11 +205,9 @@
 		border-radius: 12px;
 		background: color-mix(in srgb, var(--user-colour) 85%, white);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		transition: transform 0.2s ease, box-shadow 0.2s ease;
 	}
 
 	.search-result:hover {
-		transform: translateY(-2px);
 		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 	}
 
@@ -255,7 +253,6 @@
 		font-size: 1rem;
 		width: 100%;
 		max-width: 150px;
-		transition: background 0.2s ease;
 	}
 
 	.add-btn:hover {
@@ -268,9 +265,4 @@
 		font-style: italic;
 	}
 
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
 </style>

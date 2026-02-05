@@ -72,7 +72,7 @@ export async function addGroupMember(
 		method: 'POST',
 		endpoint: API.groupEndpoints.addGroupMember,
 		accessToken,
-		body: { group_id: groupId, user_id: userId }
+		body: { group_id: groupId, user_add_id: userId }
 	});
 }
 
@@ -85,7 +85,7 @@ export async function removeGroupMember(
 		method: 'POST',
 		endpoint: API.groupEndpoints.removeGroupMember,
 		accessToken,
-		body: { group_id: groupId, user_id: userId }
+		body: { group_id: groupId, user_remove_id: userId }
 	});
 }
 

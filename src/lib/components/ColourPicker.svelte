@@ -416,13 +416,11 @@
 		cursor: grab;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 		transform: translate(-50%, -50%);
-		transition: transform 0.1s ease;
 		pointer-events: none;
 	}
 
 	.slider:active {
 		cursor: grabbing;
-		transform: translate(-50%, -50%) scale(1.1);
 	}
 
 	.lightness-slider {
@@ -446,12 +444,10 @@
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 		top: 50%;
 		transform: translate(-50%, -50%);
-		transition: transform 0.1s ease;
 	}
 
 	.lightness-handle:active {
 		cursor: grabbing;
-		transform: translate(-50%, -50%) scale(1.1);
 	}
 
 	.colour-display {
@@ -481,7 +477,6 @@
 		font-weight: bold;
 		text-align: center;
 		background: white;
-		transition: border-colour 0.2s;
 	}
 
 	.hex-input:focus {

@@ -85,7 +85,7 @@
 
 	function handleSave() {
 		if (!croppedImage) return;
-		const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+		const maxSizeBytes = 4 * 1024 * 1024; // 4MB
 		const blob = dataURLtoBlob(croppedImage);
 		if (blob.size <= maxSizeBytes) {
 			const file = new File([blob], 'cropped-avatar.png', { type: 'image/png' });
@@ -419,7 +419,6 @@
 		border: 2px dashed transparent;
 		padding: 0.5rem;
 		border-radius: 4px;
-		transition: all 0.2s;
 	}
 	.avatar-upload.dragging {
 		border-color: #3498db;
@@ -443,7 +442,6 @@
 		padding: 0.5rem 1rem;
 		border-radius: 4px;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.browse-button:hover {
@@ -473,7 +471,6 @@
 		padding: 0.5rem 1rem;
 		border-radius: 4px;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.modal-actions button:hover:not(:disabled) {
@@ -525,7 +522,6 @@
 	.crop-section,
 	.cropped-preview-section {
 		border: 2px dashed transparent;
-		transition: border-color 0.2s;
 	}
 
 	.cropped-preview-section .avatar-label {
@@ -583,13 +579,5 @@
 		color: #7f8c8d;
 		font-size: 0.9rem;
 		border: 1px dashed #bdc3c7;
-	}
-	@keyframes spin {
-		0% {
-			transform: rotate(0deg);
-		}
-		100% {
-			transform: rotate(360deg);
-		}
 	}
 </style>

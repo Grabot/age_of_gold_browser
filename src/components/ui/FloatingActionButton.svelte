@@ -33,17 +33,11 @@
 		align-items: center;
 		justify-content: center;
 		position: relative;
-		transition: all 0.2s ease;
 		z-index: 1001;
 	}
 
 	.fab-button:hover {
         background: var(--primary-colour-dark);
-		transform: scale(1.05);
-	}
-
-	.fab-button:active {
-		transform: scale(0.95);
 	}
 
 	.fab-icon {

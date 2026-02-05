@@ -209,6 +209,7 @@
 			group_colour: data.group_colour,
 			current_message_id: data.current_message_id
 		};
+		console.log("Group created event received", );
 		joinGroup(group.group_id);
 		setTimeout(() => {
 			groupStore.updateGroup(group);
@@ -356,13 +357,13 @@
 		});
 	}
 
-	function joinGroup(groupId: number) {
+	export function joinGroup(groupId: number) {
 		if (socket) {
 			socket.emit('join_group', { group_id: groupId });
 		}
 	}
 
-	function leaveGroup(groupId: number) {
+	export function leaveGroup(groupId: number) {
 		if (socket) {
 			socket.emit('leave_group', { group_id: groupId });
 		}

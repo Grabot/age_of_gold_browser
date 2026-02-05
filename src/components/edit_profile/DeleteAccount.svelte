@@ -121,7 +121,6 @@
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        transition: background 0.2s;
     }
 
     .modal-actions button:first-child {
@@ -160,7 +159,6 @@
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 	.modal-actions button:first-child {
 		background: #f0f0f0;

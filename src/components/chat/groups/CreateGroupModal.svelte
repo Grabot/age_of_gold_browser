@@ -9,6 +9,7 @@
 	import { get } from 'svelte/store';
 	import { avatarStore } from '$lib/stores/avatarStore';
 	import ColourPickerModal from '$lib/components/ColourPickerModal.svelte';
+	import { joinGroup } from '$lib/socket';
 
 	export let onClose: () => void;
 
@@ -53,10 +54,6 @@
 			return;
 		}
 
-		if (selectedFriends.length === 0) {
-			errorToast('Please select at least one friend to create a group');
-			return;
-		}
 		if (myUserId == null) {
 			errorToast('User not authenticated');
 			return;
@@ -74,6 +71,7 @@
 			if (successGroupId) {
 				successToast('Group created successfully!');
 				setTimeout(async () => {
+					joinGroup(successGroupId);
 					const accessToken = get(accessTokenValue);
 					if (accessToken) {
 						const avatarResponse = await handleGetGroupAvatar(accessToken, successGroupId, false);
@@ -301,7 +299,6 @@
 		border: 1px solid #ddd;
 		border-radius: 4px;
 		cursor: pointer;
-		transition: all 0.2s ease;
 	}
 
 	.colour-picker-trigger:hover {
@@ -336,7 +333,6 @@
 		padding: 0.75rem 1rem;
 		border-radius: 4px;
 		cursor: pointer;
-		transition: all 0.2s ease;
 		margin-bottom: 0.5rem;
 	}
 

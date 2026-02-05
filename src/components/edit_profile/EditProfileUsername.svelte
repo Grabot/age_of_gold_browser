@@ -88,8 +88,8 @@
     .modal-content {
         background: white;
         width: 90%;
-        max-width: 800px;
-        max-height: 800px;
+        max-width: 400px;
+        max-height: 400px;
         border-radius: 12px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         display: flex;
@@ -164,7 +164,6 @@
         padding: 0.5rem 1rem;
         border-radius: 4px;
         cursor: pointer;
-        transition: background 0.2s;
     }
 
     .modal-actions button:hover:not(:disabled) {
@@ -203,7 +202,6 @@
 		padding: 0.5rem 1rem;
 		border-radius: 4px;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 	.modal-actions button:hover {
 		background: #2980b9;

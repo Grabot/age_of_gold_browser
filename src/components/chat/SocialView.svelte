@@ -190,7 +190,6 @@
 		color: #666;
 		cursor: pointer;
 		border-bottom: 2px solid transparent;
-		transition: all 0.2s;
 	}
 
     .tabs button.active {

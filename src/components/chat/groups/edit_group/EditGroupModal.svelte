@@ -209,7 +209,6 @@
 		border: 1px solid #ddd;
 		border-radius: 4px;
 		font-size: 1rem;
-		transition: border-color 0.2s;
 	}
 
 	.form-input:focus {
@@ -235,7 +234,6 @@
 		border: 1px solid #ddd;
 		border-radius: 4px;
 		cursor: pointer;
-		transition: all 0.2s ease;
 	}
 
 	.colour-picker-trigger:hover {
@@ -271,7 +269,6 @@
 		cursor: pointer;
 		font-size: 0.9rem;
 		font-weight: 500;
-		transition: filter 0.2s;
 	}
 
 	.save-btn:hover {
@@ -287,7 +284,6 @@
 		cursor: pointer;
 		font-size: 0.9rem;
 		font-weight: 500;
-		transition: background-color 0.2s;
 	}
 
 	.cancel-btn:hover {

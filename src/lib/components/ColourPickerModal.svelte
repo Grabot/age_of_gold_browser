@@ -112,7 +112,6 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 4px;
-		transition: background 0.2s;
 	}
 
 	.close-btn:hover {
@@ -147,7 +146,6 @@
 		padding: 0.5rem 1.5rem;
 		border-radius: 4px;
 		cursor: pointer;
-		transition: background 0.2s;
 		font-size: 1rem;
 	}
 

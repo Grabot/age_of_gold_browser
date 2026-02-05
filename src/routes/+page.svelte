@@ -199,7 +199,6 @@
 		position: absolute;
 		top: 50%;
 		right: 5%;
-		transform: translateY(-50%);
 		z-index: 10;
 	}
 
@@ -218,7 +217,6 @@
 		font-size: 1.1rem;
 		cursor: pointer;
 		border-bottom: 2px solid transparent;
-		transition: all 0.3s ease;
 	}
 
 	.tab-button:last-child {
@@ -267,7 +265,6 @@
 		position: absolute;
 		left: 10%;
 		top: 50%;
-		transform: translateY(-50%);
 		width: 40%;
 		height: auto;
 		z-index: 1;
@@ -297,7 +294,6 @@
 		width: 90%;
 		max-width: 400px;
 		position: relative;
-		transform: none;
 		top: auto;
 		right: auto;
 		margin-bottom: 20px;

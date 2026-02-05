@@ -161,7 +161,6 @@
 		cursor: pointer;
 		font-size: 0.9rem;
 		font-weight: 500;
-		transition: filter 0.2s;
 		align-self: flex-end;
 	}
 

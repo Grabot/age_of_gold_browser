@@ -206,7 +206,6 @@
 		font-size: 0.82rem;
 		font-weight: 600;
 		color: #7f8c8d;
-		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		padding: 0.25rem 0;
 	}
