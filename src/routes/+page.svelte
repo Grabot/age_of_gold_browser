@@ -2,13 +2,13 @@
 	import LoginBox from '../components/LoginBox.svelte';
 	import RegisterBox from '../components/RegisterBox.svelte';
 	import UserBox from '../components/UserBox.svelte';
-	import { authStore } from '../stores/authStore';
+	import { authStore } from '$lib/stores/authStore';
 	import { writable } from 'svelte/store';
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import ForgotPasswordModal from '../components/ForgotPasswordModal.svelte';
 	import { forgotPassword } from '$lib/api/authApi';
-	import { errorToast } from '../utils/toast';
+	import { errorToast } from '$lib/utils/toast';
 
 	const usernameOrEmailLogin = writable('');
 	const passwordLogin = writable('');
@@ -37,7 +37,7 @@
 		const usernameValue = isEmail ? null : usernameOrEmailValue;
 		const loginResult = await authStore.login(emailValue, usernameValue, passwordValue);
 		if (loginResult) {
-			window.location.href = '/world';
+			// window.location.href = '/world';
 		}
 	}
 
@@ -60,7 +60,7 @@
 		const registerResult = await authStore.register(emailValue, usernameValue, passwordValue);
 		if (registerResult) {
 			setTimeout(() => {
-				window.location.href = '/world';
+				// window.location.href = '/world';
 			}, 1500);
 		}
 	}
@@ -199,7 +199,6 @@
 		position: absolute;
 		top: 50%;
 		right: 5%;
-		transform: translateY(-50%);
 		z-index: 10;
 	}
 
@@ -218,7 +217,6 @@
 		font-size: 1.1rem;
 		cursor: pointer;
 		border-bottom: 2px solid transparent;
-		transition: all 0.3s ease;
 	}
 
 	.tab-button:last-child {
@@ -267,7 +265,6 @@
 		position: absolute;
 		left: 10%;
 		top: 50%;
-		transform: translateY(-50%);
 		width: 40%;
 		height: auto;
 		z-index: 1;
@@ -297,7 +294,6 @@
 		width: 90%;
 		max-width: 400px;
 		position: relative;
-		transform: none;
 		top: auto;
 		right: auto;
 		margin-bottom: 20px;

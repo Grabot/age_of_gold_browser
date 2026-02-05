@@ -1,18 +1,29 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { accessTokenValue, userAvatar } from '$lib/stores/authStore';
+	import { accessTokenValue } from '$lib/stores/authStore';
 	import Cropper from 'svelte-easy-crop';
-	import { handleGetAvatar } from '$lib/services/settingsService';
+	import { handleGetGroupAvatar } from '$lib/services/settingsService';
 	import { onDestroy, onMount } from 'svelte';
 	import { errorToast } from '$lib/utils/toast';
+	import { avatarStore } from '$lib/stores/avatarStore';
+	import { getTextColorForBackground } from '$lib/utils/groupUtils';
+	import { updateGroupAvatar } from '$lib/utils/avatarUtils';
+	import type { Group } from '$lib/types/groups';
 
 	export let onSave: (data: { avatar?: File | null; defaultAvatar?: boolean | null }) => void;
 	export let onClose: () => void;
+	export let groupId: number;
+	export let groupAvatar: string | undefined;
+	export let groupColor: string = 'var(--primary-colour)';
+	export let textColor: string = 'white';
+	export let group: Group;
+	$: {
+		textColor = getTextColorForBackground(groupColor);
+	}
 
 	let resetDefault = false;
 	let defaultAvatar = false;
-	const originalAvatarUrl = get(userAvatar);
-	let imageToCrop: string = originalAvatarUrl;
+	let imageToCrop: string = '';
 	let croppedImage: string | null = imageToCrop;
 	let isResizing = false;
 	let worker: Worker;
@@ -36,6 +47,18 @@
 				errorToast(e.data.msg.message);
 			}
 		};
+		if (!groupAvatar) {
+			const currentGroupAvatar = await avatarStore.getGroupAvatar(groupId);
+			if (currentGroupAvatar) {
+				groupAvatar = currentGroupAvatar;
+			} else {
+				updateGroupAvatar(group);
+			}
+		}
+		if (groupAvatar) {
+			imageToCrop = groupAvatar;
+			croppedImage = imageToCrop;
+		}
 	});
 
 	onDestroy(() => {
@@ -85,7 +108,7 @@
 	function handleBackToDefault() {
 		const accessToken = get(accessTokenValue);
 		if (accessToken) {
-			handleGetAvatar(accessToken, null, true).then((response) => {
+			handleGetGroupAvatar(accessToken, groupId, true).then((response) => {
 				if (response.success) {
 					if (response.avatar) {
 						imageToCrop = response.avatar;
@@ -94,7 +117,7 @@
 						resetDefault = true;
 					}
 				} else {
-					errorToast('Failed to fetch avatar');
+					errorToast('Failed to fetch group avatar');
 				}
 			});
 		}
@@ -137,7 +160,6 @@
 			}
 		}
 	}
-
 	function onCropComplete(e: {
 		percent: any;
 		pixels: { x: number; y: number; width: number; height: number };
@@ -189,7 +211,6 @@
 	function handleWheel() {
 		debouncePreview();
 	}
-
 	let fileInput: HTMLInputElement;
 	let filename = '';
 </script>
@@ -205,12 +226,11 @@
 	tabindex="0"
 	role="dialog"
 	aria-modal="true"
-	aria-label="Edit Profile Avatar"
 >
 	<div class="modal-content">
-		<div class="modal-header">
-			<h2>Edit Profile Avatar</h2>
-			<button class="close-btn" on:click={onClose}>x</button>
+		<div class="modal-header" style="background-color: {groupColor}; color: {textColor};">
+			<h2>Edit Group Avatar</h2>
+			<button class="close-btn" on:click={onClose}>×</button>
 		</div>
 		<div class="avatar-section">
 			<div class="avatar-edit-container">
@@ -222,7 +242,7 @@
 					role="dialog"
 					aria-modal="true"
 				>
-					<p class="avatar-label">Crop Avatar</p>
+					<p class="avatar-label">Crop Group Avatar</p>
 					<div
 						class="cropper-container"
 						on:mouseup={handleMouseUp}
@@ -242,6 +262,7 @@
 					role="dialog"
 					aria-modal="true"
 				>
+					<p class="avatar-label">Cropped Preview</p>
 					{#if croppedImage}
 						<img src={croppedImage} alt="Cropped Avatar" class="avatar-box" />
 					{:else}
@@ -258,7 +279,7 @@
 					on:dragleave={() => (isDragging = false)}
 					class:dragging={isDragging}
 					role="region"
-					aria-label="Avatar upload area"
+					aria-label="Group avatar upload area"
 				>
 					<input
 						type="file"
@@ -281,14 +302,12 @@
 				</div>
 			</div>
 		</div>
-		<div class="modal-footer">
-			<div class="modal-actions">
-				<button on:click={handleSave} disabled={isResizing}>Save</button>
-				<button on:click={onClose} disabled={isResizing}>Cancel</button>
-				{#if !defaultAvatar}
-					<button on:click={handleBackToDefault} disabled={isResizing}>Reset to default</button>
-				{/if}
-			</div>
+		<div class="modal-actions">
+			<button on:click={handleSave} disabled={isResizing}>Save</button>
+			<button on:click={onClose} disabled={isResizing}>Cancel</button>
+			{#if !defaultAvatar}
+				<button on:click={handleBackToDefault} disabled={isResizing}>Reset to default</button>
+			{/if}
 		</div>
 	</div>
 
@@ -329,29 +348,29 @@
 
 	.modal-content {
 		background: white;
-		width: 92%;
-		max-width: 500px;
-		max-height: 92vh;
+		padding: 0;
 		border-radius: 12px;
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-		display: flex;
-		flex-direction: column;
-		overflow: hidden;
+		width: 90%;
+		max-width: 400px;
+		text-align: center;
 		position: relative;
+		z-index: 1;
+		overflow: hidden;
 	}
 
-    .modal-header {
-        background: var(--primary-colour);
-        color: var(--text-colour-on-primary);
-        padding: 0.8rem 1.2rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+	.modal-header {
+		padding: 1rem 1.5rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-radius: 12px 12px 0 0;
+		margin: 0;
+	}
 
 	.modal-header h2 {
 		margin: 0;
-		font-size: 1.3rem;
+		font-size: 1.2rem;
 	}
 
 	.close-btn {
@@ -360,15 +379,16 @@
 		color: var(--text-colour-on-primary);
 		font-size: 1.5rem;
 		cursor: pointer;
+		padding: 0;
+		line-height: 1;
 	}
 
 	.avatar-section {
-		padding: 1rem 1.2rem;
-		flex: 1;
-		overflow: hidden;
+		position: relative;
 		display: flex;
-		flex-direction: column;
-		align-items: center;
+		justify-content: center;
+		margin: 1rem auto;
+		padding: 1rem;
 	}
 
 	.avatar-edit-container {
@@ -376,48 +396,33 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 1rem;
-		width: 100%;
 	}
 
-	.crop-section,
-	.cropped-preview-section {
-		width: 88%;
-		aspect-ratio: 1/1;
-		max-width: 280px;
-		max-height: 280px;
-		border: 2px dashed #ddd;
-		border-radius: 4px;
-		overflow: hidden;
-		position: relative;
-		margin: 0 auto;
-	}
-
-	.cropper-container {
-		width: 100%;
-		height: 100%;
-		position: relative;
-	}
-
-	.cropped-preview-section img {
+	.avatar-box {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+		background: #3498db;
+		color: var(--text-colour-on-primary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: calc(30vh * 0.4);
+		border-radius: 4px;
 	}
 
 	.avatar-upload {
-		width: 88%;
+		margin-top: 0.5rem;
 		display: flex;
 		gap: 0.5rem;
 		align-items: center;
-		margin-top: 0.8rem;
 		border: 2px dashed transparent;
 		padding: 0.5rem;
 		border-radius: 4px;
 	}
-
 	.avatar-upload.dragging {
-		border-color: var(--primary-colour);
-		background: rgba(var(--primary-colour-light), 0.1);
+		border-color: #3498db;
+		background: rgba(52, 152, 219, 0.1);
 	}
 
 	.filename-input {
@@ -425,50 +430,51 @@
 		padding: 0.5rem;
 		border: 1px solid #ddd;
 		border-radius: 4px;
-		font-size: 0.9rem;
+		font-size: 1rem;
 		text-align: left;
 		background: white;
 	}
 
 	.browse-button {
-		background: var(--primary-colour);
+		background: #3498db;
 		color: var(--text-colour-on-primary);
 		border: none;
 		padding: 0.5rem 1rem;
 		border-radius: 4px;
 		cursor: pointer;
-		font-size: 0.9rem;
 	}
 
 	.browse-button:hover {
-		background: var(--primary-colour-dark);
+		background: #2980b9;
 	}
-
-	.modal-footer {
-		padding: 0.8rem 1.2rem;
-		border-top: 1px solid #eee;
-		text-align: right;
+	.field-input {
+		width: 100%;
+		padding: 0.5rem;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		font-size: 1rem;
+		text-align: center;
 	}
 
 	.modal-actions {
 		display: flex;
-		justify-content: flex-end;
+		justify-content: center;
 		gap: 0.5rem;
-		margin-top: 0;
+		margin-top: 1.5rem;
+		margin-bottom: 1.5rem;
 	}
 
 	.modal-actions button {
-		background: var(--primary-colour);
+		background: #3498db;
 		color: var(--text-colour-on-primary);
 		border: none;
 		padding: 0.5rem 1rem;
 		border-radius: 4px;
 		cursor: pointer;
-		font-size: 0.9rem;
 	}
 
 	.modal-actions button:hover:not(:disabled) {
-		background: var(--primary-colour-dark);
+		background: #2980b9;
 	}
 
 	.modal-actions button:last-child {
@@ -484,15 +490,44 @@
 		cursor: not-allowed;
 	}
 
-	.avatar-label {
-		position: absolute;
-		top: -0.8rem;
-		left: 0;
+	.cropper-container {
+		width: 30vh;
+		height: 30vh;
+		max-width: 300px;
+		max-height: 300px;
+		position: relative;
+		margin-bottom: 1rem;
+	}
+
+	.crop-section {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.cropped-preview-section {
+		width: 30vh;
+		height: 30vh;
+		max-width: 300px;
+		max-height: 300px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.crop-section,
+	.cropped-preview-section {
+		border: 2px dashed transparent;
+	}
+
+	.cropped-preview-section .avatar-label {
 		margin: 0;
 		font-size: 0.8rem;
-		color: var(--primary-colour);
-		background: white;
-		padding: 0 0.2rem;
+		color: #27ae60;
 	}
 
 	.spinner-overlay {
@@ -506,6 +541,7 @@
 		align-items: center;
 		justify-content: center;
 		z-index: 101;
+		/* Prevent all interaction with elements behind the overlay */
 		pointer-events: auto;
 	}
 
@@ -513,23 +549,29 @@
 		text-align: center;
 		color: var(--text-colour-on-primary);
 		background: rgba(0, 0, 0, 0.8);
-		padding: 1.5rem;
+		padding: 2rem;
 		border-radius: 8px;
 	}
 
 	.spinner {
 		border: 4px solid rgba(255, 255, 255, 0.3);
 		border-radius: 50%;
-		border-top: 4px solid var(--primary-colour);
-		width: 40px;
-		height: 40px;
+		border-top: 4px solid #3498db;
+		width: 50px;
+		height: 50px;
 		animation: spin 1s linear infinite;
-		margin: 0 auto 0.8rem;
+		margin: 0 auto 1rem;
 	}
-
+	.cropped-preview-section .avatar-box.empty-preview {
+		background: #f0f0f0;
+		color: #7f8c8d;
+		font-size: 0.9rem;
+		border: 1px dashed #bdc3c7;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
 	.empty-preview {
-		width: 100%;
-		height: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -538,5 +580,4 @@
 		font-size: 0.9rem;
 		border: 1px dashed #bdc3c7;
 	}
-
 </style>

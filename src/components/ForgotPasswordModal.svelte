@@ -105,7 +105,6 @@
 		padding: 0.5rem 1rem;
 		border-radius: 4px;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 	.modal-actions button:hover {
 		background: #2980b9;

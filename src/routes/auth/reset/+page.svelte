@@ -2,10 +2,10 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { getTokenFromUrl } from '$lib/authLib';
-	import { accessTokenValue, authStore } from '../../../stores/authStore';
+	import { accessTokenValue, authStore } from '$lib/stores/authStore';
 	import { resetPassword } from '$lib/api/authApi';
 	import { get } from 'svelte/store';
-	import { errorToast, successToast } from '../../../utils/toast';
+	import { errorToast, successToast } from '$lib/utils/toast';
 
 	let showForm = true;
 	let loading = true;

@@ -1,2 +1,14 @@
+:root {
+  --primary-colour: #14a36c;
+  --primary-colour-dark: color-mix(in srgb, var(--primary-colour) 80%, black);
+  --primary-colour-light: color-mix(in srgb, var(--primary-colour) 80%, white);
+  --text-colour-on-primary: black; /* Changed to black for white background */
+}
+
+/* Ensure text is always readable on primary color backgrounds */
+.nav-btn, .modal-header, .modal-header h2, .modal-header h3, .close-btn {
+  color: var(--text-colour-on-primary) !important;
+}
+
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';

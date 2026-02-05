@@ -5,38 +5,32 @@
 		accessTokenValue,
 		authStore,
 		avatarVersionValue,
-		shouldUpdateAvatar,
 		userAvatar,
 		userDetail
-	} from '../../stores/authStore';
+	} from '$lib/stores/authStore';
 	import {
 		handleChangeAvatar,
 		handleChangeUsername,
-		handleDeleteAccount,
-		handleGetAvatar
-	} from '../../services/settingsService';
+		handleChangeColour,
+		handleDeleteAccount
+	} from '$lib/services/settingsService';
 	import EditProfileUsername from '../../components/edit_profile/EditProfileUsername.svelte';
 	import EditProfileAvatar from '../../components/edit_profile/EditProfileAvatar.svelte';
+	import EditProfileColour from '../../components/edit_profile/EditProfileColour.svelte';
 	import { get } from 'svelte/store';
 	import EditProfilePassword from '../../components/edit_profile/EditProfilePassword.svelte';
 	import DeleteAccount from '../../components/edit_profile/DeleteAccount.svelte';
 	import { resetPassword } from '$lib/api/authApi';
-	import { errorToast, successToast } from '../../utils/toast';
+	import { errorToast, successToast } from '$lib/utils/toast';
+	import { getRandomColour } from '$lib/utils/groupUtils';
+	import { updatePrimaryColour } from '$lib/utils/colourUtils';
 
 	let showModalAvatar = false;
 	let showModalUsername = false;
+	let showModalColour = false;
 	let showModalPassword = false;
 	let showModalDeleteAccount = false;
 	let showDropdown = false;
-
-	function getRandomColor(username: string): string {
-		let hash = 0;
-		for (let i = 0; i < username.length; i++) {
-			hash = username.charCodeAt(i) + ((hash << 5) - hash);
-		}
-		const hue = Math.abs(hash) % 360;
-		return `hsl(${hue}, 70%, 50%)`;
-	}
 
 	function getInitial(username: string): string {
 		return username.charAt(0).toUpperCase();
@@ -58,6 +52,10 @@
 				handleChangeUsername(accessToken, data.username).then((response) => {
 					if (response.success) {
 						successToast('Username updated successfully!');
+						let currentUserDetail = get(userDetail);
+						currentUserDetail.username = data.username;
+						currentUserDetail.profile_version += 1
+						userDetail.set(currentUserDetail);
 					} else {
 						errorToast('Failed to update username');
 					}
@@ -65,6 +63,27 @@
 			}
 		}
 		showModalUsername = false;
+	}
+
+	function handleEditProfileSaveColour(data: { colour?: string | null }) {
+		if (data.colour) {
+			const accessToken = $accessTokenValue;
+			if (accessToken) {
+				handleChangeColour(accessToken, data.colour!).then((response) => {
+					if (response.success) {
+						successToast('Colour updated successfully!');
+						let currentUserDetail = get(userDetail);
+						currentUserDetail.colour = data.colour!;
+						currentUserDetail.profile_version += 1
+						userDetail.set(currentUserDetail);
+						updatePrimaryColour(data.colour!);
+					} else {
+						errorToast('Failed to update colour');
+					}
+				});
+			}
+		}
+		showModalColour = false;
 	}
 
 	async function handleEditProfileSavePassword(data: { password?: string | null }) {
@@ -121,20 +140,25 @@
 		showDropdown = false;
 	}
 
-	function openUsernameModal() {
-		showModalUsername = true;
-		showDropdown = false;
-	}
+function openUsernameModal() {
+	showModalUsername = true;
+	showDropdown = false;
+}
 
-	function openPasswordModal() {
-		showModalPassword = true;
-		showDropdown = false;
-	}
+function openColourModal() {
+	showModalColour = true;
+	showDropdown = false;
+}
 
-	function openAvatarModal() {
-		showModalAvatar = true;
-		showDropdown = false;
-	}
+function openPasswordModal() {
+	showModalPassword = true;
+	showDropdown = false;
+}
+
+function openAvatarModal() {
+	showModalAvatar = true;
+	showDropdown = false;
+}
 
 	const handleDropdownFocusLoss = ({
 		relatedTarget,
@@ -186,6 +210,7 @@
 					<button class="settings-btn" on:click={toggleDropdown}>⚙️</button>
 					<div class="dropdown-menu" style:visibility={showDropdown ? 'visible' : 'hidden'}>
 						<button class="dropdown-item" on:click={openUsernameModal}>Change Username</button>
+						<button class="dropdown-item" on:click={openColourModal}>Change Colour</button>
 						<button class="dropdown-item" on:click={openAvatarModal}>Change Avatar</button>
 						<button class="dropdown-item" on:click={openPasswordModal}>Change Password</button>
 						<hr class="dropdown-divider" />
@@ -200,10 +225,7 @@
 				{#if $userAvatar}
 					<img src={$userAvatar} alt="User Avatar" class="avatar-box" />
 				{:else}
-					<div
-						class="avatar-box default-avatar"
-						style="background-color: {getRandomColor($userDetail.username)}"
-					>
+					<div class="avatar-box default-avatar" style="background-colour: {getRandomColour()}">
 						{getInitial($userDetail.username)}
 					</div>
 				{/if}
@@ -216,6 +238,12 @@
 			<EditProfileAvatar
 				onSave={handleEditProfileSaveAvatar}
 				onClose={() => (showModalAvatar = false)}
+			/>
+		{/if}
+		{#if showModalColour}
+			<EditProfileColour
+				onSave={handleEditProfileSaveColour}
+				onClose={() => (showModalColour = false)}
 			/>
 		{/if}
 		{#if showModalUsername}
@@ -281,9 +309,10 @@
 
 	.username {
 		font-weight: bold;
-		color: #3498db;
-		font-size: 1.2rem;
+		color: var(--primary-colour);
+		font-size: 4.2rem;
 		margin-top: 0.5rem;
+		-webkit-text-stroke: 1px rgba(0, 0, 0, 0.5);
 	}
 
 	.loading {
@@ -332,7 +361,6 @@
 		border-radius: 50%;
 		font-size: 1.2rem;
 		cursor: pointer;
-		transition: background 0.3s ease;
 		width: 40px;
 		height: 40px;
 		display: flex;
@@ -341,7 +369,7 @@
 	}
 
 	.settings-btn:hover {
-		background: #095c39;
+        background: var(--primary-colour-dark);
 	}
 
 	.dropdown-menu {

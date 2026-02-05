@@ -1,9 +1,10 @@
-import { changeAvatar, changeUsername, getAvatar, getAvatarVersion } from '$lib/api/userApi';
+import { changeAvatar, changeUsername, changeColour, getAvatar, getAvatarVersion } from '$lib/api/userApi';
 import { deleteAccount } from '$lib/api/authApi';
 import { type ApiResult } from '$lib/api/apiClient';
 import { get } from 'svelte/store';
 import { userAvatar, userDetail } from '../stores/authStore';
 import type { User } from '../types/user';
+import { getGroupAvatar, getGroupAvatarVersion, changeGroupAvatar } from '$lib/api/groupApi';
 
 export async function handleChangeUsername(
 	accessToken: string,
@@ -21,6 +22,26 @@ export async function handleChangeUsername(
 		return {
 			success: false,
 			message: (err as Error).message || 'An error occurred during username change.'
+		};
+	}
+}
+
+export async function handleChangeColour(
+	accessToken: string,
+	newColour: string
+): Promise<ApiResult> {
+	try {
+		const response: ApiResult = await changeColour(accessToken, newColour);
+		if (!response.success) {
+			throw new Error(response.message || 'Failed to change colour.');
+		}
+		const current_user: User = get(userDetail);
+		userDetail.set({ ...current_user, colour: newColour });
+		return { success: true };
+	} catch (err) {
+		return {
+			success: false,
+			message: (err as Error).message || 'An error occurred during colour change.'
 		};
 	}
 }
@@ -89,13 +110,61 @@ export async function handleGetAvatar(
 	}
 }
 
+export async function handleGetGroupAvatar(
+	accessToken: string,
+	groupId: number,
+	getDefault: boolean | null = null
+): Promise<{ success: boolean; message?: string; avatar?: string }> {
+	try {
+		const response = await getGroupAvatar(accessToken, groupId, getDefault);
+
+		if (response.success) {
+			const avatarBase64 = await new Promise<string>((resolve) => {
+				if (!response.data) {
+					return null;
+				}
+				const reader = new FileReader();
+				reader.onloadend = () => {
+					resolve(reader.result as string);
+				};
+				reader.readAsDataURL(response.data);
+			});
+
+			if (!avatarBase64) {
+				throw new Error('Issue converting avatar.');
+			}
+			return { success: true, avatar: avatarBase64 };
+		} else {
+			return { success: false, message: 'Get avatar failed.' };
+		}
+	} catch (err) {
+		return { success: false, message: (err as Error).message || 'Getting avatar failed' };
+	}
+}
+
 export async function handleGetAvatarVersion(
 	accessToken: string,
-	userId: number | null = null,
-	getDefault: boolean | null = null
+	userId: number
 ): Promise<{ success: boolean; message?: string; avatarVersion?: number }> {
 	try {
 		const response = await getAvatarVersion(accessToken, userId);
+
+		if (response.success) {
+			return { success: true, avatarVersion: response.data as number };
+		} else {
+			return { success: false, message: 'Get avatar version failed.' };
+		}
+	} catch (err) {
+		return { success: false, message: (err as Error).message || 'Getting avatar version failed' };
+	}
+}
+
+export async function handleGetGroupAvatarVersion(
+	accessToken: string,
+	groupId: number
+): Promise<{ success: boolean; message?: string; avatarVersion?: number }> {
+	try {
+		const response = await getGroupAvatarVersion(accessToken, groupId);
 
 		if (response.success) {
 			return { success: true, avatarVersion: response.data as number };
@@ -118,6 +187,31 @@ export async function handleDeleteAccount(accessToken: string): Promise<ApiResul
 		return {
 			success: false,
 			message: (err as Error).message || 'An error occurred during account deletion.'
+		};
+	}
+}
+
+export async function handleChangeGroupAvatar(
+	accessToken: string,
+	groupId: number,
+	newAvatar: File | null,
+	useDefaultAvatar: boolean = false
+): Promise<ApiResult> {
+	try {
+		const response: ApiResult = await changeGroupAvatar(
+			accessToken,
+			groupId,
+			newAvatar,
+			useDefaultAvatar
+		);
+		if (!response.success) {
+			throw new Error(response.message || 'Failed to change group avatar.');
+		}
+		return { success: true };
+	} catch (err) {
+		return {
+			success: false,
+			message: (err as Error).message || 'An error occurred during group avatar change.'
 		};
 	}
 }

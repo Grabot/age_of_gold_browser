@@ -5,8 +5,8 @@
 		signInWithGithub,
 		signInWithReddit
 	} from '$lib/authLib/oauth2';
-	import { authStore } from '../stores/authStore';
-	import { errorToast } from '../utils/toast';
+	import { authStore } from '$lib/stores/authStore';
+	import { errorToast } from '$lib/utils/toast';
 
 	const googleLogin = googleProvider.useGoogleLogin({
 		flow: 'implicit',
@@ -89,13 +89,11 @@
 		aspect-ratio: 1;
 		min-height: 60px;
 		max-height: 80px;
-		transition: all 0.2s ease;
 		overflow: hidden;
 	}
 
 	.oauth-button:hover {
 		opacity: 0.9;
-		transform: scale(1.02);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 	}
 
@@ -104,10 +102,5 @@
 		height: 100%;
 		object-fit: contain;
 		border-radius: 8px;
-		transition: transform 0.2s ease;
-	}
-
-	.oauth-button:hover .oauth-img {
-		transform: scale(1.05);
 	}
 </style>

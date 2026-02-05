@@ -8,10 +8,11 @@ import {
 } from '$lib/api/friendApi';
 import type { ApiResponse } from '$lib/api/apiClient';
 import type { User } from '../types/user';
-import type { Friend } from '../types/user';
+import type { Friend } from '../types/friend';
 import { accessTokenValue } from './authStore';
 import { userStore } from './userStore';
 import { avatarStore } from './avatarStore';
+import { indexedDBHelper } from './indexedDBHelper';
 
 export const STORAGE_KEY_FRIENDS_PREFIX = 'friend_';
 
@@ -34,29 +35,40 @@ function createFriendStore() {
 		loadFriendsFromStorage();
 	}
 
-	function loadFriendsFromStorage() {
-		const keys = Object.keys(localStorage);
-		const friendKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_FRIENDS_PREFIX));
+	async function loadFriendsFromStorage() {
+		// Try IndexedDB first
+		let friends: Friend[] = [];
+		try {
+			friends = (await indexedDBHelper.getAllFriends()) as Friend[];
+		} catch (error) {
+			console.error('Error loading friends from IndexedDB:', error);
+		}
 
-		const friends: Friend[] = [];
+		// If no friends in IndexedDB, try localStorage for migration
+		if (friends.length === 0) {
+			const keys = Object.keys(localStorage);
+			const friendKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_FRIENDS_PREFIX));
 
-		friendKeys.forEach((key) => {
-			const friendId = parseInt(key.replace(STORAGE_KEY_FRIENDS_PREFIX, ''));
-			const friendData = localStorage.getItem(key);
-			if (friendData) {
-				try {
-					const friend: Friend = JSON.parse(friendData);
-					friends.push(friend);
-				} catch (error) {
-					console.error(`Failed to parse friend data for friend ${friendId}:`, error);
+			friendKeys.forEach((key) => {
+				const friendId = parseInt(key.replace(STORAGE_KEY_FRIENDS_PREFIX, ''));
+				const friendData = localStorage.getItem(key);
+				if (friendData) {
+					try {
+						const friend: Friend = JSON.parse(friendData);
+						friends.push(friend);
+						// Migrate to IndexedDB
+						indexedDBHelper.saveFriend(friend);
+					} catch (error) {
+						console.error(`Failed to parse friend data for friend ${friendId}:`, error);
+					}
 				}
-			}
-		});
+			});
+		}
 
 		update((state) => ({ ...state, friends }));
 	}
 
-	function saveFriendToStorage(friend: Friend) {
+	async function saveFriendToStorage(friend: Friend) {
 		if (typeof window !== 'undefined') {
 			// Only store friend data without user object (user is stored separately)
 			const friendToStore = {
@@ -64,18 +76,25 @@ function createFriendStore() {
 				accepted: friend.accepted,
 				friend_version: friend.friend_version
 			};
-			localStorage.setItem(
-				`${STORAGE_KEY_FRIENDS_PREFIX}${friend.friend_id}`,
-				JSON.stringify(friendToStore)
-			);
+			await indexedDBHelper.saveFriend(friendToStore);
 		}
 	}
 
-	function getStoredFriend(friendId: number): Friend | null {
+	async function getStoredFriend(friendId: number): Promise<Friend | null> {
+		// Try IndexedDB first
+		const friend = (await indexedDBHelper.getFriend(friendId)) as Friend | null;
+		if (friend) {
+			return friend;
+		}
+
+		// Fallback to localStorage for migration purposes
 		const friendData = localStorage.getItem(`${STORAGE_KEY_FRIENDS_PREFIX}${friendId}`);
 		if (friendData) {
 			try {
-				return JSON.parse(friendData) as Friend;
+				const parsedFriend = JSON.parse(friendData) as Friend;
+				// Migrate to IndexedDB
+				await indexedDBHelper.saveFriend(parsedFriend);
+				return parsedFriend;
 			} catch (error) {
 				console.error(`Failed to parse stored friend data for friend ${friendId}:`, error);
 				return null;
@@ -84,22 +103,26 @@ function createFriendStore() {
 		return null;
 	}
 
-	function removeFriendFromStorage(friendId: number) {
+	async function removeFriendFromStorage(friendId: number) {
 		if (typeof window !== 'undefined') {
+			await indexedDBHelper.removeFriend(friendId);
 			localStorage.removeItem(`${STORAGE_KEY_FRIENDS_PREFIX}${friendId}`);
 		}
 	}
 
 	return {
 		subscribe,
-		setFriends: (friends: Friend[]) => {
+		setFriends: async (friends: Friend[]) => {
 			// Save each friend to storage
-			friends.forEach((friend) => saveFriendToStorage(friend));
+			for (const friend of friends) {
+				await saveFriendToStorage(friend);
+			}
 			set({ friends, loading: false, error: null });
 		},
 		sendFriendRequest: async (friendData: {
 			friendId: number;
 			username: string;
+			colour: string;
 			avatar: string | undefined;
 		}) => {
 			try {
@@ -115,6 +138,7 @@ function createFriendStore() {
 						username: friendData.username,
 						avatar_version: 0,
 						profile_version: 0,
+						colour: friendData.colour,
 						avatar: friendData.avatar || undefined
 					};
 
@@ -123,7 +147,7 @@ function createFriendStore() {
 
 					// Store avatar in avatarStore if available
 					if (friendData.avatar) {
-						avatarStore.updateAvatar(friendData.friendId, friendData.avatar);
+						await avatarStore.updateAvatar(friendData.friendId, friendData.avatar);
 					}
 
 					// Create friend object
@@ -135,7 +159,7 @@ function createFriendStore() {
 					};
 
 					// Save friend to storage
-					saveFriendToStorage(friend);
+					await saveFriendToStorage(friend);
 
 					// Add friend to store
 					update((state) => ({
@@ -149,14 +173,18 @@ function createFriendStore() {
 				return false;
 			}
 		},
-		updateFriend: (friend: Friend): void => {
-			saveFriendToStorage(friend);
+		updateFriend: async (friend: Friend): Promise<void> => {
+			await saveFriendToStorage(friend);
 			update((state) => {
 				const newFriends = state.friends.filter((f) => f.friend_id !== friend.friend_id);
 				return { ...state, friends: [...newFriends, friend] };
 			});
 		},
-		updateFriendUsername: (userId: number, newUsername: string, profileVersion: number): void => {
+		updateFriendUsername: async (
+			userId: number,
+			newUsername: string,
+			profileVersion: number
+		): Promise<void> => {
 			update((state) => {
 				const updatedFriends = state.friends.map((friend) => {
 					if (friend.friend_id === userId) {
@@ -182,12 +210,43 @@ function createFriendStore() {
 				return { ...state, friends: updatedFriends };
 			});
 		},
-		addFriendRequest: (friendData: {
+		updateFriendColour: async (
+			userId: number,
+			newColour: string,
+			profileVersion: number
+		): Promise<void> => {
+			update((state) => {
+				const updatedFriends = state.friends.map((friend) => {
+					if (friend.friend_id === userId) {
+						// Update the friend version and user info
+						const updatedFriend = {
+							...friend,
+							friend_version: friend.friend_version + 1,
+							user: friend.user
+								? {
+										...friend.user,
+										colour: newColour,
+										profile_version: profileVersion
+									}
+								: undefined
+						};
+						// Save the updated friend to storage
+						saveFriendToStorage(updatedFriend);
+						return updatedFriend;
+					}
+
+					return friend;
+				});
+				return { ...state, friends: updatedFriends };
+			});
+		},
+		addFriendRequest: async (friendData: {
 			friend_id: number;
 			username: string;
+			colour: string;
 			avatar_version: number;
 			profile_version: number;
-		}): void => {
+		}): Promise<void> => {
 			update((state) => {
 				// Check if friend already exists
 				const existingFriend = state.friends.find((f) => f.friend_id === friendData.friend_id);
@@ -200,6 +259,7 @@ function createFriendStore() {
 				const user: User = {
 					id: friendData.friend_id,
 					username: friendData.username,
+					colour: friendData.colour,
 					avatar_version: friendData.avatar_version,
 					profile_version: friendData.profile_version
 				};
@@ -266,7 +326,7 @@ function createFriendStore() {
 						return { ...state, friends: updatedFriends };
 					});
 					// Remove from storage
-					removeFriendFromStorage(friendId);
+					await removeFriendFromStorage(friendId);
 					return true;
 				}
 				return false;
@@ -290,7 +350,7 @@ function createFriendStore() {
 						return { ...state, friends: updatedFriends };
 					});
 					// Remove from storage
-					removeFriendFromStorage(friendId);
+					await removeFriendFromStorage(friendId);
 					return true;
 				}
 				return false;
@@ -314,7 +374,7 @@ function createFriendStore() {
 						return { ...state, friends: updatedFriends };
 					});
 					// Remove from storage
-					removeFriendFromStorage(friendId);
+					await removeFriendFromStorage(friendId);
 					return true;
 				}
 				return false;
@@ -332,10 +392,13 @@ function createFriendStore() {
 		},
 		getStoredFriend,
 		removeFriendFromStorage,
-		clear: () => {
+		clear: async () => {
 			set(initialState);
 			// Clear all friend storage
 			if (typeof window !== 'undefined') {
+				await indexedDBHelper.clearFriends();
+
+				// Clear localStorage as fallback
 				const keys = Object.keys(localStorage);
 				const friendKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_FRIENDS_PREFIX));
 				friendKeys.forEach((key) => localStorage.removeItem(key));

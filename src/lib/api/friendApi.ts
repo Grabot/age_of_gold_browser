@@ -1,13 +1,5 @@
-import { z } from 'zod';
-import {
-	makeRequest,
-	type ApiResponse,
-	type LoginResponse,
-	LoginResponseSchema,
-	API,
-	type ApiResult
-} from './apiClient';
-import type { Friend } from '../../types/user';
+import { makeRequest, type ApiResponse, API } from './apiClient';
+import type { Friend } from '$lib/types/friend';
 
 export async function searchFriend<T>(
 	accessToken: string,

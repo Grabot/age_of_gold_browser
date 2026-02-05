@@ -1,10 +1,15 @@
 import { z } from 'zod';
-import { accessTokenValue, authStore, refreshTokenValue } from '../../stores/authStore';
+import { accessTokenValue, authStore, refreshTokenValue } from '$lib/stores/authStore';
 import { get } from 'svelte/store';
 
 export interface FriendLogin {
 	friend_id: number;
 	friend_version: number;
+}
+
+export interface GroupLogin {
+	group_id: number;
+	group_version: number;
 }
 
 export const LoginResponseSchema = z.object({
@@ -17,6 +22,12 @@ export const LoginResponseSchema = z.object({
 			friend_id: z.number(),
 			friend_version: z.number()
 		})
+	),
+	groups: z.array(
+		z.object({
+			group_id: z.number(),
+			group_version: z.number()
+		})
 	)
 });
 
@@ -26,6 +37,7 @@ export interface LoginResponse {
 	profile_version: number;
 	avatar_version: number;
 	friends: FriendLogin[];
+	groups: GroupLogin[];
 }
 
 export interface ApiResponse<T = unknown> {
@@ -60,14 +72,15 @@ class ApiConfig {
 		deleteAccountRequest: 'delete/account/request'
 	} as const;
 
-	readonly userEndpoints = {
-		changeUsername: 'user/username',
-		changeAvatar: 'user/avatar',
-		getAvatar: 'user/avatar',
-		getAvatarVersion: 'user/avatar/version',
-		getUser: 'user',
-		getMultipleUsers: 'users'
-	} as const;
+    readonly userEndpoints = {
+        changeUsername: 'user/username',
+        changeColour: 'user/colour',
+        changeAvatar: 'user/avatar',
+        getAvatar: 'user/avatar',
+        getAvatarVersion: 'user/avatar/version',
+        getUser: 'user',
+        getMultipleUsers: 'users'
+    } as const;
 
 	readonly friendEndpoints = {
 		searchFriend: 'friend/search',
@@ -76,6 +89,20 @@ class ApiConfig {
 		respondFriendRequest: 'friend/respond',
 		cancelFriendRequest: 'friend/cancel',
 		removeFriend: 'friend/remove'
+	} as const;
+
+	readonly groupEndpoints = {
+		createGroup: 'group/create',
+		fetchGroups: 'group/all',
+		leaveGroup: 'group/leave',
+		addGroupMember: 'group/member/add',
+		removeGroupMember: 'group/member/remove',
+		promoteAdmin: 'group/admin/promote',
+		updateGroup: 'group/update',
+		muteGroup: 'group/mute',
+		getGroupAvatar: 'group/avatar',
+		getGroupAvatarVersion: 'group/avatar/version',
+		changeGroupAvatar: 'group/avatar'
 	} as const;
 
 	buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {

@@ -43,6 +43,18 @@ export function leaveRoom(userId: number) {
 	}
 }
 
+export function joinGroup(groupId: number) {
+	if (socket) {
+		socket.emit('join_group', { group_id: groupId });
+	}
+}
+
+export function leaveGroup(groupId: number) {
+	if (socket) {
+		socket.emit('leave_group', { group_id: groupId });
+	}
+}
+
 export function onMessageEvent(callback: (message: string) => void) {
 	if (socket) {
 		socket.on('message_event', callback);
@@ -69,12 +81,27 @@ export function offUsernameUpdatedEvent() {
 	}
 }
 
+export function onColourUpdatedEvent(
+	callback: (data: { user_id: number; new_colour: string; profile_version: number }) => void
+) {
+	if (socket) {
+		socket.on('colour_updated', callback);
+	}
+}
+
+export function offColourUpdatedEvent() {
+	if (socket) {
+		socket.off('colour_updated');
+	}
+}
+
 export function onFriendRequestReceivedEvent(
 	callback: (data: {
 		friend_id: number;
 		username: string;
 		avatar_version: number;
 		profile_version: number;
+		colour: string;
 	}) => void
 ) {
 	if (socket) {
@@ -106,6 +133,7 @@ export function onFriendRequestAcceptedEvent(
 		username: string;
 		avatar_version: number;
 		profile_version: number;
+		colour: string;
 		accepted: boolean;
 		friend_version: number;
 	}) => void
@@ -154,5 +182,118 @@ export function onFriendRemovedEvent(callback: (data: { friend_id: number }) => 
 export function offFriendRemovedEvent() {
 	if (socket) {
 		socket.off('friend_removed');
+	}
+}
+
+export function onGroupCreatedEvent(
+	callback: (data: {
+		group_id: number;
+		group_name: string;
+		group_description: string;
+		group_colour: string;
+		creator_id: number;
+		creator_username: string;
+	}) => void
+) {
+	if (socket) {
+		socket.on('group_created', callback);
+	}
+}
+
+export function offGroupCreatedEvent() {
+	if (socket) {
+		socket.off('group_created');
+	}
+}
+
+export function onGroupMemberLeftEvent(
+	callback: (data: { group_id: number; user_id: number }) => void
+) {
+	if (socket) {
+		socket.on('group_member_left', callback);
+	}
+}
+
+export interface GroupAdminChangedEventData {
+	group_id: number;
+	user_id: number;
+	is_admin: boolean;
+}
+export function onGroupAdminChangedEvent(callback: (data: GroupAdminChangedEventData) => void) {
+	if (socket) {
+		socket.on('group_admin_changed', callback);
+	}
+}
+
+export function offGroupMemberLeftEvent() {
+	if (socket) {
+		socket.off('group_member_left');
+	}
+}
+
+export interface GroupUpdateEventData {
+	group_id: number;
+	group_name: string | undefined;
+	group_description: string | undefined;
+	group_colour: string | undefined;
+}
+export function onGroupUpdateEvent(callback: (data: GroupUpdateEventData) => void) {
+	if (socket) {
+		socket.on('group_updated', callback);
+	}
+}
+
+export function offGroupUpdateEvent() {
+	if (socket) {
+		socket.off('group_updated');
+	}
+}
+
+export interface GroupMemberRemovedEventData {
+	group_id: number;
+	user_id: number;
+}
+export function onGroupMemberRemovedEvent(callback: (data: GroupMemberRemovedEventData) => void) {
+	if (socket) {
+		socket.on('group_member_removed', callback);
+	}
+}
+
+export function offGroupMemberRemovedEvent() {
+	if (socket) {
+		socket.off('group_member_removed');
+	}
+}
+
+export interface GroupMemberAddedEventData {
+	group_id: number;
+	user_id: number;
+}
+export function onGroupMemberAddedEvent(callback: (data: GroupMemberAddedEventData) => void) {
+	if (socket) {
+		socket.on('group_member_added', callback);
+	}
+}
+
+export function offGroupMemberAddedEvent() {
+	if (socket) {
+		socket.off('group_member_added');
+	}
+}
+
+export interface GroupAvatarChangedEventData {
+	group_id: number;
+	user_id: number;
+}
+export function onGroupAvatarChangedEvent(callback: (data: GroupAvatarChangedEventData) => void) {
+	console.log('on group avatar updated');
+	if (socket) {
+		socket.on('group_avatar_updated', callback);
+	}
+}
+
+export function offGroupAvatarChangedEvent() {
+	if (socket) {
+		socket.off('group_avatar_updated');
 	}
 }

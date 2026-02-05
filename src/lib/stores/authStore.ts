@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
 import type { User } from '../types/user';
-import type { Friend } from '../types/user';
+import type { Friend } from '../types/friend';
 import {
 	loginTokenGoogle,
 	loginUser,
@@ -8,12 +8,20 @@ import {
 	registerUser,
 	validateToken
 } from '$lib/api/authApi';
-import { getUser, getMultipleUsers } from '$lib/api/userApi';
-import { type LoginResponse, type FriendLogin } from '$lib/api/apiClient';
+import { getUser } from '$lib/api/userApi';
+import { type LoginResponse } from '$lib/api/apiClient';
 import { friendStore } from './friendStore';
 import { userStore } from './userStore';
 import { avatarStore } from './avatarStore';
+import { groupStore } from './groupStore';
+import type { Group } from '../types/groups';
 import { errorToast } from '../utils/toast';
+import {
+	retrieveMissingFriends,
+	retrieveMissingGroups,
+	retrieveMissingUsers
+} from '../services/dataRetrievalService';
+import { updatePrimaryColour } from '$lib/utils/colourUtils';
 
 export const STORAGE_KEY_ACCESS_TOKEN = 'accessToken';
 export const STORAGE_KEY_REFRESH_TOKEN = 'refreshToken';
@@ -138,78 +146,6 @@ const initialState: AuthState = {
 	loading: true
 };
 
-async function retrieveMissingUsers(userIds: number[], accessToken: string): Promise<void> {
-	if (userIds.length === 0) {
-		return;
-	}
-
-	try {
-		const usersResponse = await getMultipleUsers(accessToken, userIds);
-
-		if (usersResponse.data) {
-			for (const userResponse of usersResponse.data) {
-				const storedUser = userStore.getUser(userResponse.id);
-				const user: User = {
-					id: userResponse.id,
-					username: userResponse.username,
-					avatar_version: userResponse.avatar_version || 0, // TODO: versions have to be present.
-					profile_version: userResponse.profile_version || 0,
-					avatar: undefined
-				};
-				if (storedUser) {
-					if (storedUser.avatar_version !== userResponse.avatar_version) {
-						avatarStore.setShouldUpdateAvatarForUser(userResponse.id, true);
-						// Only update avatar_version when we actually retrieve and update the avatar.
-						user.avatar_version = storedUser.avatar_version;
-					}
-				} else {
-					avatarStore.setShouldUpdateAvatarForUser(userResponse.id, true);
-				}
-				userStore.updateUser(user);
-				const storedFriend = friendStore.getStoredFriend(user.id);
-				if (storedFriend) {
-					storedFriend.user = user;
-					friendStore.updateFriend(storedFriend);
-				}
-			}
-		}
-	} catch (error) {
-		console.error('Failed to retrieve missing users:', error);
-	}
-}
-
-async function retrieveMissingFriends(friendIds: number[], accessToken: string): Promise<void> {
-	if (friendIds.length === 0) {
-		return;
-	}
-
-	const friends: Friend[] = [];
-	try {
-		const { fetchFriends } = await import('$lib/api/friendApi');
-		const friendsResponse = await fetchFriends(accessToken, friendIds);
-
-		if (friendsResponse.success && friendsResponse.data) {
-			// Update each friend's data
-			for (const friendData of friendsResponse.data) {
-				const storedUser = userStore.getUser(friendData.friend_id);
-
-				const friend: Friend = {
-					friend_id: friendData.friend_id,
-					accepted: friendData.accepted,
-					friend_version: friendData.friend_version,
-					user: storedUser || undefined
-				};
-
-				friendStore.updateFriend(friend);
-			}
-		}
-	} catch (error) {
-		console.error('Failed to retrieve missing friends data:', error);
-	}
-
-	return;
-}
-
 function createAuthStore() {
 	const { subscribe, set } = writable<AuthState>(initialState);
 
@@ -226,6 +162,7 @@ function createAuthStore() {
 		} else {
 			loginResultUser = get(userDetail);
 		}
+		updatePrimaryColour(loginResultUser.colour);
 
 		if (get(avatarVersionValue) != loginResult.avatar_version) {
 			shouldUpdateAvatar.set(true);
@@ -241,17 +178,12 @@ function createAuthStore() {
 		// Convert FriendLogin to Friend format using stored data
 		const friends: Friend[] = [];
 
-		loginResult.friends.forEach((friendLogin) => {
-			const storedUser = userStore.getUser(friendLogin.friend_id);
-			const storedFriend = friendStore.getStoredFriend(friendLogin.friend_id);
+		for (const friendLogin of loginResult.friends) {
+			const storedUser = await userStore.getUser(friendLogin.friend_id);
+			const storedFriend = await friendStore.getStoredFriend(friendLogin.friend_id);
 
 			// Check if we have stored user data or need to retrieve it
-			let user: User | undefined;
-			if (storedUser) {
-				user = {
-					...storedUser
-				};
-			} else {
+			if (!storedUser) {
 				// Mark user for retrieval
 				userIdsToRetrieve.push(friendLogin.friend_id);
 			}
@@ -262,17 +194,48 @@ function createAuthStore() {
 					friend_id: friendLogin.friend_id,
 					accepted: storedFriend.accepted,
 					friend_version: storedFriend.friend_version,
-					user: user
+					user: storedUser ?? undefined
 				});
 			} else {
 				// Mark friend and user for retrieval and add to friends list later
 				friendIdsToRetrieve.push(friendLogin.friend_id);
 				userIdsToRetrieve.push(friendLogin.friend_id);
 			}
-		});
+		}
 
 		// Update friend store with the converted friends
-		friendStore.setFriends(friends);
+		await friendStore.setFriends(friends);
+
+		// Handle groups similar to friends
+		const groups: Group[] = [];
+		const groupIdsToRetrieve: number[] = [];
+
+		console.log('going over groups');
+		for (const groupLogin of loginResult.groups) {
+			const storedGroup = await groupStore.getGroup(groupLogin.group_id);
+
+			// Only create group entry if we have stored data with matching version
+			if (storedGroup && storedGroup.group_version === groupLogin.group_version) {
+				console.log('group is added to list!');
+				groups.push(storedGroup);
+			} else {
+				// Mark group for retrieval
+				console.log('added to group retrieve', groupLogin.group_id);
+				groupIdsToRetrieve.push(groupLogin.group_id);
+				// Make sure a group entry exists.
+				if (storedGroup) {
+					groups.push(storedGroup);
+				}
+			}
+		}
+
+		// Update group store with the converted groups
+		groupStore.setGroups(groups);
+
+		// Retrieve missing group data
+		if (groupIdsToRetrieve.length > 0) {
+			await retrieveMissingGroups(groupIdsToRetrieve, loginResult.access_token);
+		}
 
 		// Retrieve missing friend data
 		if (friendIdsToRetrieve.length > 0) {
@@ -307,6 +270,7 @@ function createAuthStore() {
 		friendStore.clear();
 		userStore.clear();
 		avatarStore.clear();
+		groupStore.clear();
 		localStorage.removeItem(STORAGE_KEY_ACCESS_TOKEN);
 		localStorage.removeItem(STORAGE_KEY_REFRESH_TOKEN);
 		localStorage.removeItem(STORAGE_KEY_PROFILE_VERSION);
