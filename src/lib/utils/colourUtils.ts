@@ -28,9 +28,26 @@ export function initializeTextColour() {
   updateTextColourForPrimaryColour(primaryColour);
 }
 
+// Function to convert hex to RGB values
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
 // Function to update the primary colour
 export function updatePrimaryColour(hexColour: string) {
   const root = document.documentElement;
   root.style.setProperty('--primary-colour', hexColour);
+  
+  // Update the RGB version as well
+  const rgb = hexToRgb(hexColour);
+  if (rgb) {
+    root.style.setProperty('--primary-colour-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+  }
+  
   updateTextColourForPrimaryColour(hexColour);
 }

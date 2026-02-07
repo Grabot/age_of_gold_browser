@@ -105,6 +105,12 @@ class ApiConfig {
 		changeGroupAvatar: 'group/avatar'
 	} as const;
 
+	readonly messageEndpoints = {
+		sendMessage: 'message/send',
+		fetchMessages: 'message/fetch',
+		getMessages: 'message/chat/{chat_id}'
+	} as const;
+
 	buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {
 		let url = `${this.baseUrl}/${this.version}/${endpoint}`;
 

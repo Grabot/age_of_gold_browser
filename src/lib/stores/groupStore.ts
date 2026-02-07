@@ -42,6 +42,19 @@ function createGroupStore() {
 		let groups: Group[] = [];
 		try {
 			groups = await indexedDBHelper.getAllGroups() as Group[];
+			
+			// Load chats and associate them with groups
+			const chats = await indexedDBHelper.getAllChats() as { id: number }[];
+			const chatMap = new Map(chats.map((chat: { id: number }) => [chat.id, chat]));
+			
+			groups = groups.map(group => {
+				const chat = chatMap.get(group.group_id);
+				if (chat) {
+					return { ...group, chat };
+				}
+				// If no chat found, create one with the group_id
+				return { ...group, chat: { id: group.group_id } };
+			}) as Group[];
 		} catch (error) {
 			console.error('Error loading groups from IndexedDB:', error);
 		}
@@ -59,6 +72,10 @@ function createGroupStore() {
 						console.log('GroupData');
 						console.log(groupData);
 						const group: Group = JSON.parse(groupData);
+						// Ensure group has a chat
+						if (!group.chat) {
+							group.chat = { id: group.group_id, private: false };
+						}
 						groups.push(group);
 						// Migrate to IndexedDB
 						const GroupToStore: Group = {
@@ -72,13 +89,14 @@ function createGroupStore() {
 							last_message_read_id: group.last_message_read_id,
 							user_ids: group.user_ids,
 							admin_ids: group.admin_ids,
-							group_name: group.group_name,
-							private: group.private,
-							group_description: group.group_description,
-							group_colour: group.group_colour,
-							current_message_id: group.current_message_id
+							name: group.name,
+							description: group.description,
+							colour: group.colour,
+							current_message_id: group.current_message_id,
+							chat: group.chat
 						}; // Save everything but the avatar
 						indexedDBHelper.saveGroup(GroupToStore);
+						indexedDBHelper.saveChat(group.chat);
 					} catch (error) {
 						console.error(`Failed to parse group data for group ${groupId}:`, error);
 					}
@@ -102,14 +120,18 @@ function createGroupStore() {
 			last_message_read_id: group.last_message_read_id,
 			user_ids: group.user_ids,
 			admin_ids: group.admin_ids,
-			group_name: group.group_name,
-			private: group.private,
-			group_description: group.group_description,
-			group_colour: group.group_colour,
-			current_message_id: group.current_message_id
+			name: group.name,
+			description: group.description,
+			colour: group.colour,
+			current_message_id: group.current_message_id,
+			chat: group.chat
 		}; // Save everything but the avatar
 		if (typeof window !== 'undefined') {
 			await indexedDBHelper.saveGroup(GroupToStore);
+			// Also save the chat separately
+			if (group.chat) {
+				await indexedDBHelper.saveChat(group.chat);
+			}
 		}
 	}
 
@@ -149,6 +171,9 @@ function createGroupStore() {
 				);
 				console.log('Response from createGroup:', response);
 				if (response.success) {
+					const chatId = response.data;
+					const chat = { id: chatId, private: false };
+					
 					const group: Group = {
 						group_id: response.data,
 						unread_messages: 0,
@@ -160,12 +185,17 @@ function createGroupStore() {
 						last_message_read_id: 0,
 						user_ids: [...groupData.friendIds, groupData.meId],
 						admin_ids: [groupData.meId],
-						group_name: groupData.groupName,
-						private: false,
-						group_description: groupData.groupDescription,
-						group_colour: groupData.groupColour,
-						current_message_id: 1
+						name: groupData.groupName,
+						description: groupData.groupDescription,
+						colour: groupData.groupColour,
+						current_message_id: 1,
+						chat: chat
 					};
+					
+					// Also save the chat
+					import('./chatStore').then(({ chatStore }) => {
+						chatStore.addChat(chat);
+					});
 					console.log('Group object created:', group);
 					groupStore.updateGroup(group);
 					console.log('Group saved to storage');
@@ -320,10 +350,10 @@ function createGroupStore() {
 					if (group) {
 						const updatedGroup: Group = {
 							...group,
-							group_name: groupName !== null ? groupName : group.group_name,
-							group_description:
-								groupDescription !== null ? groupDescription : group.group_description,
-							group_colour: groupColour !== null ? groupColour : group.group_colour
+							name: groupName !== null ? groupName : group.name,
+							description:
+								groupDescription !== null ? groupDescription : group.description,
+							colour: groupColour !== null ? groupColour : group.colour
 						};
 						await saveGroupToStorage(updatedGroup);
 						update((state) => {
@@ -331,9 +361,9 @@ function createGroupStore() {
 							if (!oldGroup) {
 								return { ...state, groups: [...state.groups, updatedGroup] };
 							} else {
-								oldGroup.group_name = updatedGroup.group_name;
-								oldGroup.group_description = updatedGroup.group_description;
-								oldGroup.group_colour = updatedGroup.group_colour;
+								oldGroup.name = updatedGroup.name;
+								oldGroup.description = updatedGroup.description;
+								oldGroup.colour = updatedGroup.colour;
 								return { ...state, groups: [...state.groups] };
 							}
 						});
@@ -424,6 +454,7 @@ function createGroupStore() {
 			set(initialState);
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearGroups();
+				await indexedDBHelper.clearChats();
 				
 				// Clear localStorage as fallback
 				const keys = Object.keys(localStorage);

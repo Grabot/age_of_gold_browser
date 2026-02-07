@@ -7,6 +7,7 @@
 	export let friend: Friend;
 	export let onClose: () => void;
 
+	// TODO: Change the style to the colour of the friend instead of the users colour.
 	async function handleRemoveFriend() {
 		try {
 			const store = friendStore as any;

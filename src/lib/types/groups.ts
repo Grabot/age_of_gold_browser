@@ -1,3 +1,5 @@
+import type { Friend } from "./friend";
+
 export interface Group {
 	group_id: number;
 	unread_messages: number;
@@ -9,10 +11,17 @@ export interface Group {
 	last_message_read_id: number;
 	user_ids: number[];
 	admin_ids: number[];
-	group_name: string;
-	private: boolean;
-	group_description: string;
-	group_colour: string;
+	name: string;
+	description: string;
+	colour: string;
 	current_message_id: number;
 	avatar?: string;
+	chat: Chat;
+}
+
+export interface Chat {
+	id: number;
+	private: boolean;
+	group?: Group;
+	friend?: Friend;
 }

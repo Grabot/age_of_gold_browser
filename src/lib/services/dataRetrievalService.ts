@@ -1,12 +1,13 @@
 import { get } from 'svelte/store';
 import type { User } from '../types/user';
 import type { Friend } from '../types/friend';
-import type { Group } from '../types/groups';
+import type { Group, Chat } from '../types/groups';
 import { getMultipleUsers } from '$lib/api/userApi';
 import { userStore } from '../stores/userStore';
 import { avatarStore } from '../stores/avatarStore';
 import { friendStore } from '../stores/friendStore';
 import { groupStore } from '../stores/groupStore';
+import { chatStore } from '../stores/chatStore';
 
 export async function retrieveMissingUsers(userIds: number[], accessToken: string): Promise<void> {
 	if (userIds.length === 0) {
@@ -58,8 +59,8 @@ export async function retrieveMissingFriends(
 		return;
 	}
 
-	const friends: Friend[] = [];
 	try {
+		// TODO: Move imports to top level?
 		const { fetchFriends } = await import('$lib/api/friendApi');
 		const friendsResponse = await fetchFriends(accessToken, friendIds);
 
@@ -69,12 +70,25 @@ export async function retrieveMissingFriends(
 			// Update each friend's data
 			for (const friendData of friendsResponse.data) {
 				const storedUser = await userStore.getUser(friendData.friend_id);
+				let storedChat;
+				if (friendData.accepted && friendData.chat_id) {
+					storedChat = await chatStore.getChat(friendData.chat_id);
+					if (!storedChat) {
+						storedChat = {
+							id: friendData.chat_id,
+							private: true,
+						};
+						await chatStore.addChat(storedChat);
+					}
+				}
 
 				const friend: Friend = {
 					friend_id: friendData.friend_id,
 					accepted: friendData.accepted,
 					friend_version: friendData.friend_version,
-					user: storedUser || undefined
+					chat_id: friendData.chat_id,
+					user: storedUser || undefined,
+					chat: storedChat || undefined
 				};
 
 				await friendStore.updateFriend(friend);
@@ -106,6 +120,7 @@ export async function retrieveMissingGroups(
 			for (const groupData of groupsResponse.data) {
 				console.log('updating group');
 				console.log(groupData);
+				
 				const userGroup: Group = {
 					group_id: groupData.group_id,
 					unread_messages: groupData.unread_messages,
@@ -117,13 +132,28 @@ export async function retrieveMissingGroups(
 					last_message_read_id: groupData.last_message_read_id,
 					user_ids: groupData.user_ids,
 					admin_ids: groupData.admin_ids,
-					group_name: groupData.group_name,
-					private: groupData.private,
-					group_description: groupData.group_description,
-					group_colour: groupData.group_colour,
+					name: groupData.name,
+					description: groupData.description,
+					colour: groupData.colour,
 					current_message_id: groupData.current_message_id,
-					avatar: undefined
+					avatar: undefined,
+					chat: { 
+						id: groupData.group_id,
+						private: false
+					}
 				};
+				
+				// Create chat with group reference and private field
+				// Note: private field comes from API response, moved from Group to Chat
+				const chat: Chat = {
+					id: groupData.group_id,
+					private: false,
+					group: userGroup
+				};
+				await chatStore.addChat(chat);
+				
+				// Update group with chat reference
+				userGroup.chat = chat;
 
 				const storedGroup = await groupStore.getGroup(groupData.group_id);
 

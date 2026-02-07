@@ -155,6 +155,7 @@ function createFriendStore() {
 						friend_id: friendData.friendId,
 						accepted: null, // I sent this request
 						friend_version: 1,
+						chat_id: null, // not yet accepted
 						user: user
 					};
 
@@ -264,13 +265,14 @@ function createFriendStore() {
 					profile_version: friendData.profile_version
 				};
 
-				// Create friend object
-				const newFriend: Friend = {
-					friend_id: friendData.friend_id,
-					accepted: false,
-					friend_version: 1,
-					user: user
-				};
+			// Create friend object
+			const newFriend: Friend = {
+				friend_id: friendData.friend_id,
+				accepted: false,
+				friend_version: 1,
+				chat_id: null,
+				user: user
+			};
 
 				// Save to storage
 				saveFriendToStorage(newFriend);
@@ -389,6 +391,33 @@ function createFriendStore() {
 				return { ...state, friends: updatedFriends };
 			});
 			return true;
+		},
+		getFriendByChatId: async (chatId: number): Promise<Friend | null> => {
+			// First check memory store
+			const state = get({ subscribe });
+			let friend = state.friends.find((f) => f.chat_id === chatId);
+			
+			if (friend) {
+				return friend;
+			}
+			
+			// Try to get from IndexedDB
+			const allFriends = await indexedDBHelper.getAllFriends() as Friend[];
+			friend = allFriends.find((f) => f.chat_id === chatId);
+			
+			if (friend) {
+				// Add to memory store if found
+				update((state) => {
+					const exists = state.friends.find((f) => f.friend_id === friend!.friend_id);
+					if (!exists) {
+						return { ...state, friends: [...state.friends, friend!] };
+					}
+					return state;
+				});
+				return friend;
+			}
+			
+			return null;
 		},
 		getStoredFriend,
 		removeFriendFromStorage,

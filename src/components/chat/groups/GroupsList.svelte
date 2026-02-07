@@ -17,7 +17,7 @@
 
 	function getBackgroundColor(group: Group) {
 		if (!colourCache.has(group.group_id)) {
-			colourCache.set(group.group_id, group.group_colour || getRandomColour());
+			colourCache.set(group.group_id, group.colour || getRandomColour());
 		}
 		return colourCache.get(group.group_id)!;
 	}
@@ -39,11 +39,9 @@
 	onMount(() => {
 		const unsubscribe = groupStore.subscribe(async (storeState) => {
 			if (!storeState.loading) {
-				console.log('Processing groups:', storeState.groups);
 				for (const group of storeState.groups) {
 					const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(group.group_id);
 					if (shouldUpdate) {
-						console.log('it is decided that it should update the avatar!');
 						await updateGroupAvatar(group);
 					} else {
 						await checkGroupAvatar(group);
@@ -86,7 +84,7 @@
 				style="--bg: {getBackgroundColor(group)}; --text: {getTextColourForBackground(getBackgroundColor(group))}"
 				role="button"
 				tabindex="0"
-				aria-label="View details for group {group.group_name || group.group_id}"
+				aria-label="View details for group {group.name || group.group_id}"
 				onclick={() => {
 					selectedGroup = group;
 					showDetailModal = true;
@@ -100,13 +98,13 @@
 			>
 				<div class="avatar">
 					{#if group.avatar}
-						<img src={group.avatar} alt={group.group_name} />
+						<img src={group.avatar} alt={group.name} />
 					{:else}
-						<span class="initial">{getInitial(group.group_name || '')}</span>
+						<span class="initial">{getInitial(group.name || '')}</span>
 					{/if}
 				</div>
 				<div class="info">
-					<span class="group-name">{group.group_name || 'Unnamed Group'}</span>
+					<span class="group-name">{group.name || 'Unnamed Group'}</span>
 				</div>
 				{#if group.unread_messages > 0}
 					<div class="unread-badge">{group.unread_messages}</div>

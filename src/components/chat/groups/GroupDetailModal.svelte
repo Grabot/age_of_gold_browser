@@ -22,6 +22,7 @@
 	export let group: Group;
 	export let onClose: () => void;
 
+	// TODO: Make group detail full screen in mobile mode?
 	let currentUserId: number | null = null;
 	let isCurrentUserAdmin = false;
 	let showAddMemberModal = false;
@@ -152,10 +153,10 @@
 		isCurrentUserAdmin = currentUserId ? group.admin_ids.includes(currentUserId) : false;
 
 		// Initialize edit form fields
-		editGroupName = group.group_name || '';
-		editGroupDescription = group.group_description || '';
-        editGroupColour = group.group_colour || 'var(--primary-colour)';
-        groupColor = group.group_colour || 'var(--primary-colour)';
+		editGroupName = group.name || '';
+		editGroupDescription = group.description || '';
+        editGroupColour = group.colour || 'var(--primary-colour)';
+        groupColor = group.colour || 'var(--primary-colour)';
 		textColor = getTextColorForBackground(groupColor);
 	}
 
@@ -333,13 +334,13 @@
 				<!-- Avatar on the left -->
 				<div class="group-avatar-container">
 					{#if group.avatar}
-						<img class="group-avatar" src={group.avatar} alt={group.group_name} />
+						<img class="group-avatar" src={group.avatar} alt={group.name} />
 					{:else}
 						<div
 							class="group-avatar"
-							style="background-color: {group.group_colour || getRandomColour()}"
+							style="background-color: {group.colour || getRandomColour()}"
 						>
-							{getInitial(group.group_name || 'G')}
+							{getInitial(group.name || 'G')}
 						</div>
 					{/if}
 				</div>
@@ -379,8 +380,8 @@
 
 			<div class="group-details">
 				<div class="group-info">
-					<h4>{group.group_name}</h4>
-					<p class="group-description">{group.group_description || 'No description'}</p>
+					<h4>{group.name}</h4>
+					<p class="group-description">{group.description || 'No description'}</p>
 				</div>
 
 				<div class="group-meta">

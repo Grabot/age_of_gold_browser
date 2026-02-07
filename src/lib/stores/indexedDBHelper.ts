@@ -1,10 +1,12 @@
 import { writable } from 'svelte/store';
 
 export const DB_NAME = 'AgeOfGoldDB';
-export const DB_VERSION = 3;
+export const DB_VERSION = 5; // Incremented for chats
 export const USER_STORE = 'users';
 export const FRIEND_STORE = 'friends';
 export const GROUP_STORE = 'groups';
+export const CHAT_STORE = 'chats';
+export const MESSAGE_STORE = 'messages';
 export const USER_AVATAR_STORE = 'userAvatars';
 export const GROUP_AVATAR_STORE = 'groupAvatars';
 export const SHOULD_UPDATE_USER_AVATAR_STORE = 'shouldUpdateUserAvatars';
@@ -36,6 +38,8 @@ const STORES: StoreSchema[] = [
     { name: USER_STORE, keyPath: 'id' },
     { name: FRIEND_STORE, keyPath: 'friend_id' },
     { name: GROUP_STORE, keyPath: 'group_id' },
+    { name: CHAT_STORE, keyPath: 'id' },
+    { name: MESSAGE_STORE, keyPath: 'id', indexes: [{ name: 'chat_id', keyPath: 'chat_id', unique: false }] },
     { name: USER_AVATAR_STORE, keyPath: 'userId' },
     { name: GROUP_AVATAR_STORE, keyPath: 'groupId' },
     { name: SHOULD_UPDATE_USER_AVATAR_STORE, keyPath: 'userId' },
@@ -238,6 +242,25 @@ function createIndexedDBHelper() {
         }
     }
 
+    async function getByIndex<T>(storeName: string, indexName: string, key: IDBValidKey): Promise<T[]> {
+        try {
+            const database = await ensureDB();
+            const transaction = database.transaction(storeName, 'readonly');
+            const store = transaction.objectStore(storeName);
+            const index = store.index(indexName);
+
+            const request = index.getAll(key);
+
+            return new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(new Error(`Failed to get from ${storeName} by index`));
+            });
+        } catch (error) {
+            console.error(`Error getting from ${storeName} by index:`, error);
+            return [];
+        }
+    }
+
     return {
         subscribe,
         initDB,
@@ -295,7 +318,26 @@ function createIndexedDBHelper() {
         },
 
         removeShouldUpdateGroupAvatar: (groupId: number) => remove(SHOULD_UPDATE_GROUP_AVATAR_STORE, groupId),
-        clearShouldUpdateGroupAvatars: () => clear(SHOULD_UPDATE_GROUP_AVATAR_STORE)
+        clearShouldUpdateGroupAvatars: () => clear(SHOULD_UPDATE_GROUP_AVATAR_STORE),
+
+        saveMessage: (message: any) => save(MESSAGE_STORE, message),
+        getMessage: async (id: number) => await get(MESSAGE_STORE, id),
+        getAllMessages: async () => await getAll(MESSAGE_STORE),
+        getMessagesByChatId: async (chatId: number) => await getByIndex(MESSAGE_STORE, 'chat_id', chatId),
+        removeMessage: (id: number) => remove(MESSAGE_STORE, id),
+        clearMessagesForChat: async (chatId: number) => {
+            const messages = await getByIndex<any>(MESSAGE_STORE, 'chat_id', chatId);
+            for (const message of messages) {
+                await remove(MESSAGE_STORE, message.id);
+            }
+        },
+        clearAllMessages: () => clear(MESSAGE_STORE),
+
+        saveChat: (chat: any) => save(CHAT_STORE, chat),
+        getChat: async (id: number) => await get(CHAT_STORE, id),
+        getAllChats: async () => await getAll(CHAT_STORE),
+        removeChat: (id: number) => remove(CHAT_STORE, id),
+        clearChats: () => clear(CHAT_STORE)
     };
 }
 

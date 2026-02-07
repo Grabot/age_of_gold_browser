@@ -26,9 +26,9 @@
 
 	// Initialize form fields when group changes
 	$: {
-		editGroupName = group.group_name || '';
-		editGroupDescription = group.group_description || '';
-        editGroupColour = group.group_colour || 'var(--primary-colour)';
+		editGroupName = group.name || '';
+		editGroupDescription = group.description || '';
+        editGroupColour = group.colour || 'var(--primary-colour)';
 	}
 
 	async function handleSave() {
@@ -69,7 +69,7 @@
 	<div class="modal-content">
 		<div
 			class="modal-header"
-			style="background-color: {group.group_colour || '#0b9476'}; color: {textColor};"
+			style="background-color: {group.colour || '#0b9476'}; color: {textColor};"
 		>
 			<h3>Edit Group</h3>
 			<button class="close-btn" on:click={onClose}>×</button>
@@ -120,7 +120,7 @@
 					<button
 						type="submit"
 						class="save-btn"
-						style="background-color: {group.group_colour || '#0b9476'}; color: {textColor};"
+						style="background-color: {group.colour || '#0b9476'}; color: {textColor};"
 						>Save Changes</button
 					>
 					<button type="button" class="cancel-btn" on:click={() => onClose()}>Cancel</button>

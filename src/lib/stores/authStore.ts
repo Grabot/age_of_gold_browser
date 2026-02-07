@@ -22,6 +22,7 @@ import {
 	retrieveMissingUsers
 } from '../services/dataRetrievalService';
 import { updatePrimaryColour } from '$lib/utils/colourUtils';
+import { chatStore } from './chatStore';
 
 export const STORAGE_KEY_ACCESS_TOKEN = 'accessToken';
 export const STORAGE_KEY_REFRESH_TOKEN = 'refreshToken';
@@ -190,11 +191,24 @@ function createAuthStore() {
 
 			// Only create friend entry if we have stored data with matching version
 			if (storedFriend && storedFriend.friend_version === friendLogin.friend_version) {
+				let storedChat;
+				if (storedFriend.chat_id) {
+					storedChat = await chatStore.getChat(storedFriend.chat_id);
+					if (!storedChat) {
+						storedChat = {
+							id: storedFriend.chat_id,
+							private: true,
+						}
+					}
+					storedChat.friend = storedFriend;
+				}
 				friends.push({
 					friend_id: friendLogin.friend_id,
 					accepted: storedFriend.accepted,
 					friend_version: storedFriend.friend_version,
-					user: storedUser ?? undefined
+					chat_id: storedFriend.chat_id,
+					user: storedUser ?? undefined,
+					chat: storedChat ?? undefined
 				});
 			} else {
 				// Mark friend and user for retrieval and add to friends list later
@@ -216,7 +230,15 @@ function createAuthStore() {
 
 			// Only create group entry if we have stored data with matching version
 			if (storedGroup && storedGroup.group_version === groupLogin.group_version) {
-				console.log('group is added to list!');
+				let storedChat = await chatStore.getChat(storedGroup.group_id);
+				if (!storedChat) {
+					storedChat = {
+						id: storedGroup.group_id,
+						private: false,
+					}
+				}
+				storedChat.group = storedGroup;
+				storedGroup.chat = storedChat;
 				groups.push(storedGroup);
 			} else {
 				// Mark group for retrieval

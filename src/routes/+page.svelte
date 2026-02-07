@@ -197,7 +197,7 @@
 		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 		border: 1px solid #d4b18c;
 		position: absolute;
-		top: 50%;
+		top: 20%;
 		right: 5%;
 		z-index: 10;
 	}

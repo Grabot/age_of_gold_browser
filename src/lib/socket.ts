@@ -136,6 +136,7 @@ export function onFriendRequestAcceptedEvent(
 		colour: string;
 		accepted: boolean;
 		friend_version: number;
+		chat_id: number;
 	}) => void
 ) {
 	if (socket) {
@@ -188,9 +189,9 @@ export function offFriendRemovedEvent() {
 export function onGroupCreatedEvent(
 	callback: (data: {
 		group_id: number;
-		group_name: string;
-		group_description: string;
-		group_colour: string;
+		name: string;
+		description: string;
+		colour: string;
 		creator_id: number;
 		creator_username: string;
 	}) => void
@@ -233,9 +234,9 @@ export function offGroupMemberLeftEvent() {
 
 export interface GroupUpdateEventData {
 	group_id: number;
-	group_name: string | undefined;
-	group_description: string | undefined;
-	group_colour: string | undefined;
+	name: string | undefined;
+	description: string | undefined;
+	colour: string | undefined;
 }
 export function onGroupUpdateEvent(callback: (data: GroupUpdateEventData) => void) {
 	if (socket) {
@@ -297,3 +298,25 @@ export function offGroupAvatarChangedEvent() {
 		socket.off('group_avatar_updated');
 	}
 }
+
+export interface MessageData {
+	id: number;
+	chat_id: number;
+	sender_id: number;
+	content: string;
+	created_at: string;
+	message_type: number;
+}
+
+export function onMessageReceivedEvent(callback: (data: MessageData) => void) {
+	if (socket) {
+		socket.on('message_received', callback);
+	}
+}
+
+export function offMessageReceivedEvent() {
+	if (socket) {
+		socket.off('message_received');
+	}
+}
+

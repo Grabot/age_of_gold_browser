@@ -31,9 +31,9 @@ export async function createGroup(
 		endpoint: API.groupEndpoints.createGroup,
 		accessToken,
 		body: {
-			group_name: groupName,
-			group_description: groupDescription,
-			group_colour: groupColour,
+			name: groupName,
+			description: groupDescription,
+			colour: groupColour,
 			friend_ids: friendIds
 		}
 	});
@@ -116,9 +116,9 @@ export async function updateGroup(
 		accessToken,
 		body: {
 			group_id: groupId,
-			group_name: groupName,
-			group_description: groupDescription,
-			group_colour: groupColour
+			name: groupName,
+			description: groupDescription,
+			colour: groupColour
 		}
 	});
 }

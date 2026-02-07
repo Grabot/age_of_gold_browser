@@ -59,7 +59,8 @@
 	import CreateGroupModal from '../components/chat/groups/CreateGroupModal.svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { groupStore } from '$lib/stores/groupStore';
-	import type { Group } from '$lib/types/groups';
+	import { chatStore } from '$lib/stores/chatStore';
+	import type { Group, Chat } from '$lib/types/groups';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 	import { getRandomColour } from '$lib/utils/groupUtils';
 
@@ -165,14 +166,25 @@
 			profile_version: data.profile_version,
 			colour: data.colour
 		};
+		const updatedChat = {
+			id: data.chat_id,
+			private: true
+		}
 		const updatedFriend = {
 			friend_id: data.friend_id,
 			accepted: true,
 			friend_version: data.friend_version,
-			user: updatedUser
+			chat_id: data.chat_id,
+			user: updatedUser,
+			chat: updatedChat
 		};
+		console.log("ACCEPTED!");
+		console.log(updatedFriend);
+		console.log(updatedUser);
+		console.log(updatedChat);
 		friendStore.updateFriend(updatedFriend);
 		userStore.updateUser(updatedUser);
+		chatStore.updateChat(updatedChat);
 	}
 
 	function handleFriendRequestRejectedEvent(data: any) {
@@ -191,7 +203,12 @@
 	}
 
 	function handleGroupCreatedEvent(data: any) {
-		successToast(`New group created: ${data.group_name}`);
+		successToast(`New group created: ${data.name}`);
+		const chatId = data.group_id;
+		const chat = { 
+			id: chatId,
+			private: data.private
+		};
 		const group: Group = {
 			group_id: data.group_id,
 			unread_messages: 0,
@@ -203,16 +220,17 @@
 			last_message_read_id: data.last_message_read_id,
 			user_ids: data.user_ids,
 			admin_ids: data.admin_ids,
-			group_name: data.group_name,
-			private: data.private,
-			group_description: data.group_description,
-			group_colour: data.group_colour,
-			current_message_id: data.current_message_id
+			name: data.name,
+			description: data.description,
+			colour: data.colour,
+			current_message_id: data.current_message_id,
+			chat: chat
 		};
 		console.log("Group created event received", );
 		joinGroup(group.group_id);
 		setTimeout(() => {
 			groupStore.updateGroup(group);
+			chatStore.addChat(chat);
 		}, 1000);
 	}
 
@@ -266,22 +284,22 @@
 
 		let updatedGroup: Group = group;
 
-		if (data.group_name) {
+		if (data.name) {
 			updatedGroup = {
 				...updatedGroup,
-				group_name: data.group_name
+				name: data.name
 			};
 		}
-		if (data.group_description) {
+		if (data.description) {
 			updatedGroup = {
 				...updatedGroup,
-				group_description: data.group_description
+				description: data.description
 			};
 		}
-		if (data.group_colour) {
+		if (data.colour) {
 			updatedGroup = {
 				...updatedGroup,
-				group_colour: data.group_colour
+				colour: data.colour
 			};
 		}
 		updatedGroup.group_version += 1;
