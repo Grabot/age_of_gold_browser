@@ -6,7 +6,7 @@
 	import { avatarStore } from '$lib/stores/avatarStore';
 	import { getRandomColour, getInitial } from '$lib/utils/groupUtils';
 	import { getTextColourForBackground } from '$lib/utils/colourUtils';
-	import { updateGroupAvatar } from '$lib/utils/avatarUtils';
+	import { updateGroupAvatar, checkGroupAvatar } from '$lib/utils/avatarUtils';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 
 	let selectedGroup: Group | null = null;
@@ -16,31 +16,17 @@
 	const colourCache = new Map<number, string>();
 
 	function getBackgroundColor(group: Group) {
-		if (!colourCache.has(group.group_id)) {
-			colourCache.set(group.group_id, group.colour || getRandomColour());
+		if (!colourCache.has(group.chat_id)) {
+			colourCache.set(group.chat_id, group.colour || getRandomColour());
 		}
-		return colourCache.get(group.group_id)!;
-	}
-
-	async function checkGroupAvatar(group: Group) {
-		console.log('Checking group avatar for group:', group.group_id);
-		if (!group.avatar) {
-			const avatarGroup = await avatarStore.getGroupAvatar(group.group_id);
-			if (avatarGroup) {
-				group.avatar = avatarGroup;
-				groupStore.updateGroupNotSave(group);
-			} else {
-				console.log('No avatar found for group:', group.group_id);
-				await updateGroupAvatar(group);
-			}
-		}
+		return colourCache.get(group.chat_id)!;
 	}
 
 	onMount(() => {
 		const unsubscribe = groupStore.subscribe(async (storeState) => {
 			if (!storeState.loading) {
 				for (const group of storeState.groups) {
-					const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(group.group_id);
+					const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(group.chat_id);
 					if (shouldUpdate) {
 						await updateGroupAvatar(group);
 					} else {
@@ -54,7 +40,7 @@
 			events.forEach(async (event) => {
 				console.log('socket event', event);
 				if (event.type === 'group_avatar_updated') {
-					const group = $groupStore.groups.find((g) => g.group_id === event.data?.group_id);
+					const group = $groupStore.groups.find((g) => g.chat_id === event.data?.chat_id);
 					if (group) {
 						if (group.avatar_version !== event.data.avatar_version) {
 							const newGroup = await updateGroupAvatar(group);
@@ -78,13 +64,13 @@
 
 <div class="groups-list">
 	{#if $groupStore.groups.length > 0}
-		{#each $groupStore.groups as group (group.group_id)}
+		{#each $groupStore.groups as group (group.chat_id)}
 			<div
 				class="group-item"
 				style="--bg: {getBackgroundColor(group)}; --text: {getTextColourForBackground(getBackgroundColor(group))}"
 				role="button"
 				tabindex="0"
-				aria-label="View details for group {group.name || group.group_id}"
+				aria-label="View details for group {group.name || group.chat_id}"
 				onclick={() => {
 					selectedGroup = group;
 					showDetailModal = true;

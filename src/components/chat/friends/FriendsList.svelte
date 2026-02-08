@@ -5,21 +5,15 @@
 	import type { Friend } from '$lib/types/friend';
 	import { getInitial, getRandomColour } from '$lib/utils/groupUtils';
 	import { getTextColourForBackground } from '$lib/utils/colourUtils';
-	import { fr } from 'zod/locales';
 
 	let selectedFriend: Friend | null = null;
 	let showDetailModal = false;
 
 	async function handleAcceptFriend(friendId: number) {
 		try {
-			const store = friendStore as any;
-			if (store.acceptFriendRequest) {
-				const success = await store.acceptFriendRequest(friendId);
-				if (!success) {
-					errorToast('Failed to accept friend request');
-				}
-			} else {
-				errorToast('acceptFriendRequest method not found');
+			const success = await friendStore.acceptFriendRequest(friendId);
+			if (!success) {
+				errorToast('Failed to accept friend request');
 			}
 		} catch (error) {
 			errorToast(error instanceof Error ? error.message : 'Unknown error');
@@ -28,14 +22,9 @@
 
 	async function handleRejectFriend(friendId: number) {
 		try {
-			const store = friendStore as any;
-			if (store.rejectFriendRequest) {
-				const success = await store.rejectFriendRequest(friendId);
-				if (!success) {
-					errorToast('Failed to reject friend request');
-				}
-			} else {
-				errorToast('rejectFriendRequest method not found');
+			const success = await friendStore.rejectFriendRequest(friendId);
+			if (!success) {
+				errorToast('Failed to reject friend request');
 			}
 		} catch (error) {
 			errorToast(error instanceof Error ? error.message : 'Unknown error');
@@ -44,14 +33,9 @@
 
 	async function handleCancelFriendRequest(friendId: number) {
 		try {
-			const store = friendStore as any;
-			if (store.cancelFriendRequest) {
-				const success = await store.cancelFriendRequest(friendId);
-				if (!success) {
-					errorToast('Failed to cancel friend request');
-				}
-			} else {
-				errorToast('cancelFriendRequest method not found');
+			const success = await friendStore.cancelFriendRequest(friendId);
+			if (!success) {
+				errorToast('Failed to cancel friend request');
 			}
 		} catch (error) {
 			errorToast(error instanceof Error ? error.message : 'Unknown error');

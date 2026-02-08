@@ -1,4 +1,3 @@
-import type { Chat } from './groups';
 import type { User } from './user';
 
 export interface Friend {
@@ -6,6 +5,6 @@ export interface Friend {
 	accepted: boolean | null;
 	friend_version: number;
 	chat_id: number | null;
+	message_version: number;
 	user?: User;
-	chat?: Chat;
 }

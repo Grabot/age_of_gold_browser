@@ -18,15 +18,13 @@
 	} from '$lib/types/contact';
 	import type { ChatMessage } from '$lib/types/message';
 	import { onMount } from 'svelte';
+	import { pushState } from '$app/navigation';
 	import { avatarStore } from '$lib/stores/avatarStore';
-	import { updateGroupAvatar, updateUserAvatar } from '$lib/utils/avatarUtils';
+	import { updateGroupAvatar, updateUserAvatar, checkUserAvatar, checkGroupAvatar } from '$lib/utils/avatarUtils';
 	import { errorToast } from '$lib/utils/toast';
 	import { fetchMessages, sendMessage, type FetchMessagesResponse, type SendMessageResponse } from '$lib/api/messageApi';
 	import { get } from 'svelte/store';
 	import type { User } from '$lib/types/user';
-	import type { Friend } from '$lib/types/friend';
-	import { userStore } from '$lib/stores/userStore';
-	import type { Group } from '$lib/types/groups';
 
 	export let onClose: () => void;
 
@@ -42,9 +40,6 @@
 	$: isMobile = innerWidth < 768 || innerHeight > innerWidth;
 	$: showSidebar = !isMobile || showSidebarOnMobile;
 	$: showMessages = !isMobile || !showSidebarOnMobile;
-
-	// Check if selected contact is a group
-	$: isSelectedGroup = selectedContact ? isGroup(selectedContact) : false;
 
 	// Reactive variables for selected contact properties - these update automatically when selectedContact changes
 	$: selectedChatId = selectedContact ? getContactChatId(selectedContact) : null;
@@ -66,8 +61,7 @@
 		
 		if (isGroup(contact)) {
 			if (contact.avatar) return;
-			
-			const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(contact.group_id);
+			const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(contact.chat_id);
 			if (shouldUpdate) {
 				const updatedGroup = await updateGroupAvatar(contact);
 				if (updatedGroup) {
@@ -119,13 +113,12 @@
 	}
 
 	function setupBackButtonCapture() {
-		// Push a new history state when chat opens
-		if (window.history && window.history.pushState) {
-			window.history.pushState({ chatOpen: true }, '', window.location.href);
-		}
+		// Push a new history state when chat opens using SvelteKit's pushState
+		pushState('', { chatOpen: true });
 	}
 
 	async function loadMessages() {
+		console.log("loading messages");
 		const chatId = getChatId();
 		const accessToken = get(accessTokenValue);
 		
@@ -191,40 +184,6 @@
 		}
 	}
 
-	async function checkUserAvatar(friend: Friend) {
-		if (friend.user) {
-			if (!friend.user.avatar) {
-				const avatarUser = await avatarStore.getAvatar(friend.friend_id);
-				if (avatarUser) {
-					friend.user.avatar = avatarUser;
-					friendStore.updateFriend(friend);
-					userStore.updateUser(friend.user);
-				} else {
-					console.log('No avatar found for user:', friend.friend_id);
-					const updatedUser = await updateUserAvatar(friend.user);
-					if (updatedUser) {
-						friend.user = updatedUser;
-						friendStore.updateFriend(friend);
-					}
-				}
-			}
-		}
-	}
-
-	async function checkGroupAvatar(group: Group) {
-		console.log('Checking group avatar for group:', group.group_id);
-		if (!group.avatar) {
-			const avatarGroup = await avatarStore.getGroupAvatar(group.group_id);
-			if (avatarGroup) {
-				group.avatar = avatarGroup;
-				groupStore.updateGroupNotSave(group);
-			} else {
-				console.log('No avatar found for group:', group.group_id);
-				await updateGroupAvatar(group);
-			}
-		}
-	}
-	
 	onMount(() => {
 		// Set initial dimensions
 		innerWidth = window.innerWidth;
@@ -264,7 +223,7 @@
 		const unsubscribeGroups = groupStore.subscribe(async (storeState) => {
 			if (!storeState.loading) {
 				for (const group of storeState.groups) {
-					const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(group.group_id);
+					const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(group.chat_id);
 					if (shouldUpdate) {
 						await updateGroupAvatar(group);
 					} else {
@@ -289,10 +248,7 @@
 	
 	// Get groups as contacts
 	$: groupContacts = $groupStore.groups as Contact[];
-	
-	// All contacts combined
-	$: allContacts = [...friendContacts, ...groupContacts];
-	
+
 	$: currentMessages = selectedChatId 
 		? ($messageStore.messages.get(selectedChatId) || [])
 		: [];
@@ -534,7 +490,6 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 4px;
-		transition: background-color 0.2s ease;
 	}
 
 	.close-btn:hover {
@@ -574,12 +529,10 @@
 		overflow: hidden;
 		margin-bottom: 0.5rem;
 		border: 2px solid transparent;
-		transition: all 0.2s ease;
 	}
 
 	.chat-item:hover {
 		filter: brightness(0.92);
-		transform: translateX(2px);
 	}
 
 	.chat-item.selected {
@@ -598,7 +551,6 @@
 		flex-shrink: 0;
 		overflow: hidden;
 		background: rgba(255, 255, 255, 0.2);
-		border-radius: 50%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -669,7 +621,6 @@
 		justify-content: space-between;
 		gap: 0.75rem;
 		border-bottom: 1px solid #e9ecef;
-		transition: background-color 0.3s ease, color 0.3s ease;
 		height: 64px;
 		min-height: 64px;
 	}
@@ -683,7 +634,6 @@
 	.chat-header-avatar {
 		width: 40px;
 		height: 40px;
-		border-radius: 50%;
 		overflow: hidden;
 		background: rgba(255, 255, 255, 0.2);
 		display: flex;
@@ -809,7 +759,6 @@
 		border-radius: 24px;
 		font-size: 0.95rem;
 		outline: none;
-		transition: border-color 0.2s ease;
 	}
 
 	.message-input-container input:focus {
@@ -830,7 +779,6 @@
 		font-weight: 600;
 		font-size: 0.9rem;
 		cursor: pointer;
-		transition: all 0.2s ease;
 	}
 
 	.send-btn:hover:not(:disabled) {
@@ -882,7 +830,6 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 50%;
-		transition: background-color 0.2s ease;
 		width: 36px;
 		height: 36px;
 		flex-shrink: 0;

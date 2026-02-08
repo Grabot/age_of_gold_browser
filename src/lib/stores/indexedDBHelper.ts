@@ -1,11 +1,10 @@
 import { writable } from 'svelte/store';
 
 export const DB_NAME = 'AgeOfGoldDB';
-export const DB_VERSION = 5; // Incremented for chats
+export const DB_VERSION = 6; // Incremented for chats
 export const USER_STORE = 'users';
 export const FRIEND_STORE = 'friends';
 export const GROUP_STORE = 'groups';
-export const CHAT_STORE = 'chats';
 export const MESSAGE_STORE = 'messages';
 export const USER_AVATAR_STORE = 'userAvatars';
 export const GROUP_AVATAR_STORE = 'groupAvatars';
@@ -37,8 +36,7 @@ interface GroupAvatarUpdate {
 const STORES: StoreSchema[] = [
     { name: USER_STORE, keyPath: 'id' },
     { name: FRIEND_STORE, keyPath: 'friend_id' },
-    { name: GROUP_STORE, keyPath: 'group_id' },
-    { name: CHAT_STORE, keyPath: 'id' },
+    { name: GROUP_STORE, keyPath: 'chat_id' },
     { name: MESSAGE_STORE, keyPath: 'id', indexes: [{ name: 'chat_id', keyPath: 'chat_id', unique: false }] },
     { name: USER_AVATAR_STORE, keyPath: 'userId' },
     { name: GROUP_AVATAR_STORE, keyPath: 'groupId' },
@@ -332,12 +330,6 @@ function createIndexedDBHelper() {
             }
         },
         clearAllMessages: () => clear(MESSAGE_STORE),
-
-        saveChat: (chat: any) => save(CHAT_STORE, chat),
-        getChat: async (id: number) => await get(CHAT_STORE, id),
-        getAllChats: async () => await getAll(CHAT_STORE),
-        removeChat: (id: number) => remove(CHAT_STORE, id),
-        clearChats: () => clear(CHAT_STORE)
     };
 }
 

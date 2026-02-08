@@ -4,16 +4,16 @@ import type { Friend } from './friend';
 export type Contact = Group | Friend;
 
 export function isGroup(contact: Contact): contact is Group {
-	return 'group_id' in contact;
+	return 'group_version' in contact;
 }
 
 export function isFriend(contact: Contact): contact is Friend {
-	return 'friend_id' in contact;
+	return 'friend_version' in contact;
 }
 
 export function getContactId(contact: Contact): number {
 	if (isGroup(contact)) {
-		return contact.group_id;
+		return contact.chat_id;
 	}
 	return contact.friend_id;
 }
@@ -41,7 +41,7 @@ export function getContactColour(contact: Contact): string | undefined {
 
 export function getContactChatId(contact: Contact): number | null {
 	if (isGroup(contact)) {
-		return contact.group_id;
+		return contact.chat_id;
 	}
 	return contact.chat_id;
 }

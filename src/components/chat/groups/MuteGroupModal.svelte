@@ -13,7 +13,7 @@
 	async function handleMuteGroup() {
 		try {
 			const mute = !group.mute;
-			const success = await groupStore.muteGroup(group.group_id, mute, muteDurationHours);
+			const success = await groupStore.muteGroup(group.chat_id, mute, muteDurationHours);
 			if (success) {
 				successToast(mute ? 'Group muted' : 'Group unmuted');
 				onClose();

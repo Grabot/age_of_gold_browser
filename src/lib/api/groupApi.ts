@@ -2,10 +2,7 @@ import { z } from 'zod';
 import {
 	makeRequest,
 	type ApiResponse,
-	type LoginResponse,
-	LoginResponseSchema,
 	API,
-	type ApiResult
 } from './apiClient';
 import type { Group } from '$lib/types/groups';
 
@@ -50,7 +47,7 @@ export async function fetchGroups(
 		method: 'POST',
 		endpoint: API.groupEndpoints.fetchGroups,
 		accessToken,
-		body: { group_ids: groupIds }
+		body: { chat_ids: groupIds }
 	});
 }
 
@@ -59,7 +56,7 @@ export async function leaveGroup(accessToken: string, groupId: number): Promise<
 		method: 'POST',
 		endpoint: API.groupEndpoints.leaveGroup,
 		accessToken,
-		body: { group_id: groupId }
+		body: { chat_id: groupId }
 	});
 }
 
@@ -72,7 +69,7 @@ export async function addGroupMember(
 		method: 'POST',
 		endpoint: API.groupEndpoints.addGroupMember,
 		accessToken,
-		body: { group_id: groupId, user_add_id: userId }
+		body: { chat_id: groupId, user_add_id: userId }
 	});
 }
 
@@ -85,7 +82,7 @@ export async function removeGroupMember(
 		method: 'POST',
 		endpoint: API.groupEndpoints.removeGroupMember,
 		accessToken,
-		body: { group_id: groupId, user_remove_id: userId }
+		body: { chat_id: groupId, user_remove_id: userId }
 	});
 }
 
@@ -99,7 +96,7 @@ export async function promoteAdmin(
 		method: 'POST',
 		endpoint: API.groupEndpoints.promoteAdmin,
 		accessToken,
-		body: { group_id: groupId, user_id: userId, is_admin: isAdmin }
+		body: { chat_id: groupId, user_id: userId, is_admin: isAdmin }
 	});
 }
 
@@ -115,7 +112,7 @@ export async function updateGroup(
 		endpoint: API.groupEndpoints.updateGroup,
 		accessToken,
 		body: {
-			group_id: groupId,
+			chat_id: groupId,
 			name: groupName,
 			description: groupDescription,
 			colour: groupColour
@@ -134,7 +131,7 @@ export async function muteGroup(
 		endpoint: API.groupEndpoints.muteGroup,
 		accessToken,
 		body: {
-			group_id: groupId,
+			chat_id: groupId,
 			mute: mute,
 			mute_duration_hours: muteDurationHours
 		}
@@ -151,7 +148,7 @@ export async function getGroupAvatar(
 		endpoint: API.groupEndpoints.getGroupAvatar,
 		accessToken,
 		body: {
-			group_id: groupId,
+			chat_id: groupId,
 			get_default: getDefault
 		},
 		expectBlob: true
@@ -166,7 +163,7 @@ export async function getGroupAvatarVersion(
 		method: 'POST',
 		endpoint: API.groupEndpoints.getGroupAvatarVersion,
 		accessToken,
-		body: { group_id: groupId }
+		body: { chat_id: groupId }
 	});
 }
 
@@ -182,7 +179,7 @@ export async function changeGroupAvatar(
 		formData.append('avatar', newAvatar);
 	}
 
-	formData.append('group_id', groupId.toString());
+	formData.append('chat_id', groupId.toString());
 
 	return makeRequest({
 		method: 'PATCH',

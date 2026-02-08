@@ -8,7 +8,7 @@ export interface FriendLogin {
 }
 
 export interface GroupLogin {
-	group_id: number;
+	chat_id: number;
 	group_version: number;
 }
 
@@ -25,7 +25,7 @@ export const LoginResponseSchema = z.object({
 	),
 	groups: z.array(
 		z.object({
-			group_id: z.number(),
+			chat_id: z.number(),
 			group_version: z.number()
 		})
 	)

@@ -155,6 +155,7 @@ function createFriendStore() {
 						friend_id: friendData.friendId,
 						accepted: null, // I sent this request
 						friend_version: 1,
+						message_version: 1,
 						chat_id: null, // not yet accepted
 						user: user
 					};
@@ -265,14 +266,15 @@ function createFriendStore() {
 					profile_version: friendData.profile_version
 				};
 
-			// Create friend object
-			const newFriend: Friend = {
-				friend_id: friendData.friend_id,
-				accepted: false,
-				friend_version: 1,
-				chat_id: null,
-				user: user
-			};
+				// Create friend object
+				const newFriend: Friend = {
+					friend_id: friendData.friend_id,
+					accepted: false,
+					friend_version: 1,
+					message_version: 1,
+					chat_id: null,
+					user: user
+				};
 
 				// Save to storage
 				saveFriendToStorage(newFriend);
@@ -290,7 +292,7 @@ function createFriendStore() {
 				}
 
 				const response = await respondToFriendRequest(accessToken, friendId, true);
-				if (response.success) {
+				if (response.success && response.data) {
 					// Update the friend status locally
 					update((state) => {
 						const updatedFriends = state.friends.map((friend) => {
@@ -298,6 +300,7 @@ function createFriendStore() {
 								return {
 									...friend,
 									accepted: true,
+									chat_id: response.data as number,
 									friend_version: friend.friend_version + 1
 								};
 							}

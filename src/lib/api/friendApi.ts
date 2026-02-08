@@ -46,7 +46,7 @@ export async function respondToFriendRequest(
 		method: 'POST',
 		endpoint: API.friendEndpoints.respondFriendRequest,
 		accessToken,
-		body: { friend_id: friendId, accept }
+		body: { friend_id: friendId, accept: accept }
 	});
 }
 

@@ -1,13 +1,11 @@
-import { get } from 'svelte/store';
 import type { User } from '../types/user';
 import type { Friend } from '../types/friend';
-import type { Group, Chat } from '../types/groups';
+import type { Group } from '../types/groups';
 import { getMultipleUsers } from '$lib/api/userApi';
 import { userStore } from '../stores/userStore';
 import { avatarStore } from '../stores/avatarStore';
 import { friendStore } from '../stores/friendStore';
 import { groupStore } from '../stores/groupStore';
-import { chatStore } from '../stores/chatStore';
 
 export async function retrieveMissingUsers(userIds: number[], accessToken: string): Promise<void> {
 	if (userIds.length === 0) {
@@ -70,25 +68,13 @@ export async function retrieveMissingFriends(
 			// Update each friend's data
 			for (const friendData of friendsResponse.data) {
 				const storedUser = await userStore.getUser(friendData.friend_id);
-				let storedChat;
-				if (friendData.accepted && friendData.chat_id) {
-					storedChat = await chatStore.getChat(friendData.chat_id);
-					if (!storedChat) {
-						storedChat = {
-							id: friendData.chat_id,
-							private: true,
-						};
-						await chatStore.addChat(storedChat);
-					}
-				}
-
 				const friend: Friend = {
 					friend_id: friendData.friend_id,
 					accepted: friendData.accepted,
 					friend_version: friendData.friend_version,
+					message_version: friendData.message_version,
 					chat_id: friendData.chat_id,
-					user: storedUser || undefined,
-					chat: storedChat || undefined
+					user: storedUser || undefined
 				};
 
 				await friendStore.updateFriend(friend);
@@ -122,7 +108,7 @@ export async function retrieveMissingGroups(
 				console.log(groupData);
 				
 				const userGroup: Group = {
-					group_id: groupData.group_id,
+					chat_id: groupData.chat_id,
 					unread_messages: groupData.unread_messages,
 					mute: groupData.mute,
 					mute_timestamp: groupData.mute_timestamp,
@@ -137,36 +123,20 @@ export async function retrieveMissingGroups(
 					colour: groupData.colour,
 					current_message_id: groupData.current_message_id,
 					avatar: undefined,
-					chat: { 
-						id: groupData.group_id,
-						private: false
-					}
 				};
 				
-				// Create chat with group reference and private field
-				// Note: private field comes from API response, moved from Group to Chat
-				const chat: Chat = {
-					id: groupData.group_id,
-					private: false,
-					group: userGroup
-				};
-				await chatStore.addChat(chat);
-				
-				// Update group with chat reference
-				userGroup.chat = chat;
-
-				const storedGroup = await groupStore.getGroup(groupData.group_id);
+				const storedGroup = await groupStore.getGroup(groupData.chat_id);
 
 				console.log('compare stored group with avatar version');
 				console.log(storedGroup);
 				if (storedGroup) {
 					if (storedGroup.avatar_version !== userGroup.avatar_version) {
-						avatarStore.setShouldUpdateGroupAvatarForGroup(userGroup.group_id, true);
+						avatarStore.setShouldUpdateGroupAvatarForGroup(userGroup.chat_id, true);
 						// Only update avatar_version when we actually retrieve and update the avatar.
 						userGroup.avatar_version = storedGroup.avatar_version;
 					}
 				} else {
-					avatarStore.setShouldUpdateAvatarForUser(userGroup.group_id, true);
+					avatarStore.setShouldUpdateAvatarForUser(userGroup.chat_id, true);
 				}
 
 				await groupStore.updateGroup(userGroup);

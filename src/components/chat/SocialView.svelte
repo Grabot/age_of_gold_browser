@@ -9,7 +9,7 @@
 	import type { User } from '$lib/types/user';
 	import type { Friend } from '$lib/types/friend';
 	import { userStore } from '$lib/stores/userStore';
-	import { updateUserAvatar } from '$lib/utils/avatarUtils';
+	import { updateUserAvatar, checkUserAvatar } from '$lib/utils/avatarUtils';
 
 	export let onClose: () => void;
 
@@ -17,26 +17,6 @@
 	export let onAddFriendClick: () => void = () => {};
 	export let onCreateGroupClick: () => void = () => {};
 
-
-	async function checkUserAvatar(friend: Friend) {
-		if (friend.user) {
-			if (!friend.user.avatar) {
-				const avatarUser = await avatarStore.getAvatar(friend.friend_id);
-				if (avatarUser) {
-					friend.user.avatar = avatarUser;
-					friendStore.updateFriend(friend);
-					userStore.updateUser(friend.user);
-				} else {
-					console.log('No avatar found for user:', friend.friend_id);
-					const updatedUser = await updateUserAvatar(friend.user);
-					if (updatedUser) {
-						friend.user = updatedUser;
-						friendStore.updateFriend(friend);
-					}
-				}
-			}
-		}
-	}
 
 	onMount(() => {
 		const unsubscribe = friendStore.subscribe(async (storeState) => {

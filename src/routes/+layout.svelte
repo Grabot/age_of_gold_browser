@@ -59,8 +59,7 @@
 	import CreateGroupModal from '../components/chat/groups/CreateGroupModal.svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { groupStore } from '$lib/stores/groupStore';
-	import { chatStore } from '$lib/stores/chatStore';
-	import type { Group, Chat } from '$lib/types/groups';
+	import type { Group } from '$lib/types/groups';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 	import { getRandomColour } from '$lib/utils/groupUtils';
 
@@ -166,25 +165,19 @@
 			profile_version: data.profile_version,
 			colour: data.colour
 		};
-		const updatedChat = {
-			id: data.chat_id,
-			private: true
-		}
 		const updatedFriend = {
 			friend_id: data.friend_id,
 			accepted: true,
 			friend_version: data.friend_version,
+			message_version: 0,
 			chat_id: data.chat_id,
 			user: updatedUser,
-			chat: updatedChat
 		};
 		console.log("ACCEPTED!");
 		console.log(updatedFriend);
 		console.log(updatedUser);
-		console.log(updatedChat);
 		friendStore.updateFriend(updatedFriend);
 		userStore.updateUser(updatedUser);
-		chatStore.updateChat(updatedChat);
 	}
 
 	function handleFriendRequestRejectedEvent(data: any) {
@@ -204,13 +197,13 @@
 
 	function handleGroupCreatedEvent(data: any) {
 		successToast(`New group created: ${data.name}`);
-		const chatId = data.group_id;
+		const chatId = data.chat_id;
 		const chat = { 
 			id: chatId,
 			private: data.private
 		};
 		const group: Group = {
-			group_id: data.group_id,
+			chat_id: data.chat_id,
 			unread_messages: 0,
 			mute: false,
 			mute_timestamp: null,
@@ -224,18 +217,16 @@
 			description: data.description,
 			colour: data.colour,
 			current_message_id: data.current_message_id,
-			chat: chat
 		};
 		console.log("Group created event received", );
-		joinGroup(group.group_id);
+		joinGroup(group.chat_id);
 		setTimeout(() => {
 			groupStore.updateGroup(group);
-			chatStore.addChat(chat);
 		}, 1000);
 	}
 
 	async function handleGroupMemberLeftEvent(data: any) {
-		const group = await groupStore.getGroup(data.group_id);
+		const group = await groupStore.getGroup(data.chat_id);
 		if (!group) {
 			console.error(`Group not found in storage.`);
 			return false;
@@ -256,7 +247,7 @@
 	}
 
 	async function handleGroupAdminChangedEvent(data: GroupAdminChangedEventData) {
-		const group = await groupStore.getGroup(data.group_id);
+		const group = await groupStore.getGroup(data.chat_id);
 		if (!group) {
 			throw new Error(`Group not found in storage.`);
 		}
@@ -277,7 +268,7 @@
 	}
 
 	async function handleGroupUpdateEvent(data: GroupUpdateEventData) {
-		const group = await groupStore.getGroup(data.group_id);
+		const group = await groupStore.getGroup(data.chat_id);
 		if (!group) {
 			throw new Error(`Group not found in storage.`);
 		}
@@ -311,15 +302,15 @@
 	}
 
 	async function handleGroupMemberRemovedEvent(data: GroupMemberRemovedEventData) {
-		const group = await groupStore.getGroup(data.group_id);
+		const group = await groupStore.getGroup(data.chat_id);
 		if (!group) {
 			throw new Error(`Group not found in storage.`);
 		}
 		if ($authStore.user) {
 			if ($authStore.user.id === data.user_id) {
 				errorToast('You were removed from a group');
-				groupStore.removeGroup(data.group_id);
-				leaveGroup(data.group_id);
+				groupStore.removeGroup(data.chat_id);
+				leaveGroup(data.chat_id);
 				const friendIds: number[] = $friendStore.friends.map((friend) => friend.friend_id);
 
 				for (const userId of group.user_ids) {
@@ -346,7 +337,7 @@
 	}
 
 	async function handleGroupMemberAddedEvent(data: GroupMemberAddedEventData) {
-		const group = await groupStore.getGroup(data.group_id);
+		const group = await groupStore.getGroup(data.chat_id);
 		if (!group) {
 			throw new Error(`Group not found in storage.`);
 		}
@@ -377,27 +368,27 @@
 
 	export function joinGroup(groupId: number) {
 		if (socket) {
-			socket.emit('join_group', { group_id: groupId });
+			socket.emit('join_group', { chat_id: groupId });
 		}
 	}
 
 	export function leaveGroup(groupId: number) {
 		if (socket) {
-			socket.emit('leave_group', { group_id: groupId });
+			socket.emit('leave_group', { chat_id: groupId });
 		}
 	}
 
 	function joinAllGroupRooms() {
 		const state = get(groupStore);
 		state.groups.forEach((group) => {
-			joinGroup(group.group_id);
+			joinGroup(group.chat_id);
 		});
 	}
 
 	function leaveAllGroupRooms() {
 		const state = get(groupStore);
 		state.groups.forEach((group) => {
-			leaveGroup(group.group_id);
+			leaveGroup(group.chat_id);
 		});
 	}
 

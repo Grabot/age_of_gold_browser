@@ -43,17 +43,9 @@ function createGroupStore() {
 		try {
 			groups = await indexedDBHelper.getAllGroups() as Group[];
 			
-			// Load chats and associate them with groups
-			const chats = await indexedDBHelper.getAllChats() as { id: number }[];
-			const chatMap = new Map(chats.map((chat: { id: number }) => [chat.id, chat]));
-			
 			groups = groups.map(group => {
-				const chat = chatMap.get(group.group_id);
-				if (chat) {
-					return { ...group, chat };
-				}
-				// If no chat found, create one with the group_id
-				return { ...group, chat: { id: group.group_id } };
+				// If no chat found, create one with the chat_id
+				return { ...group};
 			}) as Group[];
 		} catch (error) {
 			console.error('Error loading groups from IndexedDB:', error);
@@ -72,14 +64,10 @@ function createGroupStore() {
 						console.log('GroupData');
 						console.log(groupData);
 						const group: Group = JSON.parse(groupData);
-						// Ensure group has a chat
-						if (!group.chat) {
-							group.chat = { id: group.group_id, private: false };
-						}
 						groups.push(group);
 						// Migrate to IndexedDB
 						const GroupToStore: Group = {
-							group_id: group.group_id,
+							chat_id: group.chat_id,
 							unread_messages: group.unread_messages,
 							mute: group.mute,
 							mute_timestamp: group.mute_timestamp,
@@ -93,10 +81,8 @@ function createGroupStore() {
 							description: group.description,
 							colour: group.colour,
 							current_message_id: group.current_message_id,
-							chat: group.chat
 						}; // Save everything but the avatar
 						indexedDBHelper.saveGroup(GroupToStore);
-						indexedDBHelper.saveChat(group.chat);
 					} catch (error) {
 						console.error(`Failed to parse group data for group ${groupId}:`, error);
 					}
@@ -110,7 +96,7 @@ function createGroupStore() {
 	async function saveGroupToStorage(group: Group) {
 		// Only store group data without avatar
 		const GroupToStore = {
-			group_id: group.group_id,
+			chat_id: group.chat_id,
 			unread_messages: group.unread_messages,
 			mute: group.mute,
 			mute_timestamp: group.mute_timestamp,
@@ -123,15 +109,10 @@ function createGroupStore() {
 			name: group.name,
 			description: group.description,
 			colour: group.colour,
-			current_message_id: group.current_message_id,
-			chat: group.chat
+			current_message_id: group.current_message_id
 		}; // Save everything but the avatar
 		if (typeof window !== 'undefined') {
 			await indexedDBHelper.saveGroup(GroupToStore);
-			// Also save the chat separately
-			if (group.chat) {
-				await indexedDBHelper.saveChat(group.chat);
-			}
 		}
 	}
 
@@ -175,7 +156,7 @@ function createGroupStore() {
 					const chat = { id: chatId, private: false };
 					
 					const group: Group = {
-						group_id: response.data,
+						chat_id: response.data,
 						unread_messages: 0,
 						mute: false,
 						mute_timestamp: null,
@@ -189,13 +170,8 @@ function createGroupStore() {
 						description: groupData.groupDescription,
 						colour: groupData.groupColour,
 						current_message_id: 1,
-						chat: chat
 					};
 					
-					// Also save the chat
-					import('./chatStore').then(({ chatStore }) => {
-						chatStore.addChat(chat);
-					});
 					console.log('Group object created:', group);
 					groupStore.updateGroup(group);
 					console.log('Group saved to storage');
@@ -213,7 +189,7 @@ function createGroupStore() {
 			await removeGroupFromStorage(groupId);
 			await avatarStore.removeGroupAvatarFromStorage(groupId);
 			update((state) => {
-				const updatedGroups = state.groups.filter((g) => g.group_id !== groupId);
+				const updatedGroups = state.groups.filter((g) => g.chat_id !== groupId);
 				return { ...state, groups: updatedGroups };
 			});
 			return true;
@@ -227,7 +203,7 @@ function createGroupStore() {
 					await removeGroupFromStorage(groupId);
 					await avatarStore.removeGroupAvatarFromStorage(groupId);
 					update((state) => {
-						const updatedGroups = state.groups.filter((g) => g.group_id !== groupId);
+						const updatedGroups = state.groups.filter((g) => g.chat_id !== groupId);
 						return { ...state, groups: updatedGroups };
 					});
 					return true;
@@ -252,7 +228,7 @@ function createGroupStore() {
 						};
 						await saveGroupToStorage(updatedGroup);
 						update((state) => {
-							const newGroups = state.groups.filter((g) => g.group_id !== groupId);
+							const newGroups = state.groups.filter((g) => g.chat_id !== groupId);
 							return { ...state, groups: [...newGroups, updatedGroup] };
 						});
 					}
@@ -279,7 +255,7 @@ function createGroupStore() {
 						};
 						await saveGroupToStorage(updatedGroup);
 						update((state) => {
-							const newGroups = state.groups.filter((g) => g.group_id !== groupId);
+							const newGroups = state.groups.filter((g) => g.chat_id !== groupId);
 							return { ...state, groups: [...newGroups, updatedGroup] };
 						});
 					}
@@ -317,7 +293,7 @@ function createGroupStore() {
 						};
 						await saveGroupToStorage(updatedGroup);
 						update((state) => {
-							const newGroups = state.groups.filter((g) => g.group_id !== groupId);
+							const newGroups = state.groups.filter((g) => g.chat_id !== groupId);
 							return { ...state, groups: [...newGroups, updatedGroup] };
 						});
 					}
@@ -357,7 +333,7 @@ function createGroupStore() {
 						};
 						await saveGroupToStorage(updatedGroup);
 						update((state) => {
-							const oldGroup = state.groups.find((g) => g.group_id === groupId);
+							const oldGroup = state.groups.find((g) => g.chat_id === groupId);
 							if (!oldGroup) {
 								return { ...state, groups: [...state.groups, updatedGroup] };
 							} else {
@@ -403,7 +379,7 @@ function createGroupStore() {
 						};
 						await saveGroupToStorage(updatedGroup);
 						update((state) => {
-							const newGroups = state.groups.filter((g) => g.group_id !== groupId);
+							const newGroups = state.groups.filter((g) => g.chat_id !== groupId);
 							return { ...state, groups: [...newGroups, updatedGroup] };
 						});
 					}
@@ -418,13 +394,13 @@ function createGroupStore() {
 		updateGroup: async (group: Group): Promise<void> => {
 			await saveGroupToStorage(group);
 			update((state) => {
-				const newGroups = state.groups.filter((g) => g.group_id !== group.group_id);
+				const newGroups = state.groups.filter((g) => g.chat_id !== group.chat_id);
 				return { ...state, groups: [...newGroups, group] };
 			});
 		},
 		updateGroupNotSave: (group: Group): void => {
 			update((state) => {
-				const newGroups = state.groups.filter((g) => g.group_id !== group.group_id);
+				const newGroups = state.groups.filter((g) => g.chat_id !== group.chat_id);
 				return { ...state, groups: [...newGroups, group] };
 			});
 		},
@@ -454,7 +430,6 @@ function createGroupStore() {
 			set(initialState);
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearGroups();
-				await indexedDBHelper.clearChats();
 				
 				// Clear localStorage as fallback
 				const keys = Object.keys(localStorage);

@@ -45,13 +45,13 @@ export function leaveRoom(userId: number) {
 
 export function joinGroup(groupId: number) {
 	if (socket) {
-		socket.emit('join_group', { group_id: groupId });
+		socket.emit('join_group', { chat_id: groupId });
 	}
 }
 
 export function leaveGroup(groupId: number) {
 	if (socket) {
-		socket.emit('leave_group', { group_id: groupId });
+		socket.emit('leave_group', { chat_id: groupId });
 	}
 }
 
@@ -188,7 +188,7 @@ export function offFriendRemovedEvent() {
 
 export function onGroupCreatedEvent(
 	callback: (data: {
-		group_id: number;
+		chat_id: number;
 		name: string;
 		description: string;
 		colour: string;
@@ -208,7 +208,7 @@ export function offGroupCreatedEvent() {
 }
 
 export function onGroupMemberLeftEvent(
-	callback: (data: { group_id: number; user_id: number }) => void
+	callback: (data: { chat_id: number; user_id: number }) => void
 ) {
 	if (socket) {
 		socket.on('group_member_left', callback);
@@ -216,7 +216,7 @@ export function onGroupMemberLeftEvent(
 }
 
 export interface GroupAdminChangedEventData {
-	group_id: number;
+	chat_id: number;
 	user_id: number;
 	is_admin: boolean;
 }
@@ -233,7 +233,7 @@ export function offGroupMemberLeftEvent() {
 }
 
 export interface GroupUpdateEventData {
-	group_id: number;
+	chat_id: number;
 	name: string | undefined;
 	description: string | undefined;
 	colour: string | undefined;
@@ -251,7 +251,7 @@ export function offGroupUpdateEvent() {
 }
 
 export interface GroupMemberRemovedEventData {
-	group_id: number;
+	chat_id: number;
 	user_id: number;
 }
 export function onGroupMemberRemovedEvent(callback: (data: GroupMemberRemovedEventData) => void) {
@@ -267,7 +267,7 @@ export function offGroupMemberRemovedEvent() {
 }
 
 export interface GroupMemberAddedEventData {
-	group_id: number;
+	chat_id: number;
 	user_id: number;
 }
 export function onGroupMemberAddedEvent(callback: (data: GroupMemberAddedEventData) => void) {
@@ -283,7 +283,7 @@ export function offGroupMemberAddedEvent() {
 }
 
 export interface GroupAvatarChangedEventData {
-	group_id: number;
+	chat_id: number;
 	user_id: number;
 }
 export function onGroupAvatarChangedEvent(callback: (data: GroupAvatarChangedEventData) => void) {

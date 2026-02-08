@@ -10,7 +10,7 @@
 	import { avatarStore } from '$lib/stores/avatarStore';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 	import type { Group } from '$lib/types/groups';
-	import { handleChangeGroupAvatar, handleGetGroupAvatar } from '$lib/services/settingsService';
+	import { handleChangeGroupAvatar } from '$lib/services/settingsService';
 	import { onMount, onDestroy } from 'svelte';
 	import EditGroupAvatar from './edit_group/EditGroupAvatar.svelte';
 	import EditGroupModal from './edit_group/EditGroupModal.svelte';
@@ -168,9 +168,9 @@
 
 	async function handleLeaveGroup() {
 		try {
-			const success = await groupStore.leaveGroup(group.group_id);
+			const success = await groupStore.leaveGroup(group.chat_id);
 			if (success) {
-				leaveGroup(group.group_id);
+				leaveGroup(group.chat_id);
 				const friendIds: number[] = $friendStore.friends.map((friend) => friend.friend_id);
 
 				for (const userId of group.user_ids) {
@@ -213,10 +213,10 @@
 
 	async function handleRemoveMember(userId: number) {
 		try {
-			const success = await groupStore.removeGroupMember(group.group_id, userId);
+			const success = await groupStore.removeGroupMember(group.chat_id, userId);
 			if (success) {
 				successToast('Member removed successfully');
-				const updatedGroup = await groupStore.getGroup(group.group_id);
+				const updatedGroup = await groupStore.getGroup(group.chat_id);
 				if (updatedGroup) {
 					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
@@ -236,10 +236,10 @@
 
 	async function handlePromoteAdmin(userId: number, isAdmin: boolean) {
 		try {
-			const success = await groupStore.promoteAdmin(group.group_id, userId, isAdmin);
+			const success = await groupStore.promoteAdmin(group.chat_id, userId, isAdmin);
 			if (success) {
 				successToast(isAdmin ? 'User promoted to admin' : 'User demoted from admin');
-				const updatedGroup = await groupStore.getGroup(group.group_id);
+				const updatedGroup = await groupStore.getGroup(group.chat_id);
 				if (updatedGroup) {
 					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
@@ -256,13 +256,13 @@
 		try {
 			group.group_version = group.group_version + 1;
 			groupStore.updateGroup(group);
-			const success = await groupStore.addGroupMember(group.group_id, userId);
+			const success = await groupStore.addGroupMember(group.chat_id, userId);
 			if (success) {
 				successToast('Member added successfully');
 				showAddMemberModal = false;
 				newMemberUsername = '';
 				filteredFriends = [];
-				const updatedGroup = await groupStore.getGroup(group.group_id);
+				const updatedGroup = await groupStore.getGroup(group.chat_id);
 				if (updatedGroup) {
 					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
@@ -285,13 +285,13 @@
 				if (event.type === 'group_avatar_updated') {
 					// It is updated in the group list view, we wait a bit and update it here by taking what is stored.
 					await new Promise((resolve) => setTimeout(resolve, 1000));
-					const updatedAvatar = await avatarStore.getGroupAvatar(group.group_id);
+					const updatedAvatar = await avatarStore.getGroupAvatar(group.chat_id);
 					if (updatedAvatar) {
 						group.avatar = updatedAvatar;
 					}
 					return;
 				}
-				const updatedGroup = await groupStore.getGroup(group.group_id);
+				const updatedGroup = await groupStore.getGroup(group.chat_id);
 				if (updatedGroup) {
 					updatedGroup.avatar = group.avatar;
 					group = updatedGroup;
@@ -487,14 +487,14 @@
 						group.group_version = group.group_version + 1;
 						groupStore.updateGroup(group);
 						const success = await groupStore.updateGroupDetails(
-							group.group_id,
+							group.chat_id,
 							updatedGroup.groupName,
 							updatedGroup.groupDescription,
 							updatedGroup.groupColour
 						);
 						if (success) {
 							successToast('Group updated successfully');
-							const updatedGroupData = await groupStore.getGroup(group.group_id);
+							const updatedGroupData = await groupStore.getGroup(group.chat_id);
 							if (updatedGroupData) {
 								updatedGroupData.avatar = group.avatar;
 								group = updatedGroupData;
@@ -513,7 +513,7 @@
 
 		{#if showEditAvatarModal}
 			<EditGroupAvatar
-				groupId={group.group_id}
+				groupId={group.chat_id}
 				groupAvatar={group.avatar}
 				{groupColor}
 				{textColor}
@@ -528,7 +528,7 @@
 						groupStore.updateGroup(group);
 						const result = await handleChangeGroupAvatar(
 							accessToken,
-							group.group_id,
+							group.chat_id,
 							data.avatar,
 							data.defaultAvatar || false
 						);
@@ -538,7 +538,7 @@
 							reader.onload = async () => {
 								const newAvatar = reader.result as string;
 								group.avatar = newAvatar;
-								await avatarStore.updateGroupAvatar(group.group_id, newAvatar);
+								await avatarStore.updateGroupAvatar(group.chat_id, newAvatar);
 								groupStore.updateGroup(group);
 								showEditAvatarModal = false;
 							};
