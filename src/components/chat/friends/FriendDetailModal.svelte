@@ -10,16 +10,11 @@
 	// TODO: Change the style to the colour of the friend instead of the users colour.
 	async function handleRemoveFriend() {
 		try {
-			const store = friendStore as any;
-			if (store.removeFriend) {
-				const success = await store.removeFriend(friend.friend_id);
-				if (success) {
-					onClose();
-				} else {
-					errorToast('Failed to remove friend');
-				}
+			const success = await friendStore.removeFriend(friend.friend_id, friend.chat_id);
+			if (success) {
+				onClose();
 			} else {
-				errorToast('removeFriend method not found');
+				errorToast('Failed to remove friend');
 			}
 		} catch (error) {
 			errorToast(error instanceof Error ? error.message : 'Unknown error');

@@ -45,15 +45,13 @@
 		avatar?: string;
 		avatar_version?: number;
 	}> = [];
-	let group_members: Array<{ user_id: number; username: string; avatar: string | null }> = [];
+	let groupMembers: Array<{ user_id: number; username: string; avatar: string | null }> = [];
 	let isDoneRetrievingGroupMembers = false;
 
 	async function getGroupMembers() {
 		if (isDoneRetrievingGroupMembers) {
-			console.log('Already retrieved group members, skipping...');
 			return;
 		}
-		console.log("getting group member");
 		let newMembers = [];
 
 		const authState = get(authStore);
@@ -116,8 +114,7 @@
 			}
 		}
 
-		group_members = newMembers;
-		console.log("group Meberms size ", group_members.length);
+		groupMembers = newMembers;
 		const accessToken = get(accessTokenValue);
 		if (userIdsToRetrieve.length > 0 && accessToken) {
 			retrieveMissingUsers(userIdsToRetrieve, accessToken).then(async (_) => {
@@ -126,7 +123,7 @@
 					if (user) {
 						const updatedUser = await updateUserAvatar(user);
 						if (updatedUser) {
-							group_members = group_members.map(member =>
+							groupMembers = groupMembers.map(member =>
 								member.user_id === updatedUser.id
 									? {
 										...member,
@@ -281,7 +278,6 @@
 	onMount(() => {
 		socketEventUnsubscribe = socketEventStore.subscribe((events) => {
 			events.forEach(async (event) => {
-				console.log('socket event', event);
 				if (event.type === 'group_avatar_updated') {
 					// It is updated in the group list view, we wait a bit and update it here by taking what is stored.
 					await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -405,39 +401,39 @@
 				<div class="group-members">
 					<h3>Members</h3>
 					<ul>
-						{#each group_members as group_member (group_member.user_id)}
+						{#each groupMembers as groupMember (groupMember.user_id)}
 							<li class="member-item">
 								<div class="member-avatar-container">
-									{#if group_member.avatar}
+									{#if groupMember.avatar}
 										<img
 											class="member-avatar"
-											src={group_member.avatar}
-											alt={group_member.username}
+											src={groupMember.avatar}
+											alt={groupMember.username}
 										/>
 									{:else}
 										<div
 											class="member-avatar placeholder"
 											style="background-color: {getRandomColour()}"
 										>
-											{getInitial(group_member.username)}
+											{getInitial(groupMember.username)}
 										</div>
 									{/if}
 								</div>
 
 								<div class="member-username-container">
 									<span class="member-username">
-										{group_member.username}
+										{groupMember.username}
 									</span>
 								</div>
 
 								<div class="member-actions-container">
-									{#if group_member.user_id === currentUserId}
+									{#if groupMember.user_id === currentUserId}
 										<span class="you-badge">You</span>
-									{:else if isCurrentUserAdmin && group_member.user_id !== currentUserId}
-										{#if group.admin_ids.includes(group_member.user_id)}
+									{:else if isCurrentUserAdmin && groupMember.user_id !== currentUserId}
+										{#if group.admin_ids.includes(groupMember.user_id)}
 											<button
 												class="demote-btn"
-												on:click={() => handlePromoteAdmin(group_member.user_id, false)}
+												on:click={() => handlePromoteAdmin(groupMember.user_id, false)}
 												style="background-color: #f39c12; color: var(--text-colour-on-primary);"
 											>
 												Demote
@@ -445,7 +441,7 @@
 										{:else}
 											<button
 												class="promote-btn"
-												on:click={() => handlePromoteAdmin(group_member.user_id, true)}
+												on:click={() => handlePromoteAdmin(groupMember.user_id, true)}
 												style="background-color: #2ecc71; color: var(--text-colour-on-primary);"
 											>
 												Promote
@@ -453,7 +449,7 @@
 										{/if}
 										<button
 											class="remove-btn"
-											on:click={() => handleRemoveMember(group_member.user_id)}
+											on:click={() => handleRemoveMember(groupMember.user_id)}
 											style="background-color: #e74c3c; color: var(--text-colour-on-primary);"
 										>
 											Remove

@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 
 export const DB_NAME = 'AgeOfGoldDB';
-export const DB_VERSION = 6; // Incremented for chats
+export const DB_VERSION = 9; // Incremented for composite message keys
 export const USER_STORE = 'users';
 export const FRIEND_STORE = 'friends';
 export const GROUP_STORE = 'groups';
@@ -10,6 +10,7 @@ export const USER_AVATAR_STORE = 'userAvatars';
 export const GROUP_AVATAR_STORE = 'groupAvatars';
 export const SHOULD_UPDATE_USER_AVATAR_STORE = 'shouldUpdateUserAvatars';
 export const SHOULD_UPDATE_GROUP_AVATAR_STORE = 'shouldUpdateGroupAvatars';
+export const SHOULD_UPDATE_MESSAGES_STORE = 'shouldUpdateMessages';
 
 export interface IndexedDBHelperState {
     isInitialized: boolean;
@@ -19,7 +20,7 @@ export interface IndexedDBHelperState {
 
 interface StoreSchema {
     name: string;
-    keyPath: string;
+    keyPath: string | string[];
     indexes?: { name: string; keyPath: string; unique?: boolean }[];
 }
 
@@ -33,15 +34,21 @@ interface GroupAvatarUpdate {
     shouldUpdate: boolean;
 }
 
+interface MessageUpdate {
+    chatId: number;
+    shouldUpdate: boolean;
+}
+
 const STORES: StoreSchema[] = [
     { name: USER_STORE, keyPath: 'id' },
-    { name: FRIEND_STORE, keyPath: 'friend_id' },
+    { name: FRIEND_STORE, keyPath: 'chat_id' },
     { name: GROUP_STORE, keyPath: 'chat_id' },
-    { name: MESSAGE_STORE, keyPath: 'id', indexes: [{ name: 'chat_id', keyPath: 'chat_id', unique: false }] },
+    { name: MESSAGE_STORE, keyPath: ['chat_id', 'id'] },
     { name: USER_AVATAR_STORE, keyPath: 'userId' },
     { name: GROUP_AVATAR_STORE, keyPath: 'groupId' },
     { name: SHOULD_UPDATE_USER_AVATAR_STORE, keyPath: 'userId' },
-    { name: SHOULD_UPDATE_GROUP_AVATAR_STORE, keyPath: 'groupId' }
+    { name: SHOULD_UPDATE_GROUP_AVATAR_STORE, keyPath: 'groupId' },
+    { name: SHOULD_UPDATE_MESSAGES_STORE, keyPath: 'chatId' }
 ];
 
 const initialState: IndexedDBHelperState = {
@@ -319,17 +326,34 @@ function createIndexedDBHelper() {
         clearShouldUpdateGroupAvatars: () => clear(SHOULD_UPDATE_GROUP_AVATAR_STORE),
 
         saveMessage: (message: any) => save(MESSAGE_STORE, message),
-        getMessage: async (id: number) => await get(MESSAGE_STORE, id),
+        getMessage: async (chatId: number, id: number) => await get(MESSAGE_STORE, [chatId, id]),
         getAllMessages: async () => await getAll(MESSAGE_STORE),
-        getMessagesByChatId: async (chatId: number) => await getByIndex(MESSAGE_STORE, 'chat_id', chatId),
-        removeMessage: (id: number) => remove(MESSAGE_STORE, id),
+        getMessagesByChatId: async (chatId: number) => {
+            // Get all messages and filter by chat_id since we can't use index with composite key
+            const allMessages = await getAll(MESSAGE_STORE);
+            return allMessages.filter((msg: any) => msg.chat_id === chatId);
+        },
+        removeMessage: (chatId: number, id: number) => remove(MESSAGE_STORE, [chatId, id]),
         clearMessagesForChat: async (chatId: number) => {
-            const messages = await getByIndex<any>(MESSAGE_STORE, 'chat_id', chatId);
-            for (const message of messages) {
-                await remove(MESSAGE_STORE, message.id);
+            // Get all messages and filter by chat_id since we can't use index with composite key
+            const allMessages = await getAll<any>(MESSAGE_STORE);
+            const chatMessages = allMessages.filter((msg: any) => msg.chat_id === chatId);
+            for (const message of chatMessages) {
+                await remove(MESSAGE_STORE, [chatId, message.id]);
             }
         },
         clearAllMessages: () => clear(MESSAGE_STORE),
+
+        saveShouldUpdateMessages: (chatId: number, shouldUpdate: boolean) =>
+            save<MessageUpdate>(SHOULD_UPDATE_MESSAGES_STORE, { chatId, shouldUpdate }),
+
+        getShouldUpdateMessages: async (chatId: number) => {
+            const result = await get<MessageUpdate>(SHOULD_UPDATE_MESSAGES_STORE, chatId);
+            return result ? result.shouldUpdate : false;
+        },
+
+        removeShouldUpdateMessages: (chatId: number) => remove(SHOULD_UPDATE_MESSAGES_STORE, chatId),
+        clearShouldUpdateMessages: () => clear(SHOULD_UPDATE_MESSAGES_STORE),
     };
 }
 

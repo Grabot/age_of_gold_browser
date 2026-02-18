@@ -40,33 +40,35 @@ export async function fetchFriends(
 export async function respondToFriendRequest(
 	accessToken: string,
 	friendId: number,
+	chatId: number,
 	accept: boolean
 ): Promise<ApiResponse> {
 	return makeRequest({
 		method: 'POST',
 		endpoint: API.friendEndpoints.respondFriendRequest,
 		accessToken,
-		body: { friend_id: friendId, accept: accept }
+		body: { friend_id: friendId, chat_id: chatId, accept: accept }
 	});
 }
 
 export async function cancelFriendRequest(
 	accessToken: string,
-	friendId: number
+	friendId: number,
+	chatId: number,
 ): Promise<ApiResponse> {
 	return makeRequest({
 		method: 'POST',
 		endpoint: API.friendEndpoints.cancelFriendRequest,
 		accessToken,
-		body: { friend_id: friendId }
+		body: { friend_id: friendId, chat_id: chatId }
 	});
 }
 
-export async function removeFriend(accessToken: string, friendId: number): Promise<ApiResponse> {
+export async function removeFriend(accessToken: string, friendId: number, chatId: number): Promise<ApiResponse> {
 	return makeRequest({
 		method: 'POST',
 		endpoint: API.friendEndpoints.removeFriend,
 		accessToken,
-		body: { friend_id: friendId }
+		body: { friend_id: friendId, chat_id: chatId }
 	});
 }

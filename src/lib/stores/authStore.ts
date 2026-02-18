@@ -22,6 +22,7 @@ import {
 	retrieveMissingUsers
 } from '../services/dataRetrievalService';
 import { updatePrimaryColour } from '$lib/utils/colourUtils';
+import { messageStore } from './messageStore';
 
 export const STORAGE_KEY_ACCESS_TOKEN = 'accessToken';
 export const STORAGE_KEY_REFRESH_TOKEN = 'refreshToken';
@@ -156,7 +157,6 @@ function createAuthStore() {
 		let loginResultUser;
 		if (get(profileVersionValue) != loginResult.profile_version) {
 			const newUserDetail = await getUser(loginResult.access_token);
-			console.log(newUserDetail);
 			loginResultUser = newUserDetail;
 			userDetail.set(loginResultUser);
 		} else {
@@ -172,37 +172,48 @@ function createAuthStore() {
 		avatarVersionValue.set(loginResult.avatar_version);
 
 		// Track user IDs and friend IDs that need retrieval
-		const userIdsToRetrieve: number[] = [];
+		let userIdsToRetrieve: number[] = [];
 		const friendIdsToRetrieve: number[] = [];
 
 		// Convert FriendLogin to Friend format using stored data
 		const friends: Friend[] = [];
 
 		for (const friendLogin of loginResult.friends) {
-			const storedUser = await userStore.getUser(friendLogin.friend_id);
-			const storedFriend = await friendStore.getStoredFriend(friendLogin.friend_id);
-
-			// Check if we have stored user data or need to retrieve it
-			if (!storedUser) {
-				// Mark user for retrieval
-				userIdsToRetrieve.push(friendLogin.friend_id);
-			}
+			const storedFriend = await friendStore.getStoredFriend(friendLogin.chat_id);
 
 			// Only create friend entry if we have stored data with matching version
 			if (storedFriend && storedFriend.friend_version === friendLogin.friend_version) {
-				// TODO: message version check?
-				friends.push({
-					friend_id: friendLogin.friend_id,
-					accepted: storedFriend.accepted,
-					friend_version: storedFriend.friend_version,
-					chat_id: storedFriend.chat_id,
-					message_version: storedFriend.message_version,
-					user: storedUser ?? undefined
-				});
+				const storedUser = await userStore.getUser(storedFriend.friend_id);
+				if (!storedUser) {
+					// Mark user for retrieval
+					userIdsToRetrieve.push(storedFriend.friend_id);
+				}
+				const friend: Friend = {
+					...storedFriend
+				}
+				if (storedUser) {
+					friend.user = storedUser;
+				}
+				if (storedFriend) {
+					if (storedFriend.message_version !== friendLogin.message_version) {
+						console.log("should update1 message friend", friendLogin.chat_id)
+						await messageStore.setShouldUpdateMessages(friendLogin.chat_id, true);
+					}
+				} else {
+					console.log("should update2 message friend", friendLogin.chat_id)
+					await messageStore.setShouldUpdateMessages(friendLogin.chat_id, true);
+				}
+				friend.message_version = friendLogin.message_version;
+				friends.push(friend);
 			} else {
+				if (storedFriend) {
+					if (storedFriend.friend_version !== friendLogin.friend_version) {
+						userIdsToRetrieve.push(storedFriend.friend_id);
+					}
+				}
+				await messageStore.setShouldUpdateMessages(friendLogin.chat_id, true);
 				// Mark friend and user for retrieval and add to friends list later
-				friendIdsToRetrieve.push(friendLogin.friend_id);
-				userIdsToRetrieve.push(friendLogin.friend_id);
+				friendIdsToRetrieve.push(friendLogin.chat_id);
 			}
 		}
 
@@ -213,17 +224,29 @@ function createAuthStore() {
 		const groups: Group[] = [];
 		const groupIdsToRetrieve: number[] = [];
 
-		console.log('going over groups');
 		for (const groupLogin of loginResult.groups) {
 			const storedGroup = await groupStore.getGroup(groupLogin.chat_id);
 
 			// Only create group entry if we have stored data with matching version
 			if (storedGroup && storedGroup.group_version === groupLogin.group_version) {
-				groups.push(storedGroup);
+				const group: Group = {
+					...storedGroup
+				}
+				if (storedGroup) {
+					if (storedGroup.message_version !== groupLogin.message_version) {
+						console.log("should update1 message group", groupLogin.chat_id)
+						await messageStore.setShouldUpdateMessages(groupLogin.chat_id, true);
+					}
+				} else {
+					console.log("should update2 message group", groupLogin.chat_id)
+					await messageStore.setShouldUpdateMessages(groupLogin.chat_id, true);
+				}
+				group.message_version = groupLogin.message_version;
+				groups.push(group);
 			} else {
 				// Mark group for retrieval
-				console.log('added to group retrieve', groupLogin.chat_id);
 				groupIdsToRetrieve.push(groupLogin.chat_id);
+				await messageStore.setShouldUpdateMessages(groupLogin.chat_id, true);
 				// Make sure a group entry exists.
 				if (storedGroup) {
 					groups.push(storedGroup);
@@ -241,7 +264,8 @@ function createAuthStore() {
 
 		// Retrieve missing friend data
 		if (friendIdsToRetrieve.length > 0) {
-			await retrieveMissingFriends(friendIdsToRetrieve, loginResult.access_token);
+			const newUserIdsToRetrieve = await retrieveMissingFriends(friendIdsToRetrieve, loginResult.access_token);
+			userIdsToRetrieve = [...new Set([...userIdsToRetrieve, ...newUserIdsToRetrieve])];
 		}
 		// Retrieve missing user data
 		if (userIdsToRetrieve.length > 0) {
@@ -273,6 +297,8 @@ function createAuthStore() {
 		userStore.clear();
 		avatarStore.clear();
 		groupStore.clear();
+		messageStore.clear();
+		messageStore.clearShouldUpdateMessages();
 		localStorage.removeItem(STORAGE_KEY_ACCESS_TOKEN);
 		localStorage.removeItem(STORAGE_KEY_REFRESH_TOKEN);
 		localStorage.removeItem(STORAGE_KEY_PROFILE_VERSION);
@@ -308,6 +334,9 @@ function createAuthStore() {
 				errorToast(err instanceof Error ? err.message : 'Unknown error');
 				return false;
 			}
+		},
+		getCurrentUserId: async (): Promise<number> => {
+			return get(userDetail).id;
 		},
 		register: async (email: string, username: string, password: string): Promise<boolean> => {
 			set({ ...initialState, loading: true });

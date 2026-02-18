@@ -5,7 +5,6 @@ import { userStore } from '../stores/userStore';
 import { friendStore } from '../stores/friendStore';
 import {
 	handleGetAvatar,
-	handleGetAvatarVersion,
 	handleGetGroupAvatar,
 	handleGetGroupAvatarVersion
 } from '../services/settingsService';
@@ -22,10 +21,6 @@ export async function updateUserAvatar(user: User): Promise<User | null> {
 		if (avatarResponse.success && avatarResponse.avatar) {
 			user.avatar = avatarResponse.avatar;
 			await avatarStore.updateAvatar(user.id, avatarResponse.avatar);
-			const avatarVersionResponse = await handleGetAvatarVersion(accessToken, user.id);
-			if (avatarVersionResponse.success && avatarVersionResponse.avatarVersion) {
-				user.avatar_version = avatarVersionResponse.avatarVersion;
-			}
 			userStore.updateUser(user);
 			await avatarStore.setShouldUpdateAvatarForUser(user.id, false);
 			return user;
@@ -37,7 +32,6 @@ export async function updateUserAvatar(user: User): Promise<User | null> {
 }
 
 export async function updateGroupAvatar(group: Group): Promise<Group | null> {
-	console.log('update group avatar');
 	const accessToken = get(accessTokenValue);
 	if (accessToken && group) {
 		const avatarResponse = await handleGetGroupAvatar(accessToken, group.chat_id, false);
@@ -46,7 +40,6 @@ export async function updateGroupAvatar(group: Group): Promise<Group | null> {
 			await avatarStore.updateGroupAvatar(group.chat_id, avatarResponse.avatar);
 			const avatarVersionResponse = await handleGetGroupAvatarVersion(accessToken, group.chat_id);
 			if (avatarVersionResponse.success && avatarVersionResponse.avatarVersion) {
-				console.log('updating avatar version', avatarVersionResponse.avatarVersion);
 				group.avatar_version = avatarVersionResponse.avatarVersion;
 			}
 			groupStore.updateGroup(group);
@@ -68,7 +61,6 @@ export async function checkUserAvatar(friend: Friend): Promise<void> {
 				friendStore.updateFriend(friend);
 				userStore.updateUser(friend.user);
 			} else {
-				console.log('No avatar found for user:', friend.friend_id);
 				const updatedUser = await updateUserAvatar(friend.user);
 				if (updatedUser) {
 					friend.user = updatedUser;
@@ -80,14 +72,12 @@ export async function checkUserAvatar(friend: Friend): Promise<void> {
 }
 
 export async function checkGroupAvatar(group: Group): Promise<void> {
-	console.log('Checking group avatar for group:', group.chat_id);
 	if (!group.avatar) {
 		const avatarGroup = await avatarStore.getGroupAvatar(group.chat_id);
 		if (avatarGroup) {
 			group.avatar = avatarGroup;
 			groupStore.updateGroupNotSave(group);
 		} else {
-			console.log('No avatar found for group:', group.chat_id);
 			await updateGroupAvatar(group);
 		}
 	}

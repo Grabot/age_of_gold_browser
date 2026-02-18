@@ -9,9 +9,9 @@
 	let selectedFriend: Friend | null = null;
 	let showDetailModal = false;
 
-	async function handleAcceptFriend(friendId: number) {
+	async function handleAcceptFriend(friendId: number, chatId: number) {
 		try {
-			const success = await friendStore.acceptFriendRequest(friendId);
+			const success = await friendStore.acceptFriendRequest(friendId, chatId);
 			if (!success) {
 				errorToast('Failed to accept friend request');
 			}
@@ -20,9 +20,9 @@
 		}
 	}
 
-	async function handleRejectFriend(friendId: number) {
+	async function handleRejectFriend(friendId: number, chatId: number) {
 		try {
-			const success = await friendStore.rejectFriendRequest(friendId);
+			const success = await friendStore.rejectFriendRequest(friendId, chatId);
 			if (!success) {
 				errorToast('Failed to reject friend request');
 			}
@@ -31,9 +31,9 @@
 		}
 	}
 
-	async function handleCancelFriendRequest(friendId: number) {
+	async function handleCancelFriendRequest(friendId: number, chatId: number) {
 		try {
-			const success = await friendStore.cancelFriendRequest(friendId);
+			const success = await friendStore.cancelFriendRequest(friendId, chatId);
 			if (!success) {
 				errorToast('Failed to cancel friend request');
 			}
@@ -47,24 +47,23 @@
 	}
 
 	function handleFriendClick(friend: Friend) {
-		console.log('Friend clicked:', friend);
 		selectedFriend = friend;
 		showDetailModal = true;
 	}
 
-	function stopAndAccept(e: MouseEvent, friendId: number) {
+	function stopAndAccept(e: MouseEvent, friendId: number, chatId: number) {
 		e.stopPropagation();
-		handleAcceptFriend(friendId);
+		handleAcceptFriend(friendId, chatId);
 	}
 
-	function stopAndReject(e: MouseEvent, friendId: number) {
+	function stopAndReject(e: MouseEvent, friendId: number, chatId: number) {
 		e.stopPropagation();
-		handleRejectFriend(friendId);
+		handleRejectFriend(friendId, chatId);
 	}
 
-	function stopAndCancel(e: MouseEvent, friendId: number) {
+	function stopAndCancel(e: MouseEvent, friendId: number, chatId: number) {
 		e.stopPropagation();
-		handleCancelFriendRequest(friendId);
+		handleCancelFriendRequest(friendId, chatId);
 	}
 </script>
 
@@ -97,8 +96,8 @@
 							<span class="status">⏳ Incoming Request</span>
 						</div>
 						<div class="actions">
-							<button class="btn accept" onclick={(e) => stopAndAccept(e, friend.friend_id)}>✓ Accept</button>
-							<button class="btn reject" onclick={(e) => stopAndReject(e, friend.friend_id)}>✗ Reject</button>
+							<button class="btn accept" onclick={(e) => stopAndAccept(e, friend.friend_id, friend.chat_id)}>✓ Accept</button>
+							<button class="btn reject" onclick={(e) => stopAndReject(e, friend.friend_id, friend.chat_id)}>✗ Reject</button>
 						</div>
 					</div>
 				{/if}
@@ -131,7 +130,7 @@
 							<span class="status">⏳ Waiting for response...</span>
 						</div>
 						<div class="actions">
-							<button class="btn cancel" onclick={(e) => stopAndCancel(e, friend.friend_id)}>✗ Cancel</button>
+							<button class="btn cancel" onclick={(e) => stopAndCancel(e, friend.friend_id, friend.chat_id)}>✗ Cancel</button>
 						</div>
 					</div>
 				{/if}

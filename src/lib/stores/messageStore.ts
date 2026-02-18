@@ -2,10 +2,8 @@ import { writable, get } from 'svelte/store';
 import type { Message, ChatMessage } from '$lib/types/message';
 import { indexedDBHelper } from './indexedDBHelper';
 
-export const STORAGE_KEY_MESSAGES_PREFIX = 'messages_';
-
 interface MessagesState {
-	messages: Map<number, ChatMessage[]>; // chat_id -> messages
+	messages: Map<number, ChatMessage[]>;
 	loading: boolean;
 	error: string | null;
 }
@@ -64,7 +62,6 @@ function createMessageStore() {
 	return {
 		subscribe,
 		
-		// Add a message to a chat
 		addMessage: async (message: ChatMessage) => {
 			await saveMessageToStorage(message);
 			
@@ -122,13 +119,26 @@ function createMessageStore() {
 			return state.messages.get(chatId) || [];
 		},
 		
+		// Get the latest message ID for a chat
+		getLatestMessageId: (chatId: number): number | null => {
+			const state = get({ subscribe });
+			const messages = state.messages.get(chatId);
+			if (!messages || messages.length === 0) {
+				return null;
+			}
+			// Get the message with the highest ID
+			return Math.max(...messages.map(m => m.id));
+		},
+		
 		// Set messages for a chat (replaces existing messages)
 		setMessagesForChat: async (chatId: number, messages: ChatMessage[]) => {
 			// Clear existing messages for this chat from storage
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearMessagesForChat(chatId);
 				for (const message of messages) {
-					await indexedDBHelper.saveMessage(message);
+					// Don't save is_me to storage - it's a client-side computed property
+					const { is_me, ...messageWithoutIsMe } = message;
+					await indexedDBHelper.saveMessage(messageWithoutIsMe);
 				}
 			}
 			
@@ -160,6 +170,7 @@ function createMessageStore() {
 		clear: async () => {
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearAllMessages();
+				await indexedDBHelper.clearShouldUpdateMessages();
 			}
 			set(initialState);
 		},
@@ -170,7 +181,22 @@ function createMessageStore() {
 		
 		setError: (error: string | null) => {
 			update((state) => ({ ...state, error }));
-		}
+		},
+		
+		// Set whether messages should be updated from backend for a chat
+		setShouldUpdateMessages: async (chatId: number, shouldUpdate: boolean): Promise<void> => {
+			await indexedDBHelper.saveShouldUpdateMessages(chatId, shouldUpdate);
+		},
+		
+		// Get whether messages should be updated from backend for a chat
+		getShouldUpdateMessages: async (chatId: number): Promise<boolean> => {
+			return await indexedDBHelper.getShouldUpdateMessages(chatId);
+		},
+		
+		// Clear all shouldUpdate flags
+		clearShouldUpdateMessages: async (): Promise<void> => {
+			await indexedDBHelper.clearShouldUpdateMessages();
+		},
 	};
 }
 

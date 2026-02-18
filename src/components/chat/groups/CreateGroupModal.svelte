@@ -31,11 +31,7 @@
 	onMount(async () => {
 		authStore.subscribe((state) => {
 			if (state.isAuthenticated && state.user) {
-				console.log('User is authenticated, getting id');
 				myUserId = state.user.id;
-				console.log(myUserId);
-			} else {
-				console.log('User is not authenticated');
 			}
 		});
 	});

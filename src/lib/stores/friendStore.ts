@@ -14,8 +14,6 @@ import { userStore } from './userStore';
 import { avatarStore } from './avatarStore';
 import { indexedDBHelper } from './indexedDBHelper';
 
-export const STORAGE_KEY_FRIENDS_PREFIX = 'friend_';
-
 const initialState: FriendState = {
 	friends: [],
 	loading: false,
@@ -44,27 +42,6 @@ function createFriendStore() {
 			console.error('Error loading friends from IndexedDB:', error);
 		}
 
-		// If no friends in IndexedDB, try localStorage for migration
-		if (friends.length === 0) {
-			const keys = Object.keys(localStorage);
-			const friendKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_FRIENDS_PREFIX));
-
-			friendKeys.forEach((key) => {
-				const friendId = parseInt(key.replace(STORAGE_KEY_FRIENDS_PREFIX, ''));
-				const friendData = localStorage.getItem(key);
-				if (friendData) {
-					try {
-						const friend: Friend = JSON.parse(friendData);
-						friends.push(friend);
-						// Migrate to IndexedDB
-						indexedDBHelper.saveFriend(friend);
-					} catch (error) {
-						console.error(`Failed to parse friend data for friend ${friendId}:`, error);
-					}
-				}
-			});
-		}
-
 		update((state) => ({ ...state, friends }));
 	}
 
@@ -72,42 +49,57 @@ function createFriendStore() {
 		if (typeof window !== 'undefined') {
 			// Only store friend data without user object (user is stored separately)
 			const friendToStore = {
+				chat_id: friend.chat_id,
 				friend_id: friend.friend_id,
 				accepted: friend.accepted,
-				friend_version: friend.friend_version
+				friend_version: friend.friend_version,
+				message_version: friend.message_version
 			};
 			await indexedDBHelper.saveFriend(friendToStore);
 		}
 	}
 
-	async function getStoredFriend(friendId: number): Promise<Friend | null> {
+	async function getStoredFriend(chatId: number): Promise<Friend | null> {
 		// Try IndexedDB first
-		const friend = (await indexedDBHelper.getFriend(friendId)) as Friend | null;
+		const friend = (await indexedDBHelper.getFriend(chatId)) as Friend | null;
 		if (friend) {
 			return friend;
-		}
-
-		// Fallback to localStorage for migration purposes
-		const friendData = localStorage.getItem(`${STORAGE_KEY_FRIENDS_PREFIX}${friendId}`);
-		if (friendData) {
-			try {
-				const parsedFriend = JSON.parse(friendData) as Friend;
-				// Migrate to IndexedDB
-				await indexedDBHelper.saveFriend(parsedFriend);
-				return parsedFriend;
-			} catch (error) {
-				console.error(`Failed to parse stored friend data for friend ${friendId}:`, error);
-				return null;
-			}
 		}
 		return null;
 	}
 
-	async function removeFriendFromStorage(friendId: number) {
+	async function removeFriendFromStorage(chatId: number) {
 		if (typeof window !== 'undefined') {
-			await indexedDBHelper.removeFriend(friendId);
-			localStorage.removeItem(`${STORAGE_KEY_FRIENDS_PREFIX}${friendId}`);
+			await indexedDBHelper.removeFriend(chatId);
 		}
+	}
+
+	async function getStoredFriendByFriendId(friendId: number): Promise<Friend | null> {
+		// First check memory store
+		const state = get({ subscribe });
+		let friend = state.friends.find((f) => f.friend_id === friendId);
+		
+		if (friend) {
+			return friend;
+		}
+		
+		// Try to get from IndexedDB
+		const allFriends = await indexedDBHelper.getAllFriends() as Friend[];
+		friend = allFriends.find((f) => f.friend_id === friendId);
+		
+		if (friend) {
+			// Add to memory store if found
+			update((state) => {
+				const exists = state.friends.find((f) => f.friend_id === friend!.friend_id);
+				if (!exists) {
+					return { ...state, friends: [...state.friends, friend!] };
+				}
+				return state;
+			});
+			return friend;
+		}
+		
+		return null;
 	}
 
 	return {
@@ -152,11 +144,11 @@ function createFriendStore() {
 
 					// Create friend object
 					const friend: Friend = {
+						chat_id: addFriendResponse.data as number,
 						friend_id: friendData.friendId,
 						accepted: null, // I sent this request
 						friend_version: 1,
-						message_version: 1,
-						chat_id: null, // not yet accepted
+						message_version: 0,
 						user: user
 					};
 
@@ -178,7 +170,7 @@ function createFriendStore() {
 		updateFriend: async (friend: Friend): Promise<void> => {
 			await saveFriendToStorage(friend);
 			update((state) => {
-				const newFriends = state.friends.filter((f) => f.friend_id !== friend.friend_id);
+				const newFriends = state.friends.filter((f) => f.chat_id !== friend.chat_id);
 				return { ...state, friends: [...newFriends, friend] };
 			});
 		},
@@ -191,19 +183,21 @@ function createFriendStore() {
 				const updatedFriends = state.friends.map((friend) => {
 					if (friend.friend_id === userId) {
 						// Update the friend version and user info
+						const updatedUser: User = {
+							id: friend.friend_id,
+							username: newUsername,
+							colour: friend.user?.colour || '',
+							avatar_version: friend.user?.avatar_version || 0,
+							profile_version: profileVersion
+						};
 						const updatedFriend = {
 							...friend,
 							friend_version: friend.friend_version + 1,
-							user: friend.user
-								? {
-										...friend.user,
-										username: newUsername,
-										profile_version: profileVersion
-									}
-								: undefined
+							user: updatedUser
 						};
 						// Save the updated friend to storage
 						saveFriendToStorage(updatedFriend);
+						userStore.updateUser(updatedUser);
 						return updatedFriend;
 					}
 
@@ -221,19 +215,21 @@ function createFriendStore() {
 				const updatedFriends = state.friends.map((friend) => {
 					if (friend.friend_id === userId) {
 						// Update the friend version and user info
+						const updatedUser: User = {
+							id: friend.friend_id,
+							username: friend.user?.username || '',
+							colour: newColour,
+							avatar_version: friend.user?.avatar_version || 0,
+							profile_version: profileVersion
+						};
 						const updatedFriend = {
 							...friend,
 							friend_version: friend.friend_version + 1,
-							user: friend.user
-								? {
-										...friend.user,
-										colour: newColour,
-										profile_version: profileVersion
-									}
-								: undefined
+							user: updatedUser
 						};
 						// Save the updated friend to storage
 						saveFriendToStorage(updatedFriend);
+						userStore.updateUser(updatedUser);
 						return updatedFriend;
 					}
 
@@ -244,6 +240,7 @@ function createFriendStore() {
 		},
 		addFriendRequest: async (friendData: {
 			friend_id: number;
+			chat_id: number;
 			username: string;
 			colour: string;
 			avatar_version: number;
@@ -269,10 +266,10 @@ function createFriendStore() {
 				// Create friend object
 				const newFriend: Friend = {
 					friend_id: friendData.friend_id,
+					chat_id: friendData.chat_id,
 					accepted: false,
 					friend_version: 1,
-					message_version: 1,
-					chat_id: null,
+					message_version: 0,
 					user: user
 				};
 
@@ -284,15 +281,15 @@ function createFriendStore() {
 				return { ...state, friends: updatedFriends };
 			});
 		},
-		acceptFriendRequest: async (friendId: number): Promise<boolean> => {
+		acceptFriendRequest: async (friendId: number, chatId: number): Promise<boolean> => {
 			try {
 				const accessToken = get(accessTokenValue);
 				if (!accessToken) {
 					throw new Error('No access token available');
 				}
 
-				const response = await respondToFriendRequest(accessToken, friendId, true);
-				if (response.success && response.data) {
+				const response = await respondToFriendRequest(accessToken, friendId, chatId, true);
+				if (response.success) {
 					// Update the friend status locally
 					update((state) => {
 						const updatedFriends = state.friends.map((friend) => {
@@ -300,7 +297,6 @@ function createFriendStore() {
 								return {
 									...friend,
 									accepted: true,
-									chat_id: response.data as number,
 									friend_version: friend.friend_version + 1
 								};
 							}
@@ -316,14 +312,14 @@ function createFriendStore() {
 				return false;
 			}
 		},
-		rejectFriendRequest: async (friendId: number): Promise<boolean> => {
+		rejectFriendRequest: async (friendId: number, chatId: number): Promise<boolean> => {
 			try {
 				const accessToken = get(accessTokenValue);
 				if (!accessToken) {
 					throw new Error('No access token available');
 				}
 
-				const response = await respondToFriendRequest(accessToken, friendId, false);
+				const response = await respondToFriendRequest(accessToken, friendId, chatId, false);
 				if (response.success) {
 					// Remove the friend from the list
 					update((state) => {
@@ -340,14 +336,14 @@ function createFriendStore() {
 				return false;
 			}
 		},
-		cancelFriendRequest: async (friendId: number): Promise<boolean> => {
+		cancelFriendRequest: async (friendId: number, chatId: number): Promise<boolean> => {
 			try {
 				const accessToken = get(accessTokenValue);
 				if (!accessToken) {
 					throw new Error('No access token available');
 				}
 
-				const response = await cancelFriendRequest(accessToken, friendId);
+				const response = await cancelFriendRequest(accessToken, friendId, chatId);
 				if (response.success) {
 					// Remove the friend from the list
 					update((state) => {
@@ -364,22 +360,22 @@ function createFriendStore() {
 				return false;
 			}
 		},
-		removeFriend: async (friendId: number): Promise<boolean> => {
+		removeFriend: async (friendId: number, chatId: number): Promise<boolean> => {
 			try {
 				const accessToken = get(accessTokenValue);
 				if (!accessToken) {
 					throw new Error('No access token available');
 				}
 
-				const response = await removeFriend(accessToken, friendId);
+				const response = await removeFriend(accessToken, friendId, chatId);
 				if (response.success) {
 					// Remove the friend from the list
 					update((state) => {
-						const updatedFriends = state.friends.filter((friend) => friend.friend_id !== friendId);
+						const updatedFriends = state.friends.filter((friend) => friend.chat_id !== chatId);
 						return { ...state, friends: updatedFriends };
 					});
-					// Remove from storage
-					await removeFriendFromStorage(friendId);
+					// TODO: Remove from storage
+					await removeFriendFromStorage(chatId);
 					return true;
 				}
 				return false;
@@ -411,7 +407,7 @@ function createFriendStore() {
 			if (friend) {
 				// Add to memory store if found
 				update((state) => {
-					const exists = state.friends.find((f) => f.friend_id === friend!.friend_id);
+					const exists = state.friends.find((f) => f.chat_id === friend!.chat_id);
 					if (!exists) {
 						return { ...state, friends: [...state.friends, friend!] };
 					}
@@ -422,6 +418,7 @@ function createFriendStore() {
 			
 			return null;
 		},
+    	getStoredFriendByFriendId,
 		getStoredFriend,
 		removeFriendFromStorage,
 		clear: async () => {
@@ -429,14 +426,11 @@ function createFriendStore() {
 			// Clear all friend storage
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearFriends();
-
-				// Clear localStorage as fallback
-				const keys = Object.keys(localStorage);
-				const friendKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_FRIENDS_PREFIX));
-				friendKeys.forEach((key) => localStorage.removeItem(key));
 			}
-		}
+		},
 	};
 }
 
 export const friendStore = createFriendStore();
+
+// TODO: Remove all "Fallback" options in the indexedb variety

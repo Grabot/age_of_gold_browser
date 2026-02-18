@@ -1,30 +1,38 @@
 <script lang="ts">
 	import { groupStore } from '$lib/stores/groupStore';
 	import { friendStore } from '$lib/stores/friendStore';
+	import { userStore } from '$lib/stores/userStore';
 	import { messageStore } from '$lib/stores/messageStore';
 	import { accessTokenValue, authStore } from '$lib/stores/authStore';
 	import { getInitial } from '$lib/utils/groupUtils';
 	import { getTextColourForBackground } from '$lib/utils/colourUtils';
 	import type { Contact } from '$lib/types/contact';
+	import MessageItem from './MessageItem.svelte';
 	import { 
 		isGroup, 
-		isFriend, 
-		getContactId, 
+		isFriend,
 		getContactName, 
 		getContactAvatar, 
-		getContactColour, 
+		getContactColour,
+		getContactUnreadCount,
+		getContactPrivate,
 		getContactChatId,
-		getContactUnreadCount
+		getContactMessages
 	} from '$lib/types/contact';
 	import type { ChatMessage } from '$lib/types/message';
 	import { onMount } from 'svelte';
 	import { pushState } from '$app/navigation';
 	import { avatarStore } from '$lib/stores/avatarStore';
+	import { indexedDBHelper } from '$lib/stores/indexedDBHelper';
 	import { updateGroupAvatar, updateUserAvatar, checkUserAvatar, checkGroupAvatar } from '$lib/utils/avatarUtils';
 	import { errorToast } from '$lib/utils/toast';
-	import { fetchMessages, sendMessage, type FetchMessagesResponse, type SendMessageResponse } from '$lib/api/messageApi';
+	import { fetchMessages, sendMessage, type FetchMessagesResponse } from '$lib/api/messageApi';
+	import { socketEventStore } from '$lib/stores/socketEventStore';
+	import type { MessageData } from '$lib/socket';
 	import { get } from 'svelte/store';
 	import type { User } from '$lib/types/user';
+	import { retrieveMissingUsers } from '$lib/services/dataRetrievalService';
+	import type { Group } from '$lib/types/groups';
 
 	export let onClose: () => void;
 
@@ -35,6 +43,10 @@
 	let innerWidth = window.innerWidth;
 	let innerHeight = window.innerHeight;
 	let showSidebarOnMobile = true;
+
+	// Cache for sender info to avoid repeated lookups
+	// Group members for the currently selected group
+	let groupMembers: Array<{ user_id: number; username: string; avatar: string | null }> = [];
 
 	// Reactive mobile detection (portrait orientation or narrow viewport)
 	$: isMobile = innerWidth < 768 || innerHeight > innerWidth;
@@ -48,10 +60,57 @@
 	$: selectedChatName = selectedContact ? getContactName(selectedContact) : 'Chat';
 	$: selectedChatAvatar = selectedContact ? getContactAvatar(selectedContact) : undefined;
 	$: selectedChatInitial = selectedContact ? getInitial(getContactName(selectedContact)) : '';
+	$: selectedChatPrivate = selectedContact ? getContactPrivate(selectedContact) : true;
+	$: currentMessages = selectedContact ? getContactMessages(selectedContact, $messageStore.messages) : [];
 
-	// Helper function for getting chat ID (used in non-reactive contexts)
-	function getChatId(): number | null {
-		return selectedChatId;
+	// Build sender username map whenever groupMembers or selectedContact changes
+	let getUserDetailsDone = false;
+	let senderUsernameMap: Map<number, string> = new Map();
+	let senderAvatarMap: Map<number, string | null> = new Map();
+
+	function checkUsernameMapReady(
+		contact: Contact | null, 
+		members: Array<{ user_id: number; username: string; avatar: string | null }>,
+		map: Map<number, string>
+	): boolean {
+		// For friend chats, map is ready immediately if we have the friend data
+		if (contact && isFriend(contact)) {
+			return contact.user !== undefined;
+		}
+		
+		// For group chats, check if we have members loaded
+		if (contact && isGroup(contact)) {
+			// If no members yet, not ready
+			if (members.length === 0) {
+				return false;
+			}
+			
+			// Check if the map has entries (meaning members were processed)
+			return map.size > 0;
+		}
+		
+		return true; // Default to ready for other cases
+	}
+
+	function buildSenderAvatarMap(members: Array<{ user_id: number; username: string; avatar: string | null }>): Map<number, string | null> {
+		const map = new Map<number, string | null>();
+		
+		// For group chats, use the groupMembers array
+		members.forEach(member => {
+			map.set(member.user_id, member.avatar);
+		});
+		
+		return map;
+	}
+
+	function buildSenderUsernameMap(members: Array<{ user_id: number; username: string; avatar: string | null }>): Map<number, string> {
+		const map = new Map<number, string>();
+		
+		members.forEach(member => {
+			map.set(member.user_id, member.username);
+		});
+		
+		return map;
 	}
 
 	// Load avatar for contact if not available
@@ -83,6 +142,10 @@
 	}
 
 	async function selectContact(contact: Contact) {
+		getUserDetailsDone = false;
+		// Clear group members when switching chats
+		groupMembers = [];
+		
 		// Load avatar if not available
 		await loadContactAvatar(contact);
 		
@@ -93,8 +156,15 @@
 		if (isMobile) {
 			showSidebarOnMobile = false;
 		}
+
+		if (isGroup(selectedContact)) {
+			loadGroupMembers(selectedContact as Group);
+		} else {
+			getUserDetailsDone = true;
+		}
 		
-		await loadMessages();
+		// Pass the contact directly to avoid reactivity timing issues
+		await loadMessagesForContact(contact);
 	}
 
 	function goBackToSidebar() {
@@ -117,50 +187,93 @@
 		pushState('', { chatOpen: true });
 	}
 
-	async function loadMessages() {
-		console.log("loading messages");
-		const chatId = getChatId();
+	async function loadMessagesForContact(contact: Contact) {
+		const chatId = getContactChatId(contact);
+		console.log("loading messages for contact", chatId, contact);
+		await loadMessagesForChatId(chatId);
+	}
+	
+	async function loadMessagesForChatId(chatId: number | null) {
+		console.log("loading messages for chatId", chatId);
 		const accessToken = get(accessTokenValue);
 		
-		if (!chatId || !currentUserId || !accessToken) return;
+		if (!chatId || !currentUserId || !accessToken || !selectedContact) return;
 		
 		messageStore.setLoading(true);
-		const response: FetchMessagesResponse = await fetchMessages(
-			accessToken,
-			chatId,
-			currentUserId
-		);
 		
-		if (!response.success) {
-			errorToast("Failed to fetch messages");
-			messageStore.setLoading(false);
-			return;
+		// First, load stored messages from IndexedDB
+		const storedMessages = await indexedDBHelper.getMessagesByChatId(chatId) as ChatMessage[];
+		if (storedMessages && storedMessages.length > 0) {
+			messageStore.addMessages(chatId, storedMessages);
+			console.log('Loaded stored messages:', storedMessages.length);
 		}
 		
-		console.log('Messages fetched:', response.data);
-		const chatMessages: ChatMessage[] = response.data.messages.map(msg => ({
-			...msg,
-			is_me: msg.sender_id === currentUserId
-		}));
-		messageStore.addMessages(chatId, chatMessages);
+		// Check if we need to update messages from backend using chatId
+		const shouldUpdate = await messageStore.getShouldUpdateMessages(chatId);
+		console.log('shouldUpdate:', shouldUpdate);
+		
+		if (shouldUpdate) {
+			console.log('Fetching messages from backend...');
+			
+			// Get the latest message ID to fetch only new messages
+			const latestMessageId = messageStore.getLatestMessageId(chatId);
+			console.log('Latest message ID:', latestMessageId);
+			
+			const response: FetchMessagesResponse = await fetchMessages(
+				accessToken,
+				chatId,
+				latestMessageId,
+			);
+			
+			if (!response.success) {
+				errorToast("Failed to fetch messages");
+				messageStore.setLoading(false);
+				return;
+			}
+			
+			console.log('Messages fetched from backend:', response.data);
+			messageStore.addMessages(chatId, response.data.messages);
+
+			// Clear the shouldUpdate flag using chatId
+			await messageStore.setShouldUpdateMessages(chatId, false);
+		}
 		messageStore.setLoading(false);
 		setTimeout(scrollToBottom, 100);
 	}
 
 	async function handleSendMessage() {
 		const accessToken = get(accessTokenValue);
-		const chatId = getChatId();
+		const chatId = selectedChatId;
 		
 		if (newMessage.trim() && chatId && currentUserId && accessToken) {
-			const response: SendMessageResponse = await sendMessage(
+			console.log("Sending message");
+			console.log(selectedChatId);
+			console.log(chatId);
+			console.log(selectedChatPrivate);
+			console.log(newMessage);
+			const response = await sendMessage(
 				accessToken,
 				chatId,
+				selectedChatPrivate,
 				newMessage.trim(),
 			);
 			if (!response.success) {
 				errorToast("Failed to send message");
 				return;
 			}
+			const messageData: MessageData = {
+				id: response.data as number,
+				chat_id: chatId,
+				sender_id: currentUserId as number,
+				content: newMessage.trim(),
+				created_at: new Date().toISOString(),
+				message_type: 0
+			}
+			const chatMessage: ChatMessage = {
+				...messageData,
+				is_me: true  // We know this is the current user's message
+			};
+			messageStore.addMessage(chatMessage);
 			newMessage = '';
 		}
 	}
@@ -182,6 +295,149 @@
 		if (messagesEndRef) {
 			messagesEndRef.scrollIntoView({ behavior: 'smooth' });
 		}
+	}
+
+	// Handle incoming socket message events
+	function handleIncomingMessageChatOpen(messageData: MessageData) {
+		console.log('Received message via socket while chat is open:', messageData);
+		
+		const chatId = messageData.chat_id;
+		const newMessageId = messageData.id;
+		
+		// Get the latest message ID we currently have for this chat
+		const latestMessageId = messageStore.getLatestMessageId(chatId);
+		
+		if (latestMessageId === null) {
+			// We don't have any messages for this chat yet, set shouldUpdate flag
+			console.log('No messages stored for chat', chatId, '- setting shouldUpdate flag');
+		} else if (newMessageId === latestMessageId + 1) {
+			// Scroll to bottom if this is the currently selected chat
+			if (selectedChatId === chatId) {
+				setTimeout(scrollToBottom, 100);
+			}
+		} else {
+			// TODO: do update messages?
+		}
+	}
+
+	function getMessageGroupMember(senderId: number) {
+		if (selectedChatId === null) return null;
+		return groupMembers.find(member => member.user_id === senderId) || null;
+	}
+
+	// Load group members for group chats
+	async function loadGroupMembers(group: Group) {
+		if (!group || !group.user_ids) return;
+
+		let newMembers: Array<{ user_id: number; username: string; avatar: string | null }> = [];
+
+		let userIdsToRetrieve = [];
+		let avatarIdsToRetrieve = [];
+		for (const userId of group.user_ids) {
+			// Skip current user - we'll handle them separately
+			if (currentUserId === userId) continue;
+
+			const groupUser = await userStore.getUser(userId);
+			const avatarUser = await avatarStore.getAvatar(userId);
+
+			for (const userId of group.user_ids) {
+				if (currentUserId === userId) continue;
+
+				const groupUser = await userStore.getUser(userId);
+				const avatarUser = await avatarStore.getAvatar(userId);
+
+				if (groupUser && avatarUser) {
+					if (!newMembers.some(member => member.user_id === groupUser.id)) {
+						newMembers.push({
+							user_id: groupUser.id,
+							username: groupUser.username,
+							avatar: avatarUser
+						});
+					}
+				} else if (groupUser && !avatarUser) {
+					avatarIdsToRetrieve.push(userId);
+					if (!newMembers.some(member => member.user_id === groupUser.id)) {
+						newMembers.push({
+							user_id: groupUser.id,
+							username: groupUser.username,
+							avatar: null
+						});
+					}
+				} else if (!groupUser && avatarUser) {
+					userIdsToRetrieve.push(userId);
+					if (!newMembers.some(member => member.user_id === userId)) {
+						newMembers.push({
+							user_id: userId,
+							username: 'User',
+							avatar: avatarUser
+						});
+					}
+				} else {
+					userIdsToRetrieve.push(userId);
+					avatarIdsToRetrieve.push(userId);
+					if (!newMembers.some(member => member.user_id === userId)) {
+						newMembers.push({
+							user_id: userId,
+							username: 'User',
+							avatar: null
+						});
+					}
+				}
+			}
+		}
+
+		groupMembers = newMembers;
+		const accessToken = get(accessTokenValue);
+		if (userIdsToRetrieve.length > 0 && accessToken) {
+			await retrieveMissingUsers(userIdsToRetrieve, accessToken);
+			for (const userId of avatarIdsToRetrieve) {
+				const user = await userStore.getUser(userId);
+				if (user) {
+					const updatedUser = await updateUserAvatar(user);
+					if (updatedUser) {
+						groupMembers = groupMembers.map(member =>
+							member.user_id === updatedUser.id
+								? {
+									...member,
+									username: updatedUser.username,
+									avatar: updatedUser.avatar ?? null
+								}
+								: member
+						);
+					}
+				}
+			}
+		}
+		senderAvatarMap = buildSenderAvatarMap(groupMembers);
+		senderUsernameMap = buildSenderUsernameMap(groupMembers);
+		getUserDetailsDone = true;
+		console.log('Loaded group members:', groupMembers.length);
+	}
+
+	// Get username for a message sender from the reactive map
+	async function getMessageUsername(senderId: number): Promise<string> {
+		if (senderId === currentUserId) {
+			return "";
+		}
+
+		// Use the reactive senderUsernameMap
+		const username = senderUsernameMap.get(senderId);
+		if (username) {
+			return username;
+		}
+
+		return 'Unknown';		
+	}
+
+	// Get avatar for a message sender from the reactive map
+	async function getMessageAvatar(senderId: number): Promise<string | null> {
+		if (senderId === currentUserId) {
+			return null;
+		}
+
+		// Use the reactive senderAvatarMap
+		const avatar = senderAvatarMap.get(senderId);
+		return avatar || null;
 	}
 
 	onMount(() => {
@@ -233,10 +489,22 @@
 			}
 		});
 
+		// Subscribe to socket events for incoming messages
+		const unsubscribeSocket = socketEventStore.subscribe((events) => {
+			console.log('Socket event received 1');
+			events.forEach((event) => {
+				console.log('Socket event received:', event);
+				if (event.type === 'message_received' && event.data) {
+					handleIncomingMessageChatOpen(event.data as MessageData);
+				}
+			});
+		});
+
 		return () => {
 			unsubscribeAuth();
 			unsubscribeFriends();
 			unsubscribeGroups();
+			unsubscribeSocket();
 			window.removeEventListener('resize', handleResize);
 			window.removeEventListener('popstate', handlePopState);
 		};
@@ -249,10 +517,6 @@
 	// Get groups as contacts
 	$: groupContacts = $groupStore.groups as Contact[];
 
-	$: currentMessages = selectedChatId 
-		? ($messageStore.messages.get(selectedChatId) || [])
-		: [];
-	
 	// Scroll to bottom when messages change
 	$: if (currentMessages.length > 0 && selectedContact) {
 		setTimeout(scrollToBottom, 100);
@@ -284,11 +548,11 @@
 				<!-- Friends Section -->
 				{#if friendContacts.length > 0}
 					<div class="section-label">Direct Messages</div>
-					{#each friendContacts as contact (getContactId(contact))}
+					{#each friendContacts as contact (contact.chat_id)}
 						{@const bgColor = getContactColour(contact) || ''}
 						<div
 							class="chat-item"
-							class:selected={selectedContact && getContactId(selectedContact) === getContactId(contact) && isFriend(selectedContact)}
+							class:selected={selectedContact && selectedContact.chat_id === contact.chat_id && isFriend(selectedContact)}
 							style="--bg: {bgColor}; --text: {getTextColourForBackground(bgColor)}"
 							role="button"
 							tabindex="0"
@@ -313,11 +577,11 @@
 				<!-- Groups Section -->
 				{#if groupContacts.length > 0}
 					<div class="section-label" class:with-border={friendContacts.length > 0}>Groups</div>
-					{#each groupContacts as contact (getContactId(contact))}
+					{#each groupContacts as contact (contact.chat_id)}
 						{@const bgColor = getContactColour(contact) || ''}
 						<div
 							class="chat-item"
-							class:selected={selectedContact && getContactId(selectedContact) === getContactId(contact) && isGroup(selectedContact)}
+							class:selected={selectedContact && selectedContact.chat_id === contact.chat_id && isGroup(selectedContact)}
 							style="--bg: {bgColor}; --text: {getTextColourForBackground(bgColor)}"
 							role="button"
 							tabindex="0"
@@ -381,20 +645,23 @@
 							<div class="spinner"></div>
 							<p>Loading messages...</p>
 						</div>
+					{:else if !getUserDetailsDone}
+						<div class="loading-messages">
+							<div class="spinner"></div>
+							<p>Loading user data...</p>
+						</div>
 					{:else if currentMessages.length === 0}
 						<div class="empty-chat">
 							<p>Start a conversation with {selectedChatName}</p>
 						</div>
 					{:else}
 						{#each currentMessages as message (message.id)}
-							<div class="message {message.is_me ? 'me' : 'other'}">
-								<div class="message-bubble">
-									{message.content}
-								</div>
-								<div class="message-time">
-									{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-								</div>
-							</div>
+							<MessageItem 
+								message={message}
+								currentUserId={currentUserId}
+								getUsername={getMessageUsername}
+								getAvatar={getMessageAvatar}
+							/>
 						{/each}
 						<div bind:this={messagesEndRef}></div>
 					{/if}
@@ -699,48 +966,6 @@
 	.empty-chat p {
 		margin: 0;
 		font-size: 0.95rem;
-	}
-
-	.message {
-		display: flex;
-		flex-direction: column;
-	}
-
-	.message.me {
-		align-items: flex-end;
-	}
-
-	.message.other {
-		align-items: flex-start;
-	}
-
-	.message-bubble {
-		max-width: 70%;
-		padding: 0.75rem 1rem;
-		border-radius: 18px;
-		font-size: 0.95rem;
-		line-height: 1.4;
-		word-wrap: break-word;
-	}
-
-	.message.me .message-bubble {
-		background: var(--chat-bg, var(--primary-colour));
-		color: var(--chat-text, var(--text-colour-on-primary));
-		border-bottom-right-radius: 4px;
-	}
-
-	.message.other .message-bubble {
-		background: white;
-		color: #212529;
-		border-bottom-left-radius: 4px;
-		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-	}
-
-	.message-time {
-		font-size: 0.7rem;
-		color: #6c757d;
-		margin-top: 0.25rem;
-		padding: 0 0.5rem;
 	}
 
 	.message-input-container {

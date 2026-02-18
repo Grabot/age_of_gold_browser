@@ -38,7 +38,6 @@
 
 		socketEventUnsubscribe = socketEventStore.subscribe((events) => {
 			events.forEach(async (event) => {
-				console.log('socket event', event);
 				if (event.type === 'group_avatar_updated') {
 					const group = $groupStore.groups.find((g) => g.chat_id === event.data?.chat_id);
 					if (group) {

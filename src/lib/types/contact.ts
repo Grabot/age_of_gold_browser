@@ -11,11 +11,11 @@ export function isFriend(contact: Contact): contact is Friend {
 	return 'friend_version' in contact;
 }
 
-export function getContactId(contact: Contact): number {
+export function getContactPrivate(contact: Contact): boolean {
 	if (isGroup(contact)) {
-		return contact.chat_id;
+		return false;
 	}
-	return contact.friend_id;
+	return true;
 }
 
 export function getContactName(contact: Contact): string {
@@ -39,13 +39,6 @@ export function getContactColour(contact: Contact): string | undefined {
 	return contact.user?.colour;
 }
 
-export function getContactChatId(contact: Contact): number | null {
-	if (isGroup(contact)) {
-		return contact.chat_id;
-	}
-	return contact.chat_id;
-}
-
 export function getContactInitial(contact: Contact): string {
 	const name = getContactName(contact);
 	return name.charAt(0).toUpperCase();
@@ -56,4 +49,16 @@ export function getContactUnreadCount(contact: Contact): number {
 		return contact.unread_messages || 0;
 	}
 	return 0;
+}
+
+export function getContactChatId(contact: Contact): number {
+	return contact.chat_id;
+}
+
+export function getContactMessages(contact: Contact, messageStore: Map<number, any>): any[] {
+	const chatId = contact.chat_id;
+	const messages = messageStore.get(chatId) || [];
+	console.log("messages");
+	console.log(messages);
+	return messageStore.get(chatId) || [];
 }

@@ -45,7 +45,16 @@
 		onGroupAvatarChangedEvent,
 		type GroupAvatarChangedEventData,
 		offGroupAvatarChangedEvent,
-		onColourUpdatedEvent
+		onColourUpdatedEvent,
+
+		offMessageReceivedEvent,
+
+		onMessageReceivedEvent,
+
+		type MessageData
+
+
+
 	} from '$lib/socket';
 	import { handleGetAvatar } from '$lib/services/settingsService';
 	import { goto } from '$app/navigation';
@@ -62,6 +71,7 @@
 	import type { Group } from '$lib/types/groups';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 	import { getRandomColour } from '$lib/utils/groupUtils';
+	import { handleIncomingMessage } from '$lib/utils/messageUtils';
 
 	let { children } = $props();
 	const options = {};
@@ -173,9 +183,6 @@
 			chat_id: data.chat_id,
 			user: updatedUser,
 		};
-		console.log("ACCEPTED!");
-		console.log(updatedFriend);
-		console.log(updatedUser);
 		friendStore.updateFriend(updatedFriend);
 		userStore.updateUser(updatedUser);
 	}
@@ -218,7 +225,6 @@
 			colour: data.colour,
 			current_message_id: data.current_message_id,
 		};
-		console.log("Group created event received", );
 		joinGroup(group.chat_id);
 		setTimeout(() => {
 			groupStore.updateGroup(group);
@@ -228,7 +234,6 @@
 	async function handleGroupMemberLeftEvent(data: any) {
 		const group = await groupStore.getGroup(data.chat_id);
 		if (!group) {
-			console.error(`Group not found in storage.`);
 			return false;
 		}
 
@@ -366,6 +371,17 @@
 		});
 	}
 
+	function handleOnMessageReceivedEvent(data: MessageData) {
+		console.log("Message received");
+		console.log(data);
+		handleIncomingMessage(data);
+		// Dispatch to socket event store for components to handle
+		socketEventStore.dispatch({
+			type: 'message_received',
+			data: data
+		});
+	}
+
 	export function joinGroup(groupId: number) {
 		if (socket) {
 			socket.emit('join_group', { chat_id: groupId });
@@ -491,6 +507,7 @@
 		onGroupUpdateEvent(handleGroupUpdateEvent);
 		onGroupMemberRemovedEvent(handleGroupMemberRemovedEvent);
 		onGroupAvatarChangedEvent(handleGroupAvatarChangedEvent);
+		onMessageReceivedEvent(handleOnMessageReceivedEvent);
 	}
 	function socketOff() {
 		offMessageEvent();
@@ -506,6 +523,7 @@
 		offGroupUpdateEvent();
 		offGroupMemberRemovedEvent();
 		offGroupAvatarChangedEvent();
+		offMessageReceivedEvent();
 	}
 
 	function toggleHome() {

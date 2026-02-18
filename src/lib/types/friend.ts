@@ -4,7 +4,7 @@ export interface Friend {
 	friend_id: number;
 	accepted: boolean | null;
 	friend_version: number;
-	chat_id: number | null;
+	chat_id: number;
 	message_version: number;
 	user?: User;
 }

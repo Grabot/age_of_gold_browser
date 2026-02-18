@@ -34,8 +34,6 @@ export async function createGroup(
 			friend_ids: friendIds
 		}
 	});
-	console.log('createGroupResponse');
-	console.log(createGroupResponse);
 	return CreateGroupResponseSchema.parse(createGroupResponse);
 }
 

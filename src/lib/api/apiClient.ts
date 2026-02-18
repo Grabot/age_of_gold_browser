@@ -3,13 +3,15 @@ import { accessTokenValue, authStore, refreshTokenValue } from '$lib/stores/auth
 import { get } from 'svelte/store';
 
 export interface FriendLogin {
-	friend_id: number;
+	chat_id: number;
 	friend_version: number;
+	message_version: number;
 }
 
 export interface GroupLogin {
 	chat_id: number;
 	group_version: number;
+	message_version: number;
 }
 
 export const LoginResponseSchema = z.object({
@@ -19,14 +21,16 @@ export const LoginResponseSchema = z.object({
 	avatar_version: z.int(),
 	friends: z.array(
 		z.object({
-			friend_id: z.number(),
-			friend_version: z.number()
+			chat_id: z.number(),
+			friend_version: z.number(),
+			message_version: z.number()
 		})
 	),
 	groups: z.array(
 		z.object({
 			chat_id: z.number(),
-			group_version: z.number()
+			group_version: z.number(),
+			message_version: z.number()
 		})
 	)
 });
@@ -77,7 +81,6 @@ class ApiConfig {
         changeColour: 'user/colour',
         changeAvatar: 'user/avatar',
         getAvatar: 'user/avatar',
-        getAvatarVersion: 'user/avatar/version',
         getUser: 'user',
         getMultipleUsers: 'users'
     } as const;
@@ -108,7 +111,6 @@ class ApiConfig {
 	readonly messageEndpoints = {
 		sendMessage: 'message/send',
 		fetchMessages: 'message/fetch',
-		getMessages: 'message/chat/{chat_id}'
 	} as const;
 
 	buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {

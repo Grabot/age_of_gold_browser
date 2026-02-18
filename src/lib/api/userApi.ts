@@ -91,18 +91,6 @@ export async function getAvatar(
 	});
 }
 
-export async function getAvatarVersion(
-	accessToken: string,
-	userId: number
-): Promise<ApiResponse<unknown>> {
-	return makeRequest({
-		method: 'POST',
-		endpoint: API.userEndpoints.getAvatarVersion,
-		accessToken,
-		body: { user_id: userId }
-	});
-}
-
 export async function getUser(
 	accessToken: string,
 	userId: number | undefined = undefined

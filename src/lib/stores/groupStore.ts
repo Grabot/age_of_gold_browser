@@ -16,8 +16,6 @@ import { accessTokenValue } from './authStore';
 import { avatarStore } from './avatarStore';
 import { indexedDBHelper } from './indexedDBHelper';
 
-export const STORAGE_KEY_GROUPS_PREFIX = 'group_';
-
 const initialState: GroupState = {
 	groups: [],
 	loading: false,
@@ -51,45 +49,6 @@ function createGroupStore() {
 			console.error('Error loading groups from IndexedDB:', error);
 		}
 
-		// If no groups in IndexedDB, try localStorage for migration
-		if (groups.length === 0) {
-			const keys = Object.keys(localStorage);
-			const groupKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_GROUPS_PREFIX));
-
-			groupKeys.forEach((key) => {
-				const groupId = parseInt(key.replace(STORAGE_KEY_GROUPS_PREFIX, ''));
-				const groupData = localStorage.getItem(key);
-				if (groupData) {
-					try {
-						console.log('GroupData');
-						console.log(groupData);
-						const group: Group = JSON.parse(groupData);
-						groups.push(group);
-						// Migrate to IndexedDB
-						const GroupToStore: Group = {
-							chat_id: group.chat_id,
-							unread_messages: group.unread_messages,
-							mute: group.mute,
-							mute_timestamp: group.mute_timestamp,
-							group_version: group.group_version,
-							message_version: group.message_version,
-							avatar_version: group.avatar_version,
-							last_message_read_id: group.last_message_read_id,
-							user_ids: group.user_ids,
-							admin_ids: group.admin_ids,
-							name: group.name,
-							description: group.description,
-							colour: group.colour,
-							current_message_id: group.current_message_id,
-						}; // Save everything but the avatar
-						indexedDBHelper.saveGroup(GroupToStore);
-					} catch (error) {
-						console.error(`Failed to parse group data for group ${groupId}:`, error);
-					}
-				}
-			});
-		}
-
 		update((state) => ({ ...state, groups }));
 	}
 
@@ -119,7 +78,6 @@ function createGroupStore() {
 	async function removeGroupFromStorage(groupId: number) {
 		if (typeof window !== 'undefined') {
 			await indexedDBHelper.removeGroup(groupId);
-			localStorage.removeItem(`${STORAGE_KEY_GROUPS_PREFIX}${groupId}`);
 		}
 	}
 
@@ -139,10 +97,7 @@ function createGroupStore() {
 			meId: number;
 		}): Promise<number | null> => {
 			try {
-				console.log('Starting group creation process');
 				const accessToken = get(accessTokenValue);
-				console.log('Access token retrieved:', accessToken);
-				console.log('Group data:', groupData);
 				const response: CreateGroupResponse = await createGroup(
 					accessToken,
 					groupData.groupName,
@@ -150,7 +105,6 @@ function createGroupStore() {
 					groupData.groupColour,
 					groupData.friendIds
 				);
-				console.log('Response from createGroup:', response);
 				if (response.success) {
 					const chatId = response.data;
 					const chat = { id: chatId, private: false };
@@ -172,12 +126,9 @@ function createGroupStore() {
 						current_message_id: 1,
 					};
 					
-					console.log('Group object created:', group);
 					groupStore.updateGroup(group);
-					console.log('Group saved to storage');
 					return response.data;
 				}
-				console.log('Group creation not successful');
 				return null;
 			} catch (err) {
 				console.error('Error during group creation:', err);
@@ -269,7 +220,6 @@ function createGroupStore() {
 		},
 		promoteAdmin: async (groupId: number, userId: number, isAdmin: boolean): Promise<boolean> => {
 			try {
-				console.log('promoting admin');
 				const accessToken = get(accessTokenValue);
 				const response: ApiResponse = await promoteAdmin(accessToken, groupId, userId, isAdmin);
 				if (response.success) {
@@ -411,32 +361,14 @@ function createGroupStore() {
 				return group;
 			}
 
-			// Fallback to localStorage for migration purposes
-			const groupData = localStorage.getItem(`${STORAGE_KEY_GROUPS_PREFIX}${groupId}`);
-			if (groupData) {
-				try {
-					const parsedGroup = JSON.parse(groupData) as Group;
-					// Migrate to IndexedDB
-					await indexedDBHelper.saveGroup(parsedGroup);
-					return parsedGroup;
-				} catch (error) {
-					console.error(`Failed to parse stored group data for group ${groupId}:`, error);
-					return null;
-				}
-			}
 			return null;
 		},
 		clear: async () => {
 			set(initialState);
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearGroups();
-				
-				// Clear localStorage as fallback
-				const keys = Object.keys(localStorage);
-				const groupKeys = keys.filter((key) => key.startsWith(STORAGE_KEY_GROUPS_PREFIX));
-				groupKeys.forEach((key) => localStorage.removeItem(key));
 			}
-		}
+		},
 	};
 }
 

@@ -29,14 +29,12 @@ export async function retrieveMissingUsers(userIds: number[], accessToken: strin
 				if (storedUser) {
 					if (storedUser.avatar_version !== userResponse.avatar_version) {
 						avatarStore.setShouldUpdateAvatarForUser(userResponse.id, true);
-						// Only update avatar_version when we actually retrieve and update the avatar.
-						user.avatar_version = storedUser.avatar_version;
 					}
 				} else {
 					avatarStore.setShouldUpdateAvatarForUser(userResponse.id, true);
 				}
 				userStore.updateUser(user);
-				const storedFriend = await friendStore.getStoredFriend(user.id);
+				const storedFriend = await friendStore.getStoredFriendByFriendId(user.id);
 				if (storedFriend) {
 					storedFriend.user = user;
 					await friendStore.updateFriend(storedFriend);
@@ -50,24 +48,27 @@ export async function retrieveMissingUsers(userIds: number[], accessToken: strin
 }
 
 export async function retrieveMissingFriends(
-	friendIds: number[],
+	chatIds: number[],
 	accessToken: string
-): Promise<void> {
-	if (friendIds.length === 0) {
-		return;
+): Promise<number[]> {
+	if (chatIds.length === 0) {
+		return [];
 	}
 
 	try {
 		// TODO: Move imports to top level?
 		const { fetchFriends } = await import('$lib/api/friendApi');
-		const friendsResponse = await fetchFriends(accessToken, friendIds);
+		const friendsResponse = await fetchFriends(accessToken, chatIds);
+		
+		const userIdsToRetrieve: number[] = [];
 
 		if (friendsResponse.success && friendsResponse.data) {
-			console.log('friend data');
-			console.log(friendsResponse.data);
 			// Update each friend's data
 			for (const friendData of friendsResponse.data) {
 				const storedUser = await userStore.getUser(friendData.friend_id);
+				if (!storedUser) {
+					userIdsToRetrieve.push(friendData.friend_id);
+				}
 				const friend: Friend = {
 					friend_id: friendData.friend_id,
 					accepted: friendData.accepted,
@@ -80,8 +81,10 @@ export async function retrieveMissingFriends(
 				await friendStore.updateFriend(friend);
 			}
 		}
+		return userIdsToRetrieve;
 	} catch (error) {
 		console.error('Failed to retrieve missing friends data:', error);
+		return [];
 	}
 }
 
@@ -89,23 +92,17 @@ export async function retrieveMissingGroups(
 	groupIds: number[],
 	accessToken: string
 ): Promise<void> {
-	console.log('retrieving missing groups');
 	if (groupIds.length === 0) {
 		return;
 	}
 
 	try {
 		const { fetchGroups } = await import('$lib/api/groupApi');
-		console.log('group call');
 		const groupsResponse = await fetchGroups(accessToken, groupIds);
-		console.log('response');
-		console.log(groupsResponse);
 
 		if (groupsResponse.success && groupsResponse.data) {
 			// Update each group's data
 			for (const groupData of groupsResponse.data) {
-				console.log('updating group');
-				console.log(groupData);
 				
 				const userGroup: Group = {
 					chat_id: groupData.chat_id,
@@ -127,8 +124,6 @@ export async function retrieveMissingGroups(
 				
 				const storedGroup = await groupStore.getGroup(groupData.chat_id);
 
-				console.log('compare stored group with avatar version');
-				console.log(storedGroup);
 				if (storedGroup) {
 					if (storedGroup.avatar_version !== userGroup.avatar_version) {
 						avatarStore.setShouldUpdateGroupAvatarForGroup(userGroup.chat_id, true);
