@@ -6,8 +6,3 @@ export interface Message {
 	created_at: string;
 	message_type: number;
 }
-
-export interface ChatMessage extends Message {
-	sender_name?: string;
-	is_me?: boolean;
-}

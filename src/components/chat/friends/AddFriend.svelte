@@ -26,7 +26,7 @@
 				try {
 					const response = await handleSearchFriend(accessToken, searchQuery);
 					if (response.success && response.data) {
-						searchResult = response.data as { id: number; username: string, colour: string };
+						searchResult = response.data as { id: number; username: string; colour: string };
 						const avatarResponse = await handleGetAvatar(accessToken, searchResult.id, false);
 						if (avatarResponse.success && avatarResponse.avatar) {
 							searchResultAvatar = avatarResponse.avatar;
@@ -55,13 +55,13 @@
 
 			const success = await friendStore.sendFriendRequest(friendData);
 
-				if (success) {
-					searchResult = null;
-					searchResultAvatar = null;
-					searched = false;
-					searchQuery = '';
-					onClose();
-				}
+			if (success) {
+				searchResult = null;
+				searchResultAvatar = null;
+				searched = false;
+				searchQuery = '';
+				onClose();
+			}
 		}
 	}
 </script>
@@ -94,10 +94,7 @@
 		<div class="search-result-container">
 			{#if searchResult}
 				{@const result = searchResult}
-				<div
-					class="search-result"
-					style="--user-colour: {result.colour}"
-				>
+				<div class="search-result" style="--user-colour: {result.colour}">
 					<div class="avatar-container">
 						{#if searchResultAvatar}
 							<img class="friend-avatar" src={searchResultAvatar} alt={result.username} />
@@ -143,17 +140,17 @@
 		cursor: not-allowed;
 	}
 
-    .search-btn {
-        background: var(--primary-colour);
-        color: var(--text-colour-on-primary);
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 4px;
-        cursor: pointer;
-    }
+	.search-btn {
+		background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 4px;
+		cursor: pointer;
+	}
 
 	.search-btn:disabled {
-        background: var(--primary-colour-light);
+		background: var(--primary-colour-light);
 		cursor: not-allowed;
 	}
 
@@ -175,7 +172,7 @@
 		height: 40px;
 		border: 4px solid rgba(0, 0, 0, 0.1);
 		border-radius: 50%;
-        border-top-color: var(--primary-colour);
+		border-top-color: var(--primary-colour);
 		animation: spin 1s ease-in-out infinite;
 	}
 
@@ -210,8 +207,6 @@
 	.search-result:hover {
 		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 	}
-
-
 
 	.avatar-container {
 		width: 80px;
@@ -264,5 +259,4 @@
 		color: #666;
 		font-style: italic;
 	}
-
 </style>

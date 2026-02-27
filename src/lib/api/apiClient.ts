@@ -5,13 +5,13 @@ import { get } from 'svelte/store';
 export interface FriendLogin {
 	chat_id: number;
 	friend_version: number;
-	message_version: number;
+	unread_messages: number;
 }
 
 export interface GroupLogin {
 	chat_id: number;
 	group_version: number;
-	message_version: number;
+	unread_messages: number;
 }
 
 export const LoginResponseSchema = z.object({
@@ -23,14 +23,14 @@ export const LoginResponseSchema = z.object({
 		z.object({
 			chat_id: z.number(),
 			friend_version: z.number(),
-			message_version: z.number()
+			unread_messages: z.number()
 		})
 	),
 	groups: z.array(
 		z.object({
 			chat_id: z.number(),
 			group_version: z.number(),
-			message_version: z.number()
+			unread_messages: z.number()
 		})
 	)
 });
@@ -76,14 +76,14 @@ class ApiConfig {
 		deleteAccountRequest: 'delete/account/request'
 	} as const;
 
-    readonly userEndpoints = {
-        changeUsername: 'user/username',
-        changeColour: 'user/colour',
-        changeAvatar: 'user/avatar',
-        getAvatar: 'user/avatar',
-        getUser: 'user',
-        getMultipleUsers: 'users'
-    } as const;
+	readonly userEndpoints = {
+		changeUsername: 'user/username',
+		changeColour: 'user/colour',
+		changeAvatar: 'user/avatar',
+		getAvatar: 'user/avatar',
+		getUser: 'user',
+		getMultipleUsers: 'users'
+	} as const;
 
 	readonly friendEndpoints = {
 		searchFriend: 'friend/search',
@@ -111,6 +111,9 @@ class ApiConfig {
 	readonly messageEndpoints = {
 		sendMessage: 'message/send',
 		fetchMessages: 'message/fetch',
+		receivedMessages: 'message/received',
+		receivedMessage: 'message/received/single',
+		readMessages: 'message/read'
 	} as const;
 
 	buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {

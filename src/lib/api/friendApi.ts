@@ -54,7 +54,7 @@ export async function respondToFriendRequest(
 export async function cancelFriendRequest(
 	accessToken: string,
 	friendId: number,
-	chatId: number,
+	chatId: number
 ): Promise<ApiResponse> {
 	return makeRequest({
 		method: 'POST',
@@ -64,7 +64,11 @@ export async function cancelFriendRequest(
 	});
 }
 
-export async function removeFriend(accessToken: string, friendId: number, chatId: number): Promise<ApiResponse> {
+export async function removeFriend(
+	accessToken: string,
+	friendId: number,
+	chatId: number
+): Promise<ApiResponse> {
 	return makeRequest({
 		method: 'POST',
 		endpoint: API.friendEndpoints.removeFriend,

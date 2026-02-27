@@ -69,19 +69,22 @@
 
 <div class="friends-list">
 	{#if $friendStore.friends.length > 0}
-
 		{#if $friendStore.friends.some((f) => f.accepted === false && f.user)}
 			<div class="section-label top">Incoming friend requests</div>
 			{#each $friendStore.friends as friend (friend.friend_id)}
 				{#if friend.accepted === false && friend.user}
 					<div
 						class="friend-item incoming"
-						style="--bg: {getBackgroundColor(friend)}; --text: {getTextColourForBackground(getBackgroundColor(friend))}"
+						style="--bg: {getBackgroundColor(friend)}; --text: {getTextColourForBackground(
+							getBackgroundColor(friend)
+						)}"
 						role="button"
 						tabindex="0"
 						aria-label="View details for {friend.user?.username || 'Unknown User'}"
 						onclick={() => handleFriendClick(friend)}
-						onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleFriendClick(friend); }}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') handleFriendClick(friend);
+						}}
 					>
 						<div class="indicator"></div>
 						<div class="avatar">
@@ -96,8 +99,14 @@
 							<span class="status">⏳ Incoming Request</span>
 						</div>
 						<div class="actions">
-							<button class="btn accept" onclick={(e) => stopAndAccept(e, friend.friend_id, friend.chat_id)}>✓ Accept</button>
-							<button class="btn reject" onclick={(e) => stopAndReject(e, friend.friend_id, friend.chat_id)}>✗ Reject</button>
+							<button
+								class="btn accept"
+								onclick={(e) => stopAndAccept(e, friend.friend_id, friend.chat_id)}>✓ Accept</button
+							>
+							<button
+								class="btn reject"
+								onclick={(e) => stopAndReject(e, friend.friend_id, friend.chat_id)}>✗ Reject</button
+							>
 						</div>
 					</div>
 				{/if}
@@ -105,17 +114,27 @@
 		{/if}
 
 		{#if $friendStore.friends.some((f) => f.accepted === null)}
-			<div class="section-label {$friendStore.friends.some((f) => f.accepted === false && f.user) ? 'with-border' : 'top'}">Pending requests</div>
+			<div
+				class="section-label {$friendStore.friends.some((f) => f.accepted === false && f.user)
+					? 'with-border'
+					: 'top'}"
+			>
+				Pending requests
+			</div>
 			{#each $friendStore.friends as friend (friend.friend_id)}
 				{#if friend.accepted === null}
 					<div
 						class="friend-item pending"
-						style="--bg: {getBackgroundColor(friend)}; --text: {getTextColourForBackground(getBackgroundColor(friend))}"
+						style="--bg: {getBackgroundColor(friend)}; --text: {getTextColourForBackground(
+							getBackgroundColor(friend)
+						)}"
 						role="button"
 						tabindex="0"
 						aria-label="View details for {friend.user?.username || 'Pending Request'}"
 						onclick={() => handleFriendClick(friend)}
-						onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleFriendClick(friend); }}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') handleFriendClick(friend);
+						}}
 					>
 						<div class="indicator"></div>
 						<div class="avatar">
@@ -130,7 +149,10 @@
 							<span class="status">⏳ Waiting for response...</span>
 						</div>
 						<div class="actions">
-							<button class="btn cancel" onclick={(e) => stopAndCancel(e, friend.friend_id, friend.chat_id)}>✗ Cancel</button>
+							<button
+								class="btn cancel"
+								onclick={(e) => stopAndCancel(e, friend.friend_id, friend.chat_id)}>✗ Cancel</button
+							>
 						</div>
 					</div>
 				{/if}
@@ -145,12 +167,16 @@
 			{#if friend.accepted === true && friend.user}
 				<div
 					class="friend-item accepted"
-					style="--bg: {getBackgroundColor(friend)}; --text: {getTextColourForBackground(getBackgroundColor(friend))}"
+					style="--bg: {getBackgroundColor(friend)}; --text: {getTextColourForBackground(
+						getBackgroundColor(friend)
+					)}"
 					role="button"
 					tabindex="0"
 					aria-label="View details for {friend.user.username}"
 					onclick={() => handleFriendClick(friend)}
-					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleFriendClick(friend); }}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') handleFriendClick(friend);
+					}}
 				>
 					<div class="avatar">
 						{#if friend.user?.avatar}
@@ -166,7 +192,6 @@
 				</div>
 			{/if}
 		{/each}
-
 	{:else}
 		<p class="no-friends">You don't have any friends yet. Add some friends to get started!</p>
 	{/if}
@@ -290,9 +315,15 @@
 	.btn:hover {
 		filter: brightness(0.85);
 	}
-	.accept { background: #27ae60; }
-	.reject { background: #e74c3c; }
-	.cancel { background: #f39c12; }
+	.accept {
+		background: #27ae60;
+	}
+	.reject {
+		background: #e74c3c;
+	}
+	.cancel {
+		background: #f39c12;
+	}
 
 	.no-friends {
 		text-align: center;

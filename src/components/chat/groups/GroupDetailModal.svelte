@@ -76,7 +76,7 @@
 			const avatarUser = await avatarStore.getAvatar(userId);
 
 			if (groupUser && avatarUser) {
-				if (!newMembers.some(member => member.user_id === groupUser.id)) {
+				if (!newMembers.some((member) => member.user_id === groupUser.id)) {
 					newMembers.push({
 						user_id: groupUser.id,
 						username: groupUser.username,
@@ -85,7 +85,7 @@
 				}
 			} else if (groupUser && !avatarUser) {
 				avatarIdsToRetrieve.push(userId);
-				if (!newMembers.some(member => member.user_id === groupUser.id)) {
+				if (!newMembers.some((member) => member.user_id === groupUser.id)) {
 					newMembers.push({
 						user_id: groupUser.id,
 						username: groupUser.username,
@@ -94,7 +94,7 @@
 				}
 			} else if (!groupUser && avatarUser) {
 				userIdsToRetrieve.push(userId);
-				if (!newMembers.some(member => member.user_id === userId)) {
+				if (!newMembers.some((member) => member.user_id === userId)) {
 					newMembers.push({
 						user_id: userId,
 						username: 'User',
@@ -104,7 +104,7 @@
 			} else {
 				userIdsToRetrieve.push(userId);
 				avatarIdsToRetrieve.push(userId);
-				if (!newMembers.some(member => member.user_id === userId)) {
+				if (!newMembers.some((member) => member.user_id === userId)) {
 					newMembers.push({
 						user_id: userId,
 						username: 'User',
@@ -123,13 +123,13 @@
 					if (user) {
 						const updatedUser = await updateUserAvatar(user);
 						if (updatedUser) {
-							groupMembers = groupMembers.map(member =>
+							groupMembers = groupMembers.map((member) =>
 								member.user_id === updatedUser.id
 									? {
-										...member,
-										username: updatedUser.username,
-										avatar: updatedUser.avatar ?? null
-									}
+											...member,
+											username: updatedUser.username,
+											avatar: updatedUser.avatar ?? null
+										}
 									: member
 							);
 						}
@@ -152,8 +152,8 @@
 		// Initialize edit form fields
 		editGroupName = group.name || '';
 		editGroupDescription = group.description || '';
-        editGroupColour = group.colour || 'var(--primary-colour)';
-        groupColor = group.colour || 'var(--primary-colour)';
+		editGroupColour = group.colour || 'var(--primary-colour)';
+		groupColor = group.colour || 'var(--primary-colour)';
 		textColor = getTextColorForBackground(groupColor);
 	}
 
@@ -276,25 +276,26 @@
 	let socketEventUnsubscribe: (() => void) | null = null;
 
 	onMount(() => {
-		socketEventUnsubscribe = socketEventStore.subscribe((events) => {
-			events.forEach(async (event) => {
-				if (event.type === 'group_avatar_updated') {
-					// It is updated in the group list view, we wait a bit and update it here by taking what is stored.
-					await new Promise((resolve) => setTimeout(resolve, 1000));
-					const updatedAvatar = await avatarStore.getGroupAvatar(group.chat_id);
-					if (updatedAvatar) {
-						group.avatar = updatedAvatar;
-					}
-					return;
+		socketEventUnsubscribe = socketEventStore.subscribe(async (event) => {
+			if (!event) return; // Skip if null/undefined
+
+			if (event.type === 'group_avatar_updated') {
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				const updatedAvatar = await avatarStore.getGroupAvatar(group.chat_id);
+				if (updatedAvatar) {
+					group.avatar = updatedAvatar;
 				}
-				const updatedGroup = await groupStore.getGroup(group.chat_id);
-				if (updatedGroup) {
-					updatedGroup.avatar = group.avatar;
-					group = updatedGroup;
-				}
-				isDoneRetrievingGroupMembers = false;
-				getGroupMembers();
-			});
+				return;
+			}
+
+			// For other event types (if any)
+			const updatedGroup = await groupStore.getGroup(group.chat_id);
+			if (updatedGroup) {
+				updatedGroup.avatar = group.avatar;
+				group = updatedGroup;
+			}
+			isDoneRetrievingGroupMembers = false;
+			getGroupMembers();
 		});
 	});
 
@@ -332,10 +333,7 @@
 					{#if group.avatar}
 						<img class="group-avatar" src={group.avatar} alt={group.name} />
 					{:else}
-						<div
-							class="group-avatar"
-							style="background-color: {group.colour || getRandomColour()}"
-						>
+						<div class="group-avatar" style="background-color: {group.colour || getRandomColour()}">
 							{getInitial(group.name || 'G')}
 						</div>
 					{/if}

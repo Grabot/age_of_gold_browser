@@ -5,6 +5,7 @@ export interface Friend {
 	accepted: boolean | null;
 	friend_version: number;
 	chat_id: number;
-	message_version: number;
+	unread_messages: number;
+	last_message_read_id: number;
 	user?: User;
 }

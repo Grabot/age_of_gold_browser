@@ -1,5 +1,4 @@
 <script lang="ts">
-
 	import FriendsList from './friends/FriendsList.svelte';
 	import GroupsTab from './groups/GroupsTab.svelte';
 	import FloatingActionButton from '../ui/FloatingActionButton.svelte';
@@ -16,7 +15,6 @@
 	let activeTab: 'friends' | 'groups' = 'friends';
 	export let onAddFriendClick: () => void = () => {};
 	export let onCreateGroupClick: () => void = () => {};
-
 
 	onMount(() => {
 		const unsubscribe = friendStore.subscribe(async (storeState) => {
@@ -70,41 +68,37 @@
 			<button class="close-btn" on:click={onClose}>x</button>
 		</div>
 
-        <div class="tabs">
-            <button
-                class={activeTab === 'friends' ? 'active' : ''}
-                on:click={() => setActiveTab('friends')}
-            >
-                Friends
-            </button>
+		<div class="tabs">
+			<button
+				class={activeTab === 'friends' ? 'active' : ''}
+				on:click={() => setActiveTab('friends')}
+			>
+				Friends
+			</button>
 
-            <button
-                class={activeTab === 'groups' ? 'active' : ''}
-                on:click={() => setActiveTab('groups')}
-            >
-                Groups
-            </button>
-        </div>
+			<button
+				class={activeTab === 'groups' ? 'active' : ''}
+				on:click={() => setActiveTab('groups')}
+			>
+				Groups
+			</button>
+		</div>
 
-            <div class="tab-content">
-                {#if activeTab === 'friends'}
-                    <FriendsList />
-                {:else if activeTab === 'groups'}
-                    <GroupsTab onCreateGroupClick={onCreateGroupClick} />
-                {/if}
-            </div>
-            
-            {#if activeTab === 'friends'}
-					<div class="fab-container">
-					<FloatingActionButton 
-						onClick={onAddFriendClick} 
-						icon="👤"
-						label="Add Social"
-					/>
-				</div>
+		<div class="tab-content">
+			{#if activeTab === 'friends'}
+				<FriendsList />
+			{:else if activeTab === 'groups'}
+				<GroupsTab {onCreateGroupClick} />
 			{/if}
 		</div>
+
+		{#if activeTab === 'friends'}
+			<div class="fab-container">
+				<FloatingActionButton onClick={onAddFriendClick} icon="👤" label="Add Social" />
+			</div>
+		{/if}
 	</div>
+</div>
 
 <style>
 	.modal {
@@ -134,14 +128,14 @@
 		position: relative;
 	}
 
-    .modal-header {
-        background: var(--primary-colour);
-        color: var(--text-colour-on-primary);
-        padding: 1rem 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+	.modal-header {
+		background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
+		padding: 1rem 1.5rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
 
 	.modal-header h2 {
 		margin: 0;
@@ -172,16 +166,15 @@
 		border-bottom: 2px solid transparent;
 	}
 
-    .tabs button.active {
-        color: var(--primary-colour);
-        border-bottom-color: var(--primary-colour);
-        font-weight: 500;
-    }
+	.tabs button.active {
+		color: var(--primary-colour);
+		border-bottom-color: var(--primary-colour);
+		font-weight: 500;
+	}
 
 	.tab-content {
 		flex: 1;
 		overflow-y: auto;
 		position: relative;
 	}
-
 </style>

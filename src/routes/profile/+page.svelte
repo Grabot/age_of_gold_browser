@@ -54,7 +54,7 @@
 						successToast('Username updated successfully!');
 						let currentUserDetail = get(userDetail);
 						currentUserDetail.username = data.username;
-						currentUserDetail.profile_version += 1
+						currentUserDetail.profile_version += 1;
 						userDetail.set(currentUserDetail);
 					} else {
 						errorToast('Failed to update username');
@@ -74,7 +74,7 @@
 						successToast('Colour updated successfully!');
 						let currentUserDetail = get(userDetail);
 						currentUserDetail.colour = data.colour!;
-						currentUserDetail.profile_version += 1
+						currentUserDetail.profile_version += 1;
 						userDetail.set(currentUserDetail);
 						updatePrimaryColour(data.colour!);
 					} else {
@@ -140,25 +140,25 @@
 		showDropdown = false;
 	}
 
-function openUsernameModal() {
-	showModalUsername = true;
-	showDropdown = false;
-}
+	function openUsernameModal() {
+		showModalUsername = true;
+		showDropdown = false;
+	}
 
-function openColourModal() {
-	showModalColour = true;
-	showDropdown = false;
-}
+	function openColourModal() {
+		showModalColour = true;
+		showDropdown = false;
+	}
 
-function openPasswordModal() {
-	showModalPassword = true;
-	showDropdown = false;
-}
+	function openPasswordModal() {
+		showModalPassword = true;
+		showDropdown = false;
+	}
 
-function openAvatarModal() {
-	showModalAvatar = true;
-	showDropdown = false;
-}
+	function openAvatarModal() {
+		showModalAvatar = true;
+		showDropdown = false;
+	}
 
 	const handleDropdownFocusLoss = ({
 		relatedTarget,
@@ -369,7 +369,7 @@ function openAvatarModal() {
 	}
 
 	.settings-btn:hover {
-        background: var(--primary-colour-dark);
+		background: var(--primary-colour-dark);
 	}
 
 	.dropdown-menu {

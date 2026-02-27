@@ -51,7 +51,10 @@
 				{#if friend.user?.avatar}
 					<img class="friend-avatar-large" src={friend.user.avatar} alt={friend.user.username} />
 				{:else}
-					<div class="friend-avatar-large placeholder" style="background-color: {getRandomColour()}">
+					<div
+						class="friend-avatar-large placeholder"
+						style="background-color: {getRandomColour()}"
+					>
 						{getInitial(friend.user?.username || '')}
 					</div>
 				{/if}
@@ -104,11 +107,11 @@
 		position: relative;
 	}
 
-    .modal-header {
-        background: var(--primary-colour);
-        color: var(--text-colour-on-primary);
-        padding: 1rem 1.5rem;
-        display: flex;
+	.modal-header {
+		background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
+		padding: 1rem 1.5rem;
+		display: flex;
 		justify-content: space-between;
 		align-items: center;
 	}

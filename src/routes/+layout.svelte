@@ -46,15 +46,9 @@
 		type GroupAvatarChangedEventData,
 		offGroupAvatarChangedEvent,
 		onColourUpdatedEvent,
-
 		offMessageReceivedEvent,
-
 		onMessageReceivedEvent,
-
 		type MessageData
-
-
-
 	} from '$lib/socket';
 	import { handleGetAvatar } from '$lib/services/settingsService';
 	import { goto } from '$app/navigation';
@@ -72,6 +66,7 @@
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 	import { getRandomColour } from '$lib/utils/groupUtils';
 	import { handleIncomingMessage } from '$lib/utils/messageUtils';
+	import { notificationStore } from '$lib/stores/notificationStore';
 
 	let { children } = $props();
 	const options = {};
@@ -84,6 +79,8 @@
 	let showSocialModal = $state(false);
 	let showAddFriendModal = $state(false);
 	let showCreateGroupModal = $state(false);
+	let showNotificationDropdown = $state(false);
+	let selectedChatIdForNotification = $state<number | null>(null);
 	let searchQuery = $state('');
 	let searchResult = $state<{ id: number; username: string; colour: string } | null>(null);
 	let searchResultAvatar = $state<string | null>(null);
@@ -91,6 +88,7 @@
 	let lastSearchedQuery = $state<string | null>(null);
 	let isLoading = $state(false);
 	let dropdownRef: HTMLDivElement | null = $state(null);
+	let notificationDropdownRef: HTMLDivElement | null = $state(null);
 
 	function handleAddFriendModalClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
@@ -179,9 +177,10 @@
 			friend_id: data.friend_id,
 			accepted: true,
 			friend_version: data.friend_version,
-			message_version: 0,
+			unread_messages: 0,
+			last_message_read_id: 0,
 			chat_id: data.chat_id,
-			user: updatedUser,
+			user: updatedUser
 		};
 		friendStore.updateFriend(updatedFriend);
 		userStore.updateUser(updatedUser);
@@ -205,7 +204,7 @@
 	function handleGroupCreatedEvent(data: any) {
 		successToast(`New group created: ${data.name}`);
 		const chatId = data.chat_id;
-		const chat = { 
+		const chat = {
 			id: chatId,
 			private: data.private
 		};
@@ -215,7 +214,6 @@
 			mute: false,
 			mute_timestamp: null,
 			group_version: 0,
-			message_version: 0,
 			avatar_version: 0,
 			last_message_read_id: data.last_message_read_id,
 			user_ids: data.user_ids,
@@ -223,7 +221,7 @@
 			name: data.name,
 			description: data.description,
 			colour: data.colour,
-			current_message_id: data.current_message_id,
+			current_message_id: data.current_message_id
 		};
 		joinGroup(group.chat_id);
 		setTimeout(() => {
@@ -371,15 +369,17 @@
 		});
 	}
 
-	function handleOnMessageReceivedEvent(data: MessageData) {
-		console.log("Message received");
+	async function handleOnMessageReceivedEvent(data: MessageData) {
+		console.log('Message received');
 		console.log(data);
-		handleIncomingMessage(data);
+		await handleIncomingMessage(data);
 		// Dispatch to socket event store for components to handle
 		socketEventStore.dispatch({
 			type: 'message_received',
 			data: data
 		});
+		// Reload notifications when a new message arrives
+		notificationStore.loadNotifications();
 	}
 
 	export function joinGroup(groupId: number) {
@@ -425,6 +425,7 @@
 		}
 
 		document.addEventListener('click', handleClickOutside);
+		document.addEventListener('click', handleNotificationClickOutside);
 
 		const unsubscribeAuth = authStore.subscribe((state) => {
 			if (state.isAuthenticated && state.user) {
@@ -487,6 +488,7 @@
 			}
 			socketOff();
 			document.removeEventListener('click', handleClickOutside);
+			document.removeEventListener('click', handleNotificationClickOutside);
 		});
 	});
 
@@ -539,6 +541,31 @@
 	function toggleSocial() {
 		showSocialModal = !showSocialModal;
 	}
+
+	function toggleNotificationDropdown() {
+		showNotificationDropdown = !showNotificationDropdown;
+		notificationStore.checkData();
+		if (showNotificationDropdown) {
+			notificationStore.loadNotifications();
+		}
+	}
+
+	async function handleNotificationClick(notification: {
+		chatId: number;
+		chatType: string;
+		name: string;
+	}) {
+		showNotificationDropdown = false;
+		await notificationStore.clearNotification(notification.chatId);
+		selectedChatIdForNotification = notification.chatId;
+		showChatModal = true;
+	}
+
+	function handleNotificationClickOutside(event: MouseEvent) {
+		if (notificationDropdownRef && !notificationDropdownRef.contains(event.target as Node)) {
+			showNotificationDropdown = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -555,10 +582,78 @@
 			</div>
 			<div class="nav-center">
 				<button class="nav-btn" onclick={() => toggleSocial()}>👥 Socials</button>
-				<button class="nav-btn" onclick={() => toggleChat()}>💬 Chat</button>
+				<button class="nav-btn" onclick={() => toggleChat()}>
+					💬 Chat
+					{#if $notificationStore.hasUnreadMessages}
+						<span class="notification-indicator">!</span>
+					{/if}
+				</button>
 			</div>
 			<div class="nav-right">
-				<button class="notification-btn" onclick={() => {}}>🔔</button>
+				<div class="notification-dropdown-container" bind:this={notificationDropdownRef}>
+					<button class="notification-btn" onclick={() => toggleNotificationDropdown()}>
+						🔔
+						{#if $notificationStore.hasUnreadMessages}
+							<span class="notification-badge">!</span>
+						{/if}
+					</button>
+					{#if showNotificationDropdown}
+						<div class="notification-dropdown">
+							<div class="notification-header">
+								<span>Notifications</span>
+								{#if $notificationStore.notifications.length > 0}
+									<button
+										class="clear-all-btn"
+										onclick={() => notificationStore.clearAllNotifications()}
+									>
+										Clear all
+									</button>
+								{/if}
+							</div>
+							{#if $notificationStore.notifications.length === 0}
+								<div class="no-notifications">No new messages</div>
+							{:else}
+								{#each $notificationStore.notifications as notification (notification.chatId)}
+									<button
+										class="notification-item"
+										onclick={() => handleNotificationClick(notification)}
+									>
+										{#if notification.avatar}
+											<img src={notification.avatar} alt="Avatar" class="notification-avatar" />
+										{:else if notification.colour}
+											<div
+												class="notification-avatar default-avatar"
+												style="background-color: {notification.colour}"
+											>
+												{notification.name.charAt(0).toUpperCase()}
+											</div>
+										{:else}
+											<div
+												class="notification-avatar default-avatar"
+												style="background-color: var(--primary-colour)"
+											>
+												{notification.name.charAt(0).toUpperCase()}
+											</div>
+										{/if}
+										<div class="notification-content">
+											<div class="notification-header">
+												<span class="notification-type {notification.chatType}">
+													{notification.chatType === 'friend' ? '👤' : '👥'}
+												</span>
+												<span class="notification-name">{notification.name}</span>
+											</div>
+											<span class="notification-text"
+												>New message{notification.unreadCount && notification.unreadCount > 1
+													? ` (${notification.unreadCount})`
+													: ''}</span
+											>
+										</div>
+									</button>
+								{/each}
+							{/if}
+						</div>
+					{/if}
+				</div>
 				<div class="profile-dropdown-container" bind:this={dropdownRef}>
 					<button
 						class="profile-btn"
@@ -586,13 +681,15 @@
 								onclick={() => {
 									goto('/profile');
 									showProfileDropdown = false;
-								}}>Profile</button>
+								}}>Profile</button
+							>
 							<button
 								class="dropdown-item"
 								onclick={() => {
 									authStore.logout();
 									showProfileDropdown = false;
-								}}>Logout</button>
+								}}>Logout</button
+							>
 						</div>
 					{/if}
 				</div>
@@ -608,15 +705,15 @@
 		</nav>
 	{/if}
 
-    {#if showSocialModal}
-        <SocialView
-            onClose={() => (showSocialModal = false)}
-            onAddFriendClick={() => (showAddFriendModal = true)}
-            onCreateGroupClick={() => (showCreateGroupModal = true)}
-        />
-    {/if}
+	{#if showSocialModal}
+		<SocialView
+			onClose={() => (showSocialModal = false)}
+			onAddFriendClick={() => (showAddFriendModal = true)}
+			onCreateGroupClick={() => (showCreateGroupModal = true)}
+		/>
+	{/if}
 
-    {#if showAddFriendModal}
+	{#if showAddFriendModal}
 		<div
 			class="modal-overlay"
 			onclick={handleAddFriendModalClick}
@@ -632,11 +729,7 @@
 			<div class="modal-content-friend">
 				<div class="modal-header-friend">
 					<h3>Add New Social</h3>
-					<button
-						class="close-btn"
-						onclick={() => (showAddFriendModal = false)}
-						aria-label="Close"
-					>
+					<button class="close-btn" onclick={() => (showAddFriendModal = false)} aria-label="Close">
 						×
 					</button>
 				</div>
@@ -651,13 +744,19 @@
 				/>
 			</div>
 		</div>
-    {/if}
+	{/if}
 
 	{#if showCreateGroupModal}
 		<CreateGroupModal onClose={() => (showCreateGroupModal = false)} />
 	{/if}
 	{#if showChatModal}
-		<ChatView onClose={() => (showChatModal = false)} />
+		<ChatView
+			onClose={() => {
+				showChatModal = false;
+				selectedChatIdForNotification = null;
+			}}
+			initialSelectedChatId={selectedChatIdForNotification}
+		/>
 	{/if}
 
 	{@render children?.()}
@@ -677,7 +776,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 0.75rem 1.5rem;
-        background: var(--primary-colour);
+		background: var(--primary-colour);
 		color: var(--text-colour-on-primary);
 		position: fixed;
 		top: 0;
@@ -790,23 +889,204 @@
 		justify-content: center;
 	}
 
-    .notification-btn:hover {
-        background: var(--primary-colour-dark);
-    }
+	.notification-btn:hover {
+		background: var(--primary-colour-dark);
+	}
 
-    .nav-btn {
-        background: var(--primary-colour);
-        color: var(--text-colour-on-primary);
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.9rem;
-    }
+	.notification-btn {
+		position: relative;
+	}
 
-    .nav-btn:hover {
-        background: var(--primary-colour-dark);
-    }
+	.notification-badge {
+		position: absolute;
+		top: 2px;
+		right: 2px;
+		background-color: #e74c3c;
+		color: white;
+		font-size: 0.6rem;
+		font-weight: bold;
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		animation: pulse 2s infinite;
+	}
+
+	.notification-indicator {
+		background-color: #e74c3c;
+		color: white;
+		font-size: 0.7rem;
+		font-weight: bold;
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		margin-left: 0.5rem;
+		animation: pulse 2s infinite;
+	}
+
+	@keyframes pulse {
+		0% {
+			transform: scale(1);
+			box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+		}
+		70% {
+			transform: scale(1.1);
+			box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+		}
+		100% {
+			transform: scale(1);
+			box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+		}
+	}
+
+	.notification-dropdown-container {
+		position: relative;
+	}
+
+	.notification-dropdown {
+		position: absolute;
+		right: 0;
+		top: 3.5rem;
+		background: white;
+		border-radius: 8px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		overflow: hidden;
+		z-index: 1001;
+		width: 280px;
+		max-height: 400px;
+		overflow-y: auto;
+	}
+
+	.notification-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.75rem 1rem;
+		background: #f8f9fa;
+		border-bottom: 1px solid #e9ecef;
+		font-weight: 600;
+		color: #34495e;
+	}
+
+	.clear-all-btn {
+		background: none;
+		border: none;
+		color: #3498db;
+		font-size: 0.75rem;
+		cursor: pointer;
+		padding: 0.25rem 0.5rem;
+	}
+
+	.clear-all-btn:hover {
+		color: #2980b9;
+		text-decoration: underline;
+	}
+
+	.no-notifications {
+		padding: 2rem;
+		text-align: center;
+		color: #7f8c8d;
+		font-style: italic;
+	}
+
+	.notification-item {
+		width: 100%;
+		padding: 0.75rem 1rem;
+		text-align: left;
+		background: none;
+		border: none;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		border-bottom: 1px solid #f0f0f0;
+		transition: background-color 0.2s;
+	}
+
+	.notification-item:hover {
+		background: #f8f9fa;
+	}
+
+	.notification-item:last-child {
+		border-bottom: none;
+	}
+
+	.notification-avatar {
+		width: 40px;
+		height: 40px;
+		object-fit: cover;
+		flex-shrink: 0;
+	}
+
+	.notification-avatar.default-avatar {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: white;
+		font-size: 0.9rem;
+		font-weight: bold;
+	}
+
+	.notification-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.notification-header {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.notification-name {
+		color: #2c3e50;
+		font-size: 0.9rem;
+		font-weight: 600;
+		flex: 1;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.notification-type {
+		font-size: 1rem;
+		flex-shrink: 0;
+	}
+
+	.notification-type.friend {
+		color: #3498db;
+	}
+
+	.notification-type.group {
+		color: #2ecc71;
+	}
+
+	.notification-text {
+		color: #7f8c8d;
+		font-size: 0.8rem;
+		flex: 1;
+	}
+
+	.nav-btn {
+		background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.9rem;
+	}
+
+	.nav-btn:hover {
+		background: var(--primary-colour-dark);
+	}
 	.placeholder-nav {
 		background: #979797;
 		justify-content: flex-start;
@@ -873,11 +1153,11 @@
 		color: #333;
 	}
 
-    .modal-header-friend {
-        background: var(--primary-colour);
-        color: var(--text-colour-on-primary);
-        padding: 1rem 1.5rem;
-        display: flex;
+	.modal-header-friend {
+		background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
+		padding: 1rem 1.5rem;
+		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		border-top-left-radius: 12px;

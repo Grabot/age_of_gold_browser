@@ -59,7 +59,7 @@ export async function retrieveMissingFriends(
 		// TODO: Move imports to top level?
 		const { fetchFriends } = await import('$lib/api/friendApi');
 		const friendsResponse = await fetchFriends(accessToken, chatIds);
-		
+
 		const userIdsToRetrieve: number[] = [];
 
 		if (friendsResponse.success && friendsResponse.data) {
@@ -73,7 +73,8 @@ export async function retrieveMissingFriends(
 					friend_id: friendData.friend_id,
 					accepted: friendData.accepted,
 					friend_version: friendData.friend_version,
-					message_version: friendData.message_version,
+					unread_messages: friendData.unread_messages,
+					last_message_read_id: friendData.last_message_read_id,
 					chat_id: friendData.chat_id,
 					user: storedUser || undefined
 				};
@@ -103,14 +104,12 @@ export async function retrieveMissingGroups(
 		if (groupsResponse.success && groupsResponse.data) {
 			// Update each group's data
 			for (const groupData of groupsResponse.data) {
-				
 				const userGroup: Group = {
 					chat_id: groupData.chat_id,
-					unread_messages: groupData.unread_messages,
 					mute: groupData.mute,
 					mute_timestamp: groupData.mute_timestamp,
 					group_version: groupData.group_version,
-					message_version: groupData.message_version,
+					unread_messages: groupData.unread_messages,
 					avatar_version: groupData.avatar_version,
 					last_message_read_id: groupData.last_message_read_id,
 					user_ids: groupData.user_ids,
@@ -119,9 +118,9 @@ export async function retrieveMissingGroups(
 					description: groupData.description,
 					colour: groupData.colour,
 					current_message_id: groupData.current_message_id,
-					avatar: undefined,
+					avatar: undefined
 				};
-				
+
 				const storedGroup = await groupStore.getGroup(groupData.chat_id);
 
 				if (storedGroup) {

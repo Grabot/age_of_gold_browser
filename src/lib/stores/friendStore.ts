@@ -53,7 +53,7 @@ function createFriendStore() {
 				friend_id: friend.friend_id,
 				accepted: friend.accepted,
 				friend_version: friend.friend_version,
-				message_version: friend.message_version
+				unread_messages: friend.unread_messages
 			};
 			await indexedDBHelper.saveFriend(friendToStore);
 		}
@@ -78,15 +78,15 @@ function createFriendStore() {
 		// First check memory store
 		const state = get({ subscribe });
 		let friend = state.friends.find((f) => f.friend_id === friendId);
-		
+
 		if (friend) {
 			return friend;
 		}
-		
+
 		// Try to get from IndexedDB
-		const allFriends = await indexedDBHelper.getAllFriends() as Friend[];
+		const allFriends = (await indexedDBHelper.getAllFriends()) as Friend[];
 		friend = allFriends.find((f) => f.friend_id === friendId);
-		
+
 		if (friend) {
 			// Add to memory store if found
 			update((state) => {
@@ -98,7 +98,7 @@ function createFriendStore() {
 			});
 			return friend;
 		}
-		
+
 		return null;
 	}
 
@@ -148,7 +148,8 @@ function createFriendStore() {
 						friend_id: friendData.friendId,
 						accepted: null, // I sent this request
 						friend_version: 1,
-						message_version: 0,
+						unread_messages: 0,
+						last_message_read_id: 0,
 						user: user
 					};
 
@@ -269,7 +270,8 @@ function createFriendStore() {
 					chat_id: friendData.chat_id,
 					accepted: false,
 					friend_version: 1,
-					message_version: 0,
+					unread_messages: 0,
+					last_message_read_id: 0,
 					user: user
 				};
 
@@ -395,15 +397,15 @@ function createFriendStore() {
 			// First check memory store
 			const state = get({ subscribe });
 			let friend = state.friends.find((f) => f.chat_id === chatId);
-			
+
 			if (friend) {
 				return friend;
 			}
-			
+
 			// Try to get from IndexedDB
-			const allFriends = await indexedDBHelper.getAllFriends() as Friend[];
+			const allFriends = (await indexedDBHelper.getAllFriends()) as Friend[];
 			friend = allFriends.find((f) => f.chat_id === chatId);
-			
+
 			if (friend) {
 				// Add to memory store if found
 				update((state) => {
@@ -415,19 +417,28 @@ function createFriendStore() {
 				});
 				return friend;
 			}
-			
+
 			return null;
 		},
-    	getStoredFriendByFriendId,
+		getStoredFriendByFriendId,
 		getStoredFriend,
 		removeFriendFromStorage,
+		getAllFriends: async (): Promise<Friend[]> => {
+			// Get from memory first
+			const state = get({ subscribe });
+			if (state.friends.length > 0) {
+				return state.friends;
+			}
+			// Fallback to IndexedDB
+			return (await indexedDBHelper.getAllFriends()) as Friend[];
+		},
 		clear: async () => {
 			set(initialState);
 			// Clear all friend storage
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearFriends();
 			}
-		},
+		}
 	};
 }
 

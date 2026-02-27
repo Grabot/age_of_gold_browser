@@ -1,9 +1,5 @@
 import { z } from 'zod';
-import {
-	makeRequest,
-	type ApiResponse,
-	API,
-} from './apiClient';
+import { makeRequest, type ApiResponse, API } from './apiClient';
 import type { Group } from '$lib/types/groups';
 
 const CreateGroupResponseSchema = z.object({

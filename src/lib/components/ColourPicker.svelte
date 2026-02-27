@@ -159,7 +159,7 @@
 
 	function updateLightnessSliderGradient() {
 		if (!lightnessSlider) return;
-		let angle = Math.round(((currentAngle + Math.PI) / (2 * Math.PI)) * 360)
+		let angle = Math.round(((currentAngle + Math.PI) / (2 * Math.PI)) * 360);
 		angle += 180;
 		const hue = angle % 360;
 		lightnessSlider.style.background = `linear-gradient(to right, 
@@ -231,7 +231,7 @@
 	}
 
 	function updateColourDisplay() {
-		let angle = Math.round(((currentAngle + Math.PI) / (2 * Math.PI)) * 360)
+		let angle = Math.round(((currentAngle + Math.PI) / (2 * Math.PI)) * 360);
 		angle += 180;
 		const hue = angle % 360;
 		const colour = `hsl(${hue}, 100%, ${currentLightness}%)`;
@@ -346,11 +346,7 @@
 </script>
 
 <div class="colour-picker-container" bind:this={container}>
-	<canvas
-		bind:this={canvas}
-		on:mousedown={handleStart}
-		on:touchstart={handleStart}
-	></canvas>
+	<canvas bind:this={canvas} on:mousedown={handleStart} on:touchstart={handleStart}></canvas>
 	<div
 		class="lightness-slider"
 		bind:this={lightnessSlider}

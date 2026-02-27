@@ -319,4 +319,3 @@ export function offMessageReceivedEvent() {
 		socket.off('message_received');
 	}
 }
-

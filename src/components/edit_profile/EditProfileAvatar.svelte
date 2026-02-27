@@ -340,14 +340,14 @@
 		position: relative;
 	}
 
-    .modal-header {
-        background: var(--primary-colour);
-        color: var(--text-colour-on-primary);
-        padding: 0.8rem 1.2rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+	.modal-header {
+		background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
+		padding: 0.8rem 1.2rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
 
 	.modal-header h2 {
 		margin: 0;
@@ -538,5 +538,4 @@
 		font-size: 0.9rem;
 		border: 1px dashed #bdc3c7;
 	}
-
 </style>

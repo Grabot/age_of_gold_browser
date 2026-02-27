@@ -1,11 +1,9 @@
-
 export interface Group {
 	chat_id: number;
 	unread_messages: number;
 	mute: boolean;
 	mute_timestamp: string | null;
 	group_version: number;
-	message_version: number;
 	avatar_version: number;
 	last_message_read_id: number;
 	user_ids: number[];

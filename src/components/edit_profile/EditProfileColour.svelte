@@ -43,10 +43,7 @@
 			<button class="close-btn" on:click={onClose}>×</button>
 		</div>
 		<div class="modal-body-scrollable">
-			<ColourPicker 
-				initialColour={initialColour} 
-				onColourChange={handleColourChange}
-			/>
+			<ColourPicker {initialColour} onColourChange={handleColourChange} />
 		</div>
 		<div class="modal-footer">
 			<div class="modal-actions">

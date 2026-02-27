@@ -8,33 +8,49 @@
 	import { getTextColourForBackground } from '$lib/utils/colourUtils';
 	import type { Contact } from '$lib/types/contact';
 	import MessageItem from './MessageItem.svelte';
-	import { 
-		isGroup, 
+	import {
+		isGroup,
 		isFriend,
-		getContactName, 
-		getContactAvatar, 
+		getContactName,
+		getContactAvatar,
 		getContactColour,
 		getContactUnreadCount,
 		getContactPrivate,
 		getContactChatId,
 		getContactMessages
 	} from '$lib/types/contact';
-	import type { ChatMessage } from '$lib/types/message';
+	import type { Message } from '$lib/types/message';
 	import { onMount } from 'svelte';
 	import { pushState } from '$app/navigation';
 	import { avatarStore } from '$lib/stores/avatarStore';
 	import { indexedDBHelper } from '$lib/stores/indexedDBHelper';
-	import { updateGroupAvatar, updateUserAvatar, checkUserAvatar, checkGroupAvatar } from '$lib/utils/avatarUtils';
+	import {
+		updateGroupAvatar,
+		updateUserAvatar,
+		checkUserAvatar,
+		checkGroupAvatar
+	} from '$lib/utils/avatarUtils';
 	import { errorToast } from '$lib/utils/toast';
-	import { fetchMessages, sendMessage, type FetchMessagesResponse } from '$lib/api/messageApi';
+	import {
+		fetchMessages,
+		readMessages,
+		receivedMessages,
+		sendMessage,
+		type FetchMessagesResponse
+	} from '$lib/api/messageApi';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 	import type { MessageData } from '$lib/socket';
 	import { get } from 'svelte/store';
 	import type { User } from '$lib/types/user';
 	import { retrieveMissingUsers } from '$lib/services/dataRetrievalService';
 	import type { Group } from '$lib/types/groups';
+	import type { ApiResponse } from '$lib/api/apiClient';
+	import type { Friend } from '$lib/types/friend';
+	import Page from '../../routes/+page.svelte';
+	import { notificationStore } from '$lib/stores/notificationStore';
 
 	export let onClose: () => void;
+	export let initialSelectedChatId: number | null = null;
 
 	let selectedContact: Contact | null = null;
 	let newMessage = '';
@@ -54,14 +70,16 @@
 	$: showMessages = !isMobile || !showSidebarOnMobile;
 
 	// Reactive variables for selected contact properties - these update automatically when selectedContact changes
-	$: selectedChatId = selectedContact ? getContactChatId(selectedContact) : null;
-	$: selectedColor = selectedContact ? (getContactColour(selectedContact) || '') : null;
+	$: selectedChatId = selectedContact ? getContactChatId(selectedContact) : initialSelectedChatId;
+	$: selectedColor = selectedContact ? getContactColour(selectedContact) || '' : null;
 	$: selectedTextColor = selectedColor ? getTextColourForBackground(selectedColor) : null;
 	$: selectedChatName = selectedContact ? getContactName(selectedContact) : 'Chat';
 	$: selectedChatAvatar = selectedContact ? getContactAvatar(selectedContact) : undefined;
 	$: selectedChatInitial = selectedContact ? getInitial(getContactName(selectedContact)) : '';
 	$: selectedChatPrivate = selectedContact ? getContactPrivate(selectedContact) : true;
-	$: currentMessages = selectedContact ? getContactMessages(selectedContact, $messageStore.messages) : [];
+	$: currentMessages = selectedContact
+		? getContactMessages(selectedContact, $messageStore.messages)
+		: [];
 
 	// Build sender username map whenever groupMembers or selectedContact changes
 	let getUserDetailsDone = false;
@@ -69,7 +87,7 @@
 	let senderAvatarMap: Map<number, string | null> = new Map();
 
 	function checkUsernameMapReady(
-		contact: Contact | null, 
+		contact: Contact | null,
 		members: Array<{ user_id: number; username: string; avatar: string | null }>,
 		map: Map<number, string>
 	): boolean {
@@ -77,39 +95,43 @@
 		if (contact && isFriend(contact)) {
 			return contact.user !== undefined;
 		}
-		
+
 		// For group chats, check if we have members loaded
 		if (contact && isGroup(contact)) {
 			// If no members yet, not ready
 			if (members.length === 0) {
 				return false;
 			}
-			
+
 			// Check if the map has entries (meaning members were processed)
 			return map.size > 0;
 		}
-		
+
 		return true; // Default to ready for other cases
 	}
 
-	function buildSenderAvatarMap(members: Array<{ user_id: number; username: string; avatar: string | null }>): Map<number, string | null> {
+	function buildSenderAvatarMap(
+		members: Array<{ user_id: number; username: string; avatar: string | null }>
+	): Map<number, string | null> {
 		const map = new Map<number, string | null>();
-		
+
 		// For group chats, use the groupMembers array
-		members.forEach(member => {
+		members.forEach((member) => {
 			map.set(member.user_id, member.avatar);
 		});
-		
+
 		return map;
 	}
 
-	function buildSenderUsernameMap(members: Array<{ user_id: number; username: string; avatar: string | null }>): Map<number, string> {
+	function buildSenderUsernameMap(
+		members: Array<{ user_id: number; username: string; avatar: string | null }>
+	): Map<number, string> {
 		const map = new Map<number, string>();
-		
-		members.forEach(member => {
+
+		members.forEach((member) => {
 			map.set(member.user_id, member.username);
 		});
-		
+
 		return map;
 	}
 
@@ -117,7 +139,7 @@
 	async function loadContactAvatar(contact: Contact) {
 		const accessToken = get(accessTokenValue);
 		if (!accessToken) return;
-		
+
 		if (isGroup(contact)) {
 			if (contact.avatar) return;
 			const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(contact.chat_id);
@@ -129,7 +151,7 @@
 			}
 		} else if (isFriend(contact) && contact.user) {
 			if (contact.user.avatar) return;
-			
+
 			const shouldUpdate = await avatarStore.getShouldUpdateAvatarForUser(contact.friend_id);
 			if (shouldUpdate) {
 				const updatedUser = await updateUserAvatar(contact.user);
@@ -142,16 +164,20 @@
 	}
 
 	async function selectContact(contact: Contact) {
+		console.log('selectContact called with:', contact);
 		getUserDetailsDone = false;
 		// Clear group members when switching chats
 		groupMembers = [];
-		
+
+		// Clear unread messages when user opens this chat
+		const chatId = getContactChatId(contact);
+
 		// Load avatar if not available
 		await loadContactAvatar(contact);
-		
+
 		// Force update by creating new object reference
 		selectedContact = { ...contact };
-		
+
 		// On mobile, switch to messages view
 		if (isMobile) {
 			showSidebarOnMobile = false;
@@ -162,7 +188,7 @@
 		} else {
 			getUserDetailsDone = true;
 		}
-		
+
 		// Pass the contact directly to avoid reactivity timing issues
 		await loadMessagesForContact(contact);
 	}
@@ -189,76 +215,105 @@
 
 	async function loadMessagesForContact(contact: Contact) {
 		const chatId = getContactChatId(contact);
-		console.log("loading messages for contact", chatId, contact);
+		console.log('loading messages for contact', chatId, contact);
 		await loadMessagesForChatId(chatId);
 	}
-	
+
 	async function loadMessagesForChatId(chatId: number | null) {
-		console.log("loading messages for chatId", chatId);
+		console.log('loading messages for chatId', chatId);
 		const accessToken = get(accessTokenValue);
-		
+
 		if (!chatId || !currentUserId || !accessToken || !selectedContact) return;
-		
+
 		messageStore.setLoading(true);
-		
+
 		// First, load stored messages from IndexedDB
-		const storedMessages = await indexedDBHelper.getMessagesByChatId(chatId) as ChatMessage[];
+		const storedMessages = (await indexedDBHelper.getMessagesByChatId(chatId)) as Message[];
 		if (storedMessages && storedMessages.length > 0) {
 			messageStore.addMessages(chatId, storedMessages);
 			console.log('Loaded stored messages:', storedMessages.length);
 		}
-		
+
 		// Check if we need to update messages from backend using chatId
 		const shouldUpdate = await messageStore.getShouldUpdateMessages(chatId);
 		console.log('shouldUpdate:', shouldUpdate);
-		
+
+		// Get the latest message ID to fetch only new messages
+		let latestMessageId = messageStore.getLatestMessageId(chatId);
 		if (shouldUpdate) {
 			console.log('Fetching messages from backend...');
-			
-			// Get the latest message ID to fetch only new messages
-			const latestMessageId = messageStore.getLatestMessageId(chatId);
+
 			console.log('Latest message ID:', latestMessageId);
-			
-			const response: FetchMessagesResponse = await fetchMessages(
+
+			const responseFetch: FetchMessagesResponse = await fetchMessages(
 				accessToken,
 				chatId,
-				latestMessageId,
+				latestMessageId
 			);
-			
-			if (!response.success) {
-				errorToast("Failed to fetch messages");
+
+			if (!responseFetch.success) {
+				errorToast('Failed to fetch messages');
 				messageStore.setLoading(false);
 				return;
 			}
-			
-			console.log('Messages fetched from backend:', response.data);
-			messageStore.addMessages(chatId, response.data.messages);
 
+			console.log('Messages fetched from backend:', responseFetch.data);
+			messageStore.addMessages(chatId, responseFetch.data.messages);
+			const messageIds = responseFetch.data.messages.map((message) => message.id);
+			console.log('ids of fetched messages', messageIds);
 			// Clear the shouldUpdate flag using chatId
 			await messageStore.setShouldUpdateMessages(chatId, false);
+
+			if (messageIds.length !== 0) {
+				latestMessageId = Math.max(...messageIds);
+				console.log('going to send receive indicators');
+				await receivedMessages(accessToken, chatId, messageIds);
+			}
 		}
+
+		// TODO: send read message indicator (not tested)
+		if (latestMessageId) {
+			await messageRead(accessToken, chatId, latestMessageId);
+		}
+		await notificationStore.clearNotification(chatId);
 		messageStore.setLoading(false);
 		setTimeout(scrollToBottom, 100);
 	}
 
+	async function messageRead(accessToken: string, chatId: number, latestMessageId: number) {
+		console.log('reading message');
+		let chatType = 0;
+		if (selectedChatPrivate) {
+			chatType = 1;
+		}
+		const responseRead = await readMessages(accessToken, chatId, latestMessageId, chatType);
+		if (responseRead.success && selectedContact) {
+			if (isGroup(selectedContact)) {
+				(selectedContact as Group).unread_messages = 0;
+				(selectedContact as Group).last_message_read_id = latestMessageId;
+				groupStore.updateGroup(selectedContact as Group);
+			} else {
+				(selectedContact as Friend).unread_messages = 0;
+				(selectedContact as Friend).last_message_read_id = latestMessageId;
+				friendStore.updateFriend(selectedContact as Friend);
+			}
+		}
+		return;
+	}
+
 	async function handleSendMessage() {
 		const accessToken = get(accessTokenValue);
-		const chatId = selectedChatId;
-		
+		const chatId = selectedChatId || initialSelectedChatId;
+
 		if (newMessage.trim() && chatId && currentUserId && accessToken) {
-			console.log("Sending message");
-			console.log(selectedChatId);
-			console.log(chatId);
-			console.log(selectedChatPrivate);
-			console.log(newMessage);
 			const response = await sendMessage(
 				accessToken,
 				chatId,
 				selectedChatPrivate,
-				newMessage.trim(),
+				newMessage.trim()
 			);
 			if (!response.success) {
-				errorToast("Failed to send message");
+				errorToast('Failed to send message');
 				return;
 			}
 			const messageData: MessageData = {
@@ -268,12 +323,10 @@
 				content: newMessage.trim(),
 				created_at: new Date().toISOString(),
 				message_type: 0
-			}
-			const chatMessage: ChatMessage = {
-				...messageData,
-				is_me: true  // We know this is the current user's message
 			};
-			messageStore.addMessage(chatMessage);
+			console.log('Sending message');
+			console.log(messageData);
+			messageStore.addMessage(messageData);
 			newMessage = '';
 		}
 	}
@@ -298,31 +351,23 @@
 	}
 
 	// Handle incoming socket message events
-	function handleIncomingMessageChatOpen(messageData: MessageData) {
+	async function handleIncomingMessageChatOpen(messageData: MessageData) {
 		console.log('Received message via socket while chat is open:', messageData);
-		
-		const chatId = messageData.chat_id;
-		const newMessageId = messageData.id;
-		
-		// Get the latest message ID we currently have for this chat
-		const latestMessageId = messageStore.getLatestMessageId(chatId);
-		
-		if (latestMessageId === null) {
-			// We don't have any messages for this chat yet, set shouldUpdate flag
-			console.log('No messages stored for chat', chatId, '- setting shouldUpdate flag');
-		} else if (newMessageId === latestMessageId + 1) {
-			// Scroll to bottom if this is the currently selected chat
-			if (selectedChatId === chatId) {
-				setTimeout(scrollToBottom, 100);
-			}
-		} else {
-			// TODO: do update messages?
+		const currentUserId = await authStore.getCurrentUserId();
+		if (messageData.sender_id === currentUserId) {
+			console.log('I send the message, ignore');
+			return;
 		}
-	}
-
-	function getMessageGroupMember(senderId: number) {
-		if (selectedChatId === null) return null;
-		return groupMembers.find(member => member.user_id === senderId) || null;
+		// Check if the message belongs to the currently selected chat
+		const chatId = messageData.chat_id;
+		console.log('selectedchat', selectedChatId || initialSelectedChatId);
+		console.log('chatId', chatId);
+		if ((selectedChatId || initialSelectedChatId) === chatId) {
+			setTimeout(scrollToBottom, 100);
+			const newMessageId = messageData.id;
+			const accessToken = get(accessTokenValue);
+			await messageRead(accessToken, chatId, newMessageId);
+		}
 	}
 
 	// Load group members for group chats
@@ -347,7 +392,7 @@
 				const avatarUser = await avatarStore.getAvatar(userId);
 
 				if (groupUser && avatarUser) {
-					if (!newMembers.some(member => member.user_id === groupUser.id)) {
+					if (!newMembers.some((member) => member.user_id === groupUser.id)) {
 						newMembers.push({
 							user_id: groupUser.id,
 							username: groupUser.username,
@@ -356,7 +401,7 @@
 					}
 				} else if (groupUser && !avatarUser) {
 					avatarIdsToRetrieve.push(userId);
-					if (!newMembers.some(member => member.user_id === groupUser.id)) {
+					if (!newMembers.some((member) => member.user_id === groupUser.id)) {
 						newMembers.push({
 							user_id: groupUser.id,
 							username: groupUser.username,
@@ -365,7 +410,7 @@
 					}
 				} else if (!groupUser && avatarUser) {
 					userIdsToRetrieve.push(userId);
-					if (!newMembers.some(member => member.user_id === userId)) {
+					if (!newMembers.some((member) => member.user_id === userId)) {
 						newMembers.push({
 							user_id: userId,
 							username: 'User',
@@ -375,7 +420,7 @@
 				} else {
 					userIdsToRetrieve.push(userId);
 					avatarIdsToRetrieve.push(userId);
-					if (!newMembers.some(member => member.user_id === userId)) {
+					if (!newMembers.some((member) => member.user_id === userId)) {
 						newMembers.push({
 							user_id: userId,
 							username: 'User',
@@ -395,13 +440,13 @@
 				if (user) {
 					const updatedUser = await updateUserAvatar(user);
 					if (updatedUser) {
-						groupMembers = groupMembers.map(member =>
+						groupMembers = groupMembers.map((member) =>
 							member.user_id === updatedUser.id
 								? {
-									...member,
-									username: updatedUser.username,
-									avatar: updatedUser.avatar ?? null
-								}
+										...member,
+										username: updatedUser.username,
+										avatar: updatedUser.avatar ?? null
+									}
 								: member
 						);
 					}
@@ -417,7 +462,7 @@
 	// Get username for a message sender from the reactive map
 	async function getMessageUsername(senderId: number): Promise<string> {
 		if (senderId === currentUserId) {
-			return "";
+			return '';
 		}
 
 		// Use the reactive senderUsernameMap
@@ -426,7 +471,7 @@
 			return username;
 		}
 
-		return 'Unknown';		
+		return 'Unknown';
 	}
 
 	// Get avatar for a message sender from the reactive map
@@ -441,17 +486,22 @@
 	}
 
 	onMount(() => {
+		console.log('ChatView mounted with initialSelectedChatId:', initialSelectedChatId);
+		console.log('Current selectedChatId:', selectedChatId);
+		console.log('Initial friendStore state:', $friendStore);
+		console.log('Initial groupStore state:', $groupStore);
+
 		// Set initial dimensions
 		innerWidth = window.innerWidth;
 		innerHeight = window.innerHeight;
-		
+
 		// Add resize listener
 		window.addEventListener('resize', handleResize);
-		
+
 		// Setup back button capture
 		setupBackButtonCapture();
 		window.addEventListener('popstate', handlePopState);
-		
+
 		// Get current user ID
 		const unsubscribeAuth = authStore.subscribe((state) => {
 			if (state.user) {
@@ -459,6 +509,7 @@
 			}
 		});
 		const unsubscribeFriends = friendStore.subscribe(async (storeState) => {
+			console.log('friendStore updated:', storeState.loading, storeState.friends.length);
 			if (!storeState.loading) {
 				for (const friend of storeState.friends) {
 					const shouldUpdate = await avatarStore.getShouldUpdateAvatarForUser(friend.friend_id);
@@ -477,6 +528,7 @@
 			}
 		});
 		const unsubscribeGroups = groupStore.subscribe(async (storeState) => {
+			console.log('groupStore updated:', storeState.loading, storeState.groups.length);
 			if (!storeState.loading) {
 				for (const group of storeState.groups) {
 					const shouldUpdate = await avatarStore.getShouldUpdateGroupAvatarForGroup(group.chat_id);
@@ -489,15 +541,12 @@
 			}
 		});
 
-		// Subscribe to socket events for incoming messages
-		const unsubscribeSocket = socketEventStore.subscribe((events) => {
-			console.log('Socket event received 1');
-			events.forEach((event) => {
-				console.log('Socket event received:', event);
-				if (event.type === 'message_received' && event.data) {
-					handleIncomingMessageChatOpen(event.data as MessageData);
-				}
-			});
+		const unsubscribeSocket = socketEventStore.subscribe((event) => {
+			if (!event) return;
+			console.log('Socket event received:', event);
+			if (event.type === 'message_received' && event.data) {
+				handleIncomingMessageChatOpen(event.data as MessageData);
+			}
 		});
 
 		return () => {
@@ -511,11 +560,76 @@
 	});
 
 	// Get accepted friends with chat as contacts
-	$: friendContacts = $friendStore.friends
-		.filter(f => f.accepted === true && f.chat_id !== null) as Contact[];
-	
+	$: friendContacts = $friendStore.friends.filter(
+		(f) => f.accepted === true && f.chat_id !== null
+	) as Contact[];
+
 	// Get groups as contacts
 	$: groupContacts = $groupStore.groups as Contact[];
+
+	// Combine all contacts
+	$: allContacts = [...friendContacts, ...groupContacts];
+
+	// Track if we've attempted to auto-select a contact
+	let autoSelectAttempted = false;
+
+	// Reset auto-select flag when initialSelectedChatId changes
+	$: if (initialSelectedChatId !== null) {
+		console.log('initialSelectedChatId changed to:', initialSelectedChatId);
+		autoSelectAttempted = false;
+	}
+
+	// Auto-select contact when initialSelectedChatId changes or contacts load
+	$: if (
+		initialSelectedChatId &&
+		!selectedContact &&
+		allContacts.length > 0 &&
+		!autoSelectAttempted
+	) {
+		console.log(
+			'Attempting auto-select with initialSelectedChatId:',
+			initialSelectedChatId,
+			'contacts:',
+			allContacts.length
+		);
+		const contact = allContacts.find((c) => getContactChatId(c) === initialSelectedChatId);
+		if (contact) {
+			console.log('Found contact for auto-select:', contact);
+			selectContact(contact);
+			autoSelectAttempted = true;
+		} else {
+			console.log('No contact found for initialSelectedChatId:', initialSelectedChatId);
+		}
+	}
+
+	// Also try auto-selection when stores finish loading
+	$: if (
+		initialSelectedChatId &&
+		!selectedContact &&
+		!$friendStore.loading &&
+		!$groupStore.loading &&
+		!autoSelectAttempted
+	) {
+		console.log(
+			'Stores finished loading, attempting auto-select with initialSelectedChatId:',
+			initialSelectedChatId
+		);
+		if (allContacts.length > 0) {
+			const contact = allContacts.find((c) => getContactChatId(c) === initialSelectedChatId);
+			if (contact) {
+				console.log('Found contact for auto-select after stores loaded:', contact);
+				selectContact(contact);
+				autoSelectAttempted = true;
+			} else {
+				console.log(
+					'No contact found for initialSelectedChatId after stores loaded:',
+					initialSelectedChatId
+				);
+			}
+		} else {
+			console.log('No contacts available after stores loaded');
+		}
+	}
 
 	// Scroll to bottom when messages change
 	$: if (currentMessages.length > 0 && selectedContact) {
@@ -543,7 +657,7 @@
 				<h2>Messages</h2>
 				<button class="close-btn mobile-only" on:click={onClose} aria-label="Close chat">×</button>
 			</div>
-			
+
 			<div class="chats-list">
 				<!-- Friends Section -->
 				{#if friendContacts.length > 0}
@@ -552,42 +666,17 @@
 						{@const bgColor = getContactColour(contact) || ''}
 						<div
 							class="chat-item"
-							class:selected={selectedContact && selectedContact.chat_id === contact.chat_id && isFriend(selectedContact)}
+							class:selected={selectedContact &&
+								selectedContact.chat_id === contact.chat_id &&
+								isFriend(selectedContact)}
 							style="--bg: {bgColor}; --text: {getTextColourForBackground(bgColor)}"
 							role="button"
 							tabindex="0"
 							aria-label="Chat with {getContactName(contact)}"
 							on:click={() => selectContact(contact)}
-							on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectContact(contact); }}
-						>
-							<div class="avatar">
-								{#if getContactAvatar(contact)}
-									<img src={getContactAvatar(contact)} alt={getContactName(contact)} />
-								{:else}
-									<span class="initial">{getInitial(getContactName(contact))}</span>
-								{/if}
-							</div>
-							<div class="info">
-								<span class="name">{getContactName(contact)}</span>
-							</div>
-						</div>
-					{/each}
-				{/if}
-				
-				<!-- Groups Section -->
-				{#if groupContacts.length > 0}
-					<div class="section-label" class:with-border={friendContacts.length > 0}>Groups</div>
-					{#each groupContacts as contact (contact.chat_id)}
-						{@const bgColor = getContactColour(contact) || ''}
-						<div
-							class="chat-item"
-							class:selected={selectedContact && selectedContact.chat_id === contact.chat_id && isGroup(selectedContact)}
-							style="--bg: {bgColor}; --text: {getTextColourForBackground(bgColor)}"
-							role="button"
-							tabindex="0"
-							aria-label="Chat in group {getContactName(contact)}"
-							on:click={() => selectContact(contact)}
-							on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectContact(contact); }}
+							on:keydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') selectContact(contact);
+							}}
 						>
 							<div class="avatar">
 								{#if getContactAvatar(contact)}
@@ -605,30 +694,81 @@
 						</div>
 					{/each}
 				{/if}
-				
+
+				<!-- Groups Section -->
+				{#if groupContacts.length > 0}
+					<div class="section-label" class:with-border={friendContacts.length > 0}>Groups</div>
+					{#each groupContacts as contact (contact.chat_id)}
+						{@const bgColor = getContactColour(contact) || ''}
+						<div
+							class="chat-item"
+							class:selected={selectedContact &&
+								selectedContact.chat_id === contact.chat_id &&
+								isGroup(selectedContact)}
+							style="--bg: {bgColor}; --text: {getTextColourForBackground(bgColor)}"
+							role="button"
+							tabindex="0"
+							aria-label="Chat in group {getContactName(contact)}"
+							on:click={() => selectContact(contact)}
+							on:keydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') selectContact(contact);
+							}}
+						>
+							<div class="avatar">
+								{#if getContactAvatar(contact)}
+									<img src={getContactAvatar(contact)} alt={getContactName(contact)} />
+								{:else}
+									<span class="initial">{getInitial(getContactName(contact))}</span>
+								{/if}
+							</div>
+							<div class="info">
+								<span class="name">{getContactName(contact)}</span>
+							</div>
+							{#if getContactUnreadCount(contact) > 0}
+								<div class="unread-badge">{getContactUnreadCount(contact)}</div>
+							{/if}
+						</div>
+					{/each}
+				{/if}
+
 				{#if friendContacts.length === 0 && groupContacts.length === 0}
-					<p class="no-chats">You don't have any chats yet. Add friends or create a group to start chatting!</p>
+					<p class="no-chats">
+						You don't have any chats yet. Add friends or create a group to start chatting!
+					</p>
 				{/if}
 			</div>
 		</div>
 
-		<div class="chat-main" class:mobile-hidden={!showMessages} style="--chat-bg: {selectedColor || 'var(--primary-colour)'}; --chat-text: {selectedTextColor || 'var(--text-colour-on-primary)'};">
+		<div
+			class="chat-main"
+			class:mobile-hidden={!showMessages}
+			style="--chat-bg: {selectedColor ||
+				'var(--primary-colour)'}; --chat-text: {selectedTextColor ||
+				'var(--text-colour-on-primary)'};"
+		>
 			<div class="chat-header">
 				<div class="chat-header-left">
 					{#if isMobile && selectedContact}
 						<button class="back-btn" on:click={goBackToSidebar} aria-label="Back to chat list">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M19 12H5M12 19l-7-7 7-7"/>
+							<svg
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path d="M19 12H5M12 19l-7-7 7-7" />
 							</svg>
 						</button>
 					{/if}
 					{#if selectedContact}
 						<div class="chat-header-avatar">
-						{#if selectedChatAvatar}
-							<img src={selectedChatAvatar} alt={selectedChatName} />
-						{:else}
-							<span class="initial">{selectedChatInitial}</span>
-						{/if}
+							{#if selectedChatAvatar}
+								<img src={selectedChatAvatar} alt={selectedChatName} />
+							{:else}
+								<span class="initial">{selectedChatInitial}</span>
+							{/if}
 						</div>
 						<h3>{selectedChatName}</h3>
 					{:else}
@@ -637,7 +777,7 @@
 				</div>
 				<button class="close-btn" on:click={onClose}>×</button>
 			</div>
-			
+
 			{#if selectedContact}
 				<div class="messages">
 					{#if $messageStore.loading}
@@ -656,9 +796,9 @@
 						</div>
 					{:else}
 						{#each currentMessages as message (message.id)}
-							<MessageItem 
-								message={message}
-								currentUserId={currentUserId}
+							<MessageItem
+								{message}
+								{currentUserId}
 								getUsername={getMessageUsername}
 								getAvatar={getMessageAvatar}
 							/>
@@ -666,7 +806,7 @@
 						<div bind:this={messagesEndRef}></div>
 					{/if}
 				</div>
-				
+
 				<div class="message-input-container">
 					<input
 						type="text"
@@ -675,7 +815,11 @@
 						on:keydown={handleKeyDown}
 						disabled={$messageStore.loading}
 					/>
-					<button class="send-btn" on:click={handleSendMessage} disabled={!newMessage.trim() || $messageStore.loading}>
+					<button
+						class="send-btn"
+						on:click={handleSendMessage}
+						disabled={!newMessage.trim() || $messageStore.loading}
+					>
 						Send
 					</button>
 				</div>
@@ -950,8 +1094,12 @@
 	}
 
 	@keyframes spin {
-		0% { transform: rotate(0deg); }
-		100% { transform: rotate(360deg); }
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 
 	.empty-chat {

@@ -39,11 +39,11 @@ function createGroupStore() {
 		// Try IndexedDB first
 		let groups: Group[] = [];
 		try {
-			groups = await indexedDBHelper.getAllGroups() as Group[];
-			
-			groups = groups.map(group => {
+			groups = (await indexedDBHelper.getAllGroups()) as Group[];
+
+			groups = groups.map((group) => {
 				// If no chat found, create one with the chat_id
-				return { ...group};
+				return { ...group };
 			}) as Group[];
 		} catch (error) {
 			console.error('Error loading groups from IndexedDB:', error);
@@ -60,7 +60,6 @@ function createGroupStore() {
 			mute: group.mute,
 			mute_timestamp: group.mute_timestamp,
 			group_version: group.group_version,
-			message_version: group.message_version,
 			avatar_version: group.avatar_version,
 			last_message_read_id: group.last_message_read_id,
 			user_ids: group.user_ids,
@@ -108,14 +107,13 @@ function createGroupStore() {
 				if (response.success) {
 					const chatId = response.data;
 					const chat = { id: chatId, private: false };
-					
+
 					const group: Group = {
 						chat_id: response.data,
 						unread_messages: 0,
 						mute: false,
 						mute_timestamp: null,
 						group_version: 0,
-						message_version: 0,
 						avatar_version: 0,
 						last_message_read_id: 0,
 						user_ids: [...groupData.friendIds, groupData.meId],
@@ -123,9 +121,9 @@ function createGroupStore() {
 						name: groupData.groupName,
 						description: groupData.groupDescription,
 						colour: groupData.groupColour,
-						current_message_id: 1,
+						current_message_id: 1
 					};
-					
+
 					groupStore.updateGroup(group);
 					return response.data;
 				}
@@ -277,8 +275,7 @@ function createGroupStore() {
 						const updatedGroup: Group = {
 							...group,
 							name: groupName !== null ? groupName : group.name,
-							description:
-								groupDescription !== null ? groupDescription : group.description,
+							description: groupDescription !== null ? groupDescription : group.description,
 							colour: groupColour !== null ? groupColour : group.colour
 						};
 						await saveGroupToStorage(updatedGroup);
@@ -356,19 +353,28 @@ function createGroupStore() {
 		},
 		getGroup: async (groupId: number): Promise<Group | null> => {
 			// Try IndexedDB first
-			let group = await indexedDBHelper.getGroup(groupId) as Group | null;
+			let group = (await indexedDBHelper.getGroup(groupId)) as Group | null;
 			if (group) {
 				return group;
 			}
 
 			return null;
 		},
+		getAllGroups: async (): Promise<Group[]> => {
+			// Get from memory first
+			const state = get({ subscribe });
+			if (state.groups.length > 0) {
+				return state.groups;
+			}
+			// Fallback to IndexedDB
+			return (await indexedDBHelper.getAllGroups()) as Group[];
+		},
 		clear: async () => {
 			set(initialState);
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearGroups();
 			}
-		},
+		}
 	};
 }
 

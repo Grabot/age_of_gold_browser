@@ -36,20 +36,18 @@
 			}
 		});
 
-		socketEventUnsubscribe = socketEventStore.subscribe((events) => {
-			events.forEach(async (event) => {
-				if (event.type === 'group_avatar_updated') {
-					const group = $groupStore.groups.find((g) => g.chat_id === event.data?.chat_id);
-					if (group) {
-						if (group.avatar_version !== event.data.avatar_version) {
-							const newGroup = await updateGroupAvatar(group);
-							if (newGroup) {
-								groupStore.updateGroup(newGroup);
-							}
-						}
+		socketEventUnsubscribe = socketEventStore.subscribe(async (event) => {
+			if (!event) return;
+
+			if (event.type === 'group_avatar_updated') {
+				const group = $groupStore.groups.find((g) => g.chat_id === event.data?.chat_id);
+				if (group && group.avatar_version !== event.data.avatar_version) {
+					const newGroup = await updateGroupAvatar(group);
+					if (newGroup) {
+						groupStore.updateGroup(newGroup);
 					}
 				}
-			});
+			}
 		});
 
 		return () => {
@@ -66,7 +64,9 @@
 		{#each $groupStore.groups as group (group.chat_id)}
 			<div
 				class="group-item"
-				style="--bg: {getBackgroundColor(group)}; --text: {getTextColourForBackground(getBackgroundColor(group))}"
+				style="--bg: {getBackgroundColor(group)}; --text: {getTextColourForBackground(
+					getBackgroundColor(group)
+				)}"
 				role="button"
 				tabindex="0"
 				aria-label="View details for group {group.name || group.chat_id}"

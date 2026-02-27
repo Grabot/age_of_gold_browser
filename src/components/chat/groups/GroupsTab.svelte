@@ -4,7 +4,6 @@
 	import GroupsList from './GroupsList.svelte';
 	import FloatingActionButton from '../../ui/FloatingActionButton.svelte';
 
-
 	export let onCreateGroupClick: () => void = () => {};
 </script>
 
@@ -12,13 +11,9 @@
 	<div class="tab-content">
 		<GroupsList />
 	</div>
-	
+
 	<div class="fab-container">
-		<FloatingActionButton 
-			onClick={onCreateGroupClick} 
-			icon="👥"
-			label="Create Group"
-		/>
+		<FloatingActionButton onClick={onCreateGroupClick} icon="👥" label="Create Group" />
 	</div>
 </div>
 

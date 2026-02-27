@@ -1,9 +1,9 @@
 import { writable, get } from 'svelte/store';
-import type { Message, ChatMessage } from '$lib/types/message';
+import type { Message } from '$lib/types/message';
 import { indexedDBHelper } from './indexedDBHelper';
 
 interface MessagesState {
-	messages: Map<number, ChatMessage[]>;
+	messages: Map<number, Message[]>;
 	loading: boolean;
 	error: string | null;
 }
@@ -23,9 +23,9 @@ function createMessageStore() {
 
 	async function loadMessagesFromStorage() {
 		try {
-			const allMessages = await indexedDBHelper.getAllMessages() as ChatMessage[];
-			const messagesMap = new Map<number, ChatMessage[]>();
-			
+			const allMessages = (await indexedDBHelper.getAllMessages()) as Message[];
+			const messagesMap = new Map<number, Message[]>();
+
 			allMessages.forEach((msg) => {
 				const chatId = msg.chat_id;
 				if (!messagesMap.has(chatId)) {
@@ -33,25 +33,25 @@ function createMessageStore() {
 				}
 				messagesMap.get(chatId)!.push(msg);
 			});
-			
+
 			// Sort messages by created_at
 			messagesMap.forEach((msgs) => {
 				msgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 			});
-			
+
 			update((state) => ({ ...state, messages: messagesMap }));
 		} catch (error) {
 			console.error('Error loading messages from IndexedDB:', error);
 		}
 	}
 
-	async function saveMessageToStorage(message: ChatMessage) {
+	async function saveMessageToStorage(message: Message) {
 		if (typeof window !== 'undefined') {
 			await indexedDBHelper.saveMessage(message);
 		}
 	}
 
-	async function saveMessagesToStorage(chatId: number, messages: ChatMessage[]) {
+	async function saveMessagesToStorage(chatId: number, messages: Message[]) {
 		if (typeof window !== 'undefined') {
 			for (const message of messages) {
 				await indexedDBHelper.saveMessage(message);
@@ -61,64 +61,68 @@ function createMessageStore() {
 
 	return {
 		subscribe,
-		
-		addMessage: async (message: ChatMessage) => {
+
+		addMessage: async (message: Message) => {
 			await saveMessageToStorage(message);
-			
+
 			update((state) => {
 				const newMessages = new Map(state.messages);
 				const chatId = message.chat_id;
-				
+
 				if (!newMessages.has(chatId)) {
 					newMessages.set(chatId, []);
 				}
-				
+
 				const chatMessages = newMessages.get(chatId)!;
 				// Check if message already exists
-				const exists = chatMessages.some(m => m.id === message.id);
+				const exists = chatMessages.some((m) => m.id === message.id);
 				if (!exists) {
 					chatMessages.push(message);
 					// Sort by created_at
-					chatMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+					chatMessages.sort(
+						(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+					);
 				}
-				
+
 				return { ...state, messages: newMessages };
 			});
 		},
-		
+
 		// Add multiple messages to a chat
-		addMessages: async (chatId: number, messages: ChatMessage[]) => {
+		addMessages: async (chatId: number, messages: Message[]) => {
 			await saveMessagesToStorage(chatId, messages);
-			
+
 			update((state) => {
 				const newMessages = new Map(state.messages);
-				
+
 				if (!newMessages.has(chatId)) {
 					newMessages.set(chatId, []);
 				}
-				
+
 				const chatMessages = newMessages.get(chatId)!;
-				
+
 				messages.forEach((message) => {
-					const exists = chatMessages.some(m => m.id === message.id);
+					const exists = chatMessages.some((m) => m.id === message.id);
 					if (!exists) {
 						chatMessages.push(message);
 					}
 				});
-				
+
 				// Sort by created_at
-				chatMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-				
+				chatMessages.sort(
+					(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+				);
+
 				return { ...state, messages: newMessages };
 			});
 		},
-		
+
 		// Get messages for a specific chat
-		getMessagesForChat: (chatId: number): ChatMessage[] => {
+		getMessagesForChat: (chatId: number): Message[] => {
 			const state = get({ subscribe });
 			return state.messages.get(chatId) || [];
 		},
-		
+
 		// Get the latest message ID for a chat
 		getLatestMessageId: (chatId: number): number | null => {
 			const state = get({ subscribe });
@@ -127,45 +131,43 @@ function createMessageStore() {
 				return null;
 			}
 			// Get the message with the highest ID
-			return Math.max(...messages.map(m => m.id));
+			return Math.max(...messages.map((m) => m.id));
 		},
-		
+
 		// Set messages for a chat (replaces existing messages)
-		setMessagesForChat: async (chatId: number, messages: ChatMessage[]) => {
+		setMessagesForChat: async (chatId: number, messages: Message[]) => {
 			// Clear existing messages for this chat from storage
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearMessagesForChat(chatId);
 				for (const message of messages) {
-					// Don't save is_me to storage - it's a client-side computed property
-					const { is_me, ...messageWithoutIsMe } = message;
-					await indexedDBHelper.saveMessage(messageWithoutIsMe);
+					await indexedDBHelper.saveMessage(message);
 				}
 			}
-			
+
 			update((state) => {
 				const newMessages = new Map(state.messages);
 				// Sort by created_at
-				const sortedMessages = [...messages].sort((a, b) => 
-					new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+				const sortedMessages = [...messages].sort(
+					(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
 				);
 				newMessages.set(chatId, sortedMessages);
 				return { ...state, messages: newMessages };
 			});
 		},
-		
+
 		// Clear messages for a specific chat
 		clearMessagesForChat: async (chatId: number) => {
 			if (typeof window !== 'undefined') {
 				await indexedDBHelper.clearMessagesForChat(chatId);
 			}
-			
+
 			update((state) => {
 				const newMessages = new Map(state.messages);
 				newMessages.delete(chatId);
 				return { ...state, messages: newMessages };
 			});
 		},
-		
+
 		// Clear all messages
 		clear: async () => {
 			if (typeof window !== 'undefined') {
@@ -174,29 +176,29 @@ function createMessageStore() {
 			}
 			set(initialState);
 		},
-		
+
 		setLoading: (loading: boolean) => {
 			update((state) => ({ ...state, loading }));
 		},
-		
+
 		setError: (error: string | null) => {
 			update((state) => ({ ...state, error }));
 		},
-		
+
 		// Set whether messages should be updated from backend for a chat
 		setShouldUpdateMessages: async (chatId: number, shouldUpdate: boolean): Promise<void> => {
 			await indexedDBHelper.saveShouldUpdateMessages(chatId, shouldUpdate);
 		},
-		
+
 		// Get whether messages should be updated from backend for a chat
 		getShouldUpdateMessages: async (chatId: number): Promise<boolean> => {
 			return await indexedDBHelper.getShouldUpdateMessages(chatId);
 		},
-		
+
 		// Clear all shouldUpdate flags
 		clearShouldUpdateMessages: async (): Promise<void> => {
 			await indexedDBHelper.clearShouldUpdateMessages();
-		},
+		}
 	};
 }
 

@@ -45,10 +45,7 @@ export function getContactInitial(contact: Contact): string {
 }
 
 export function getContactUnreadCount(contact: Contact): number {
-	if (isGroup(contact)) {
-		return contact.unread_messages || 0;
-	}
-	return 0;
+	return contact.unread_messages;
 }
 
 export function getContactChatId(contact: Contact): number {
@@ -58,7 +55,7 @@ export function getContactChatId(contact: Contact): number {
 export function getContactMessages(contact: Contact, messageStore: Map<number, any>): any[] {
 	const chatId = contact.chat_id;
 	const messages = messageStore.get(chatId) || [];
-	console.log("messages");
+	console.log('messages');
 	console.log(messages);
 	return messageStore.get(chatId) || [];
 }

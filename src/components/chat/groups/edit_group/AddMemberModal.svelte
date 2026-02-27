@@ -161,13 +161,13 @@
 		position: relative;
 	}
 
-    .modal-header {
-        background: var(--primary-colour);
-        color: var(--text-colour-on-primary);
-        padding: 1rem 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+	.modal-header {
+		background: var(--primary-colour);
+		color: var(--text-colour-on-primary);
+		padding: 1rem 1.5rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
 		border-radius: 12px 12px 0 0;
 	}
 

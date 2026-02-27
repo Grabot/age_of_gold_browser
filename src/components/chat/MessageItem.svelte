@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { formatUTCToLocalTime } from '$lib/utils/dateUtils';
-	import type { ChatMessage } from '$lib/types/message';
+	import type { Message } from '$lib/types/message';
 
-	export let message: ChatMessage;
+	export let message: Message;
 	export let currentUserId: number | null;
 	export let getUsername: (senderId: number) => Promise<string>;
 	export let getAvatar: (senderId: number) => Promise<string | null>;

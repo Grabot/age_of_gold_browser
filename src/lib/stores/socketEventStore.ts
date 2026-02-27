@@ -6,15 +6,15 @@ interface SocketEvent {
 }
 
 function createSocketEventStore() {
-	const { subscribe, set, update } = writable<SocketEvent[]>([]);
+	const { subscribe, set } = writable<SocketEvent | null>(null);
 
 	return {
 		subscribe,
 		dispatch: (event: SocketEvent) => {
-			update((events) => [...events, event]);
+			set(event);
 		},
 		clear: () => {
-			set([]);
+			set(null);
 		}
 	};
 }

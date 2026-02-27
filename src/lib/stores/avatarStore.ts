@@ -1,5 +1,9 @@
 import { writable } from 'svelte/store';
-import { indexedDBHelper, SHOULD_UPDATE_USER_AVATAR_STORE, SHOULD_UPDATE_GROUP_AVATAR_STORE } from './indexedDBHelper';
+import {
+	indexedDBHelper,
+	SHOULD_UPDATE_USER_AVATAR_STORE,
+	SHOULD_UPDATE_GROUP_AVATAR_STORE
+} from './indexedDBHelper';
 
 export const STORAGE_KEY_SHOULD_UPDATE_AVATAR_PREFIX = 'shouldUpdateAvatar_';
 export const STORAGE_KEY_SHOULD_UPDATE_GROUP_AVATAR_PREFIX = 'shouldUpdateGroupAvatar_';
@@ -104,7 +108,10 @@ function createAvatarStore() {
 
 	async function getAvatar(userId: number): Promise<string | null> {
 		if (typeof window !== 'undefined') {
-			const avatar = (await indexedDBHelper.getUserAvatar(userId)) as { userId: number; avatar: string } | null;
+			const avatar = (await indexedDBHelper.getUserAvatar(userId)) as {
+				userId: number;
+				avatar: string;
+			} | null;
 			if (avatar && avatar.avatar) {
 				return avatar.avatar;
 			}
@@ -159,7 +166,10 @@ function createAvatarStore() {
 
 	async function getGroupAvatar(groupId: number): Promise<string | null> {
 		if (typeof window !== 'undefined') {
-			const avatar = (await indexedDBHelper.getGroupAvatar(groupId)) as { groupId: number; avatar: string } | null;
+			const avatar = (await indexedDBHelper.getGroupAvatar(groupId)) as {
+				groupId: number;
+				avatar: string;
+			} | null;
 			if (avatar && avatar.avatar) {
 				return avatar.avatar;
 			}

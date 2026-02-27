@@ -1,7 +1,7 @@
 <script lang="ts">
 	export let onClick: () => void;
-	export let icon: string = "👤";
-	export let label: string = "Add";
+	export let icon: string = '👤';
+	export let label: string = 'Add';
 </script>
 
 <div class="fab-container">
@@ -19,10 +19,10 @@
 		z-index: 10;
 	}
 
-    .fab-button {
-        background: var(--primary-colour);
-        color: white;
-        border: none;
+	.fab-button {
+		background: var(--primary-colour);
+		color: white;
+		border: none;
 		border-radius: 50%;
 		width: 60px;
 		height: 60px;
@@ -37,7 +37,7 @@
 	}
 
 	.fab-button:hover {
-        background: var(--primary-colour-dark);
+		background: var(--primary-colour-dark);
 	}
 
 	.fab-icon {

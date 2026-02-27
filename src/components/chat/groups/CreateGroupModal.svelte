@@ -89,7 +89,7 @@
 	function resetForm() {
 		groupName = '';
 		groupDescription = '';
-        groupColour = 'var(--primary-colour)';
+		groupColour = 'var(--primary-colour)';
 		selectedFriends = [];
 	}
 
@@ -143,20 +143,26 @@
 
 			<div class="form-group">
 				<label for="groupColour">Group Colour</label>
-				<div class="colour-picker-trigger" on:click={() => showColourPicker = true} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && (showColourPicker = true)}>
+				<div
+					class="colour-picker-trigger"
+					on:click={() => (showColourPicker = true)}
+					role="button"
+					tabindex="0"
+					on:keydown={(e) => e.key === 'Enter' && (showColourPicker = true)}
+				>
 					<div class="colour-preview" style="background-color: {groupColour}"></div>
 					<span class="colour-label">{groupColour}</span>
 				</div>
 			</div>
 
 			{#if showColourPicker}
-				<ColourPickerModal 
+				<ColourPickerModal
 					initialColour={groupColour}
 					onSave={(colour) => {
 						groupColour = colour;
 						showColourPicker = false;
 					}}
-					onClose={() => showColourPicker = false}
+					onClose={() => (showColourPicker = false)}
 				/>
 			{/if}
 
@@ -235,7 +241,7 @@
 	}
 
 	.modal-header {
-        background: var(--primary-colour);
+		background: var(--primary-colour);
 		color: var(--text-colour-on-primary);
 		padding: 1rem 1.5rem;
 		display: flex;
@@ -338,7 +344,7 @@
 
 	.friend-item.selected {
 		background-color: #e8f5e9;
-        border: 1px solid var(--primary-colour);
+		border: 1px solid var(--primary-colour);
 	}
 
 	.friend-item input[type='checkbox'] {
@@ -381,7 +387,7 @@
 
 	.create-btn {
 		padding: 0.5rem 1rem;
-        background-color: var(--primary-colour);
+		background-color: var(--primary-colour);
 		color: var(--text-colour-on-primary);
 		border: none;
 		border-radius: 4px;
@@ -389,6 +395,6 @@
 	}
 
 	.create-btn:hover {
-        background-color: var(--primary-colour-dark);
+		background-color: var(--primary-colour-dark);
 	}
 </style>

@@ -28,7 +28,7 @@
 	$: {
 		editGroupName = group.name || '';
 		editGroupDescription = group.description || '';
-        editGroupColour = group.colour || 'var(--primary-colour)';
+		editGroupColour = group.colour || 'var(--primary-colour)';
 	}
 
 	async function handleSave() {
@@ -99,20 +99,26 @@
 
 				<div class="form-group">
 					<label for="editGroupColour">Group Color</label>
-					<div class="colour-picker-trigger" on:click={() => showColourPicker = true} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && (showColourPicker = true)}>
+					<div
+						class="colour-picker-trigger"
+						on:click={() => (showColourPicker = true)}
+						role="button"
+						tabindex="0"
+						on:keydown={(e) => e.key === 'Enter' && (showColourPicker = true)}
+					>
 						<div class="colour-preview" style="background-color: {editGroupColour}"></div>
 						<span class="colour-label">{editGroupColour}</span>
 					</div>
 				</div>
 
 				{#if showColourPicker}
-					<ColourPickerModal 
+					<ColourPickerModal
 						initialColour={editGroupColour}
 						onSave={(colour) => {
 							editGroupColour = colour;
 							showColourPicker = false;
 						}}
-						onClose={() => showColourPicker = false}
+						onClose={() => (showColourPicker = false)}
 					/>
 				{/if}
 
@@ -213,7 +219,7 @@
 
 	.form-input:focus {
 		outline: none;
-        border-color: var(--primary-colour);
+		border-color: var(--primary-colour);
 	}
 
 	.form-textarea {

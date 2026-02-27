@@ -7,16 +7,16 @@ export function formatUTCToLocalTime(timestamp: string): string {
 	if (!timestamp) {
 		return '';
 	}
-	
+
 	// Parse the timestamp - Date constructor automatically handles ISO format with timezone
 	const date = new Date(timestamp);
-	
+
 	// Check if date is valid
 	if (isNaN(date.getTime())) {
 		console.warn('Invalid timestamp:', timestamp);
 		return '';
 	}
-	
+
 	// toLocaleTimeString automatically converts to local timezone
 	return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
@@ -28,12 +28,12 @@ export function formatUTCToLocalTime(timestamp: string): string {
  */
 export function formatUTCToLocalDateTime(timestamp: string): string {
 	const date = new Date(timestamp);
-	return date.toLocaleString([], { 
-		year: 'numeric', 
-		month: 'short', 
-		day: 'numeric', 
-		hour: '2-digit', 
-		minute: '2-digit' 
+	return date.toLocaleString([], {
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit'
 	});
 }
 
