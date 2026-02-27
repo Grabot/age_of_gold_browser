@@ -8,6 +8,10 @@
 	import { getTextColourForBackground } from '$lib/utils/colourUtils';
 	import type { Contact } from '$lib/types/contact';
 	import MessageItem from './MessageItem.svelte';
+	import AttachmentPreview from './AttachmentPreview.svelte';
+	import DocumentUpload from './DocumentUpload.svelte';
+	import AudioRecorder from './AudioRecorder.svelte';
+	import CameraView from './CameraView.svelte';
 	import {
 		isGroup,
 		isFriend,
@@ -59,6 +63,12 @@
 	let innerWidth = window.innerWidth;
 	let innerHeight = window.innerHeight;
 	let showSidebarOnMobile = true;
+	let showAttachmentMenu = false;
+	let showAttachmentPreview = false;
+	let showDocumentUpload = false;
+	let showAudioRecorder = false;
+	let showCameraView = false;
+	let selectedAttachmentType: 'image' | 'video' | 'document' | 'audio' | 'camera' | null = null;
 
 	// Cache for sender info to avoid repeated lookups
 	// Group members for the currently selected group
@@ -347,6 +357,89 @@
 	function scrollToBottom() {
 		if (messagesEndRef) {
 			messagesEndRef.scrollIntoView({ behavior: 'smooth' });
+		}
+	}
+
+	function toggleAttachmentMenu() {
+		showAttachmentMenu = !showAttachmentMenu;
+	}
+
+	function handleAttachmentSelect(type: string) {
+		console.log('Selected attachment type:', type);
+		showAttachmentMenu = false;
+
+		if (type === 'photos-videos') {
+			selectedAttachmentType = 'image';
+			showAttachmentPreview = true;
+		} else if (type === 'document') {
+			selectedAttachmentType = 'document';
+			showDocumentUpload = true;
+		} else if (type === 'audio') {
+			selectedAttachmentType = 'audio';
+			showAudioRecorder = true;
+		} else if (type === 'camera') {
+			selectedAttachmentType = 'camera';
+			showCameraView = true;
+		} else {
+			// TODO: Implement file handling for other attachment types
+			console.log('Attachment type not yet implemented:', type);
+		}
+	}
+
+	function handleAttachmentSave(data: { file?: File | null; caption?: string | null }) {
+		console.log('Attachment saved:', data);
+		showAttachmentPreview = false;
+		// TODO: Implement sending the attachment via API
+	}
+
+	function handleDocumentSave(data: { file?: File | null; filename: string }) {
+		console.log('Document saved:', data);
+		showDocumentUpload = false;
+		// TODO: Implement sending the document via API
+	}
+
+	function handleAudioSave(data: {
+		audioBlob?: Blob | null;
+		audioUrl?: string | null;
+		duration: number;
+	}) {
+		console.log('Audio saved:', data);
+		showAudioRecorder = false;
+		// TODO: Implement sending the audio via API
+	}
+
+	function handleCameraSave(data: { imageBlob?: Blob | null; imageUrl?: string | null }) {
+		console.log('Image saved:', data);
+		showCameraView = false;
+		// TODO: Implement sending the image via API
+	}
+
+	function handleAttachmentClose() {
+		showAttachmentPreview = false;
+		selectedAttachmentType = null;
+	}
+
+	function handleDocumentClose() {
+		showDocumentUpload = false;
+		selectedAttachmentType = null;
+	}
+
+	function handleAudioClose() {
+		showAudioRecorder = false;
+		selectedAttachmentType = null;
+	}
+
+	function handleCameraClose() {
+		showCameraView = false;
+		selectedAttachmentType = null;
+	}
+
+	function handleFileUpload(event: Event) {
+		const input = event.target as HTMLInputElement;
+		if (input.files && input.files.length > 0) {
+			const file = input.files[0];
+			console.log('File selected:', file.name, file.type);
+			// TODO: Implement file upload logic
 		}
 	}
 
@@ -815,6 +908,34 @@
 						on:keydown={handleKeyDown}
 						disabled={$messageStore.loading}
 					/>
+					<div class="attachment-container">
+						<button
+							class="attachment-btn"
+							on:click={toggleAttachmentMenu}
+							aria-label="Add attachment"
+							title="Add attachment"
+						>
+							📎
+						</button>
+						{#if showAttachmentMenu}
+							<div class="attachment-menu">
+								<button on:click={() => handleAttachmentSelect('document')}>Document</button>
+								<button on:click={() => handleAttachmentSelect('photos-videos')}
+									>Photos and videos</button
+								>
+								<button on:click={() => handleAttachmentSelect('camera')}>Camera</button>
+								<button on:click={() => handleAttachmentSelect('audio')}>Audio</button>
+								<input
+									type="file"
+									id="file-upload"
+									style="display: none;"
+									on:change={handleFileUpload}
+									accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+									multiple
+								/>
+							</div>
+						{/if}
+					</div>
 					<button
 						class="send-btn"
 						on:click={handleSendMessage}
@@ -833,6 +954,18 @@
 			{/if}
 		</div>
 	</div>
+	{#if showAttachmentPreview}
+		<AttachmentPreview onSave={handleAttachmentSave} onClose={handleAttachmentClose} />
+	{/if}
+	{#if showDocumentUpload}
+		<DocumentUpload onSave={handleDocumentSave} onClose={handleDocumentClose} />
+	{/if}
+	{#if showAudioRecorder}
+		<AudioRecorder onSave={handleAudioSave} onClose={handleAudioClose} />
+	{/if}
+	{#if showCameraView}
+		<CameraView onSave={handleCameraSave} onClose={handleCameraClose} />
+	{/if}
 </div>
 
 <style>
@@ -1123,6 +1256,7 @@
 		display: flex;
 		gap: 0.75rem;
 		align-items: center;
+		position: relative;
 	}
 
 	.message-input-container input {
@@ -1141,6 +1275,59 @@
 	.message-input-container input:disabled {
 		background: #f8f9fa;
 		cursor: not-allowed;
+	}
+
+	.attachment-container {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.attachment-btn {
+		padding: 0.75rem;
+		background: #f8f9fa;
+		border: none;
+		border-radius: 50%;
+		cursor: pointer;
+		font-size: 1rem;
+		width: 40px;
+		height: 40px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.attachment-btn:hover {
+		background: #e9ecef;
+	}
+
+	.attachment-menu {
+		position: absolute;
+		bottom: 50px;
+		left: 0;
+		background: white;
+		border: 1px solid #dee2e6;
+		border-radius: 8px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		padding: 0.5rem 0;
+		z-index: 1001;
+		min-width: 200px;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.attachment-menu button {
+		background: none;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		text-align: left;
+		cursor: pointer;
+		color: #495057;
+		font-size: 0.9rem;
+	}
+
+	.attachment-menu button:hover {
+		background: #f8f9fa;
 	}
 
 	.send-btn {
