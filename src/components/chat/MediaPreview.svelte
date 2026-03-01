@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { errorToast } from '$lib/utils/toast';
 
-	export let onSave: (data: { file?: File | null; caption?: string | null }) => void;
+	export let onSave: (data: {
+		file?: File | null;
+		caption?: string | null;
+		mediaType: 'image' | 'video';
+	}) => void;
 	export let onClose: () => void;
 
 	let imagePreview: string | null = null;
 	let isUploading = false;
 	let isDragging = false;
 	let caption = '';
+	let mediaType: 'image' | 'video' = 'image';
 	let filename = '';
 	let selectedFile: File | null = null;
+	let isLoading = false;
 
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget && !isUploading) {
@@ -20,9 +26,11 @@
 	function handleSave() {
 		if (!selectedFile) return;
 
-		const data: { file?: File | null; caption?: string | null } = {};
-		data.file = selectedFile;
-		data.caption = caption || null;
+		const data: { file?: File | null; caption?: string | null; mediaType: 'image' | 'video' } = {
+			file: selectedFile,
+			caption: caption || null,
+			mediaType: mediaType
+		};
 		onSave(data);
 	}
 
@@ -30,16 +38,39 @@
 		const input = event.target as HTMLInputElement;
 		if (input.files && input.files.length > 0) {
 			const file = input.files[0];
+			isLoading = true;
+
 			if (file.type.startsWith('image/')) {
 				filename = file.name;
 				selectedFile = file;
+				mediaType = 'image';
 				const reader = new FileReader();
 				reader.onload = (e) => {
 					imagePreview = e.target?.result as string;
+					isLoading = false;
+				};
+				reader.onerror = () => {
+					isLoading = false;
+					errorToast('Error loading image file');
+				};
+				reader.readAsDataURL(file);
+			} else if (file.type.startsWith('video/')) {
+				filename = file.name;
+				selectedFile = file;
+				mediaType = 'video';
+				const reader = new FileReader();
+				reader.onload = async (e) => {
+					imagePreview = e.target?.result as string;
+					isLoading = false;
+				};
+				reader.onerror = () => {
+					isLoading = false;
+					errorToast('Error loading video file');
 				};
 				reader.readAsDataURL(file);
 			} else {
-				errorToast('Please select an image file');
+				isLoading = false;
+				errorToast('Please select an image or video file');
 			}
 		}
 	}
@@ -54,16 +85,39 @@
 		event.stopPropagation();
 		if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
 			const file = event.dataTransfer.files[0];
+			isLoading = true;
+
 			if (file.type.startsWith('image/')) {
 				filename = file.name;
 				selectedFile = file;
+				mediaType = 'image';
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					imagePreview = e.target?.result as string;
+					isLoading = false;
+				};
+				reader.onerror = () => {
+					isLoading = false;
+					errorToast('Error loading image file');
+				};
+				reader.readAsDataURL(file);
+			} else if (file.type.startsWith('video/')) {
+				filename = file.name;
+				selectedFile = file;
+				mediaType = 'video';
 				const reader = new FileReader();
 				reader.onload = async (e) => {
 					imagePreview = e.target?.result as string;
+					isLoading = false;
+				};
+				reader.onerror = () => {
+					isLoading = false;
+					errorToast('Error loading video file');
 				};
 				reader.readAsDataURL(file);
 			} else {
-				errorToast('Please drop an image file');
+				isLoading = false;
+				errorToast('Please drop an image or video file');
 			}
 		}
 	}
@@ -100,11 +154,25 @@
 					role="region"
 					aria-label="Attachment preview area"
 				>
+					{#if isLoading}
+						<div class="loading-overlay">
+							<div class="loading-spinner"></div>
+							<p>Loading media...</p>
+						</div>
+					{/if}
 					{#if imagePreview}
-						<img src={imagePreview} alt="Attachment Preview" class="attachment-image" />
+						{#if mediaType === 'video'}
+							<video src={imagePreview} controls class="media-element video-element"></video>
+						{:else}
+							<img
+								src={imagePreview}
+								alt="Attachment Preview"
+								class="media-element image-element"
+							/>
+						{/if}
 					{:else}
 						<div class="empty-preview">
-							<p>Drag and drop an image here or click browse</p>
+							<p>Drag and drop an image or video here or click browse</p>
 						</div>
 					{/if}
 				</div>
@@ -127,7 +195,7 @@
 					<input
 						type="file"
 						on:change={handleFileInput}
-						accept="image/*"
+						accept="image/*,video/*"
 						class="field-input"
 						style="display: none;"
 						bind:this={fileInput}
@@ -264,14 +332,58 @@
 	.preview-area.has-image {
 		border-style: solid;
 		background: white;
+		position: relative;
 	}
 
-	.attachment-image {
+	.loading-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(255, 255, 255, 0.8);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		z-index: 10;
+	}
+
+	.loading-spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid #f3f3f3;
+		border-top: 4px solid var(--primary-colour);
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		margin-bottom: 10px;
+	}
+
+	@keyframes spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}
+
+	.media-element {
+		width: 100%;
+		height: 100%;
+		max-width: 100%;
+		max-height: 100%;
+		object-fit: contain;
+	}
+
+	.image-element {
+		object-fit: contain;
+	}
+
+	.video-element {
 		width: 100%;
 		height: 100%;
 		object-fit: contain;
-		max-width: 100%;
-		max-height: 100%;
 	}
 
 	.empty-preview {

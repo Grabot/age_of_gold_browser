@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { errorToast } from '$lib/utils/toast';
 	import { onMount } from 'svelte';
+	import audiobufferToWav from 'audiobuffer-to-wav';
 
 	export let onSave: (data: {
 		audioBlob?: Blob | null;
@@ -17,6 +18,7 @@
 	let timer: ReturnType<typeof setInterval> | null = null;
 	let mediaRecorder: MediaRecorder | null = null;
 	let audioChunks: Blob[] = [];
+	let isUploadedFile = false;
 	let audioContext: AudioContext | null = null;
 	let analyser: AnalyserNode | null = null;
 	let canvas: HTMLCanvasElement | null = null;
@@ -148,35 +150,12 @@
 		}
 	}
 
-	async function isAudioFileValid(file: File): Promise<boolean> {
-		return new Promise((resolve) => {
-			const audio = new Audio(URL.createObjectURL(file));
-			audio.onloadedmetadata = () => resolve(true);
-			audio.onerror = () => resolve(false);
-		});
-	}
-	
 	async function reencodeToWav(audioBlob: Blob): Promise<Blob> {
 		const audioContext = new AudioContext();
 		const arrayBuffer = await audioBlob.arrayBuffer();
 		const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-		// Simple WAV encoder (simplified example)
-		const wavBlob = await encodeWav(audioBuffer);
-		return wavBlob;
-	}
-
-	async function encodeWav(audioBuffer: AudioBuffer): Promise<Blob> {
-		// This is a simplified example; for a full implementation, use a library like 'audiobuffer-to-wav'
-		const wavBytes = convertAudioBufferToWavBytes(audioBuffer);
+		const wavBytes = audiobufferToWav(audioBuffer);
 		return new Blob([wavBytes], { type: 'audio/wav' });
-	}
-
-	// Placeholder for WAV encoding logic
-	function convertAudioBufferToWavBytes(audioBuffer: AudioBuffer): Uint8Array {
-		// Implement or use a library for WAV encoding
-		// See: https://github.com/Jam3/audio-buffer-to-wav
-		throw new Error('WAV encoding not implemented; use a library like audiobuffer-to-wav');
 	}
 
 	async function handleFileUpload(event: Event) {
@@ -189,16 +168,19 @@
 					const audio = new Audio(URL.createObjectURL(file));
 					audio.onloadedmetadata = async () => {
 						duration = audio.duration;
-						// Re-encode to WAV if needed
+						// Re-encode to WAV for better compatibility
 						const wavBlob = await reencodeToWav(file);
 						audioUrl = URL.createObjectURL(wavBlob);
 						audioBlob = wavBlob;
+						isUploadedFile = true;
 					};
-					audio.onerror = () => {
-						errorToast('Could not load audio file. Trying to re-encode as WAV...');
-						reencodeToWav(file).then((wavBlob) => {
+					audio.onerror = async () => {
+						errorToast('Could not load audio file. Re-encoding as WAV...');
+						try {
+							const wavBlob = await reencodeToWav(file);
 							audioUrl = URL.createObjectURL(wavBlob);
 							audioBlob = wavBlob;
+							isUploadedFile = true;
 							const audio2 = new Audio(audioUrl);
 							audio2.onloadedmetadata = () => {
 								duration = audio2.duration;
@@ -207,8 +189,14 @@
 								errorToast('Failed to re-encode audio file.');
 								audioUrl = null;
 								audioBlob = null;
+								isUploadedFile = false;
 							};
-						});
+						} catch (e) {
+							errorToast('Error re-encoding audio file.');
+							audioUrl = null;
+							audioBlob = null;
+							isUploadedFile = false;
+						}
 					};
 				} catch (e) {
 					errorToast('Error processing audio file.');
@@ -218,7 +206,6 @@
 			}
 		}
 	}
-
 
 	function togglePlayback() {
 		if (!audioUrl) return;
@@ -347,7 +334,7 @@
 								duration = 0;
 							}}
 						>
-							🔄 Re-record
+							{isUploadedFile ? '🔙 Go Back' : '🔄 Re-record'}
 						</button>
 					</div>
 				</div>

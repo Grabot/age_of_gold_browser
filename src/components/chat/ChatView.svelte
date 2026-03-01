@@ -8,7 +8,7 @@
 	import { getTextColourForBackground } from '$lib/utils/colourUtils';
 	import type { Contact } from '$lib/types/contact';
 	import MessageItem from './MessageItem.svelte';
-	import AttachmentPreview from './AttachmentPreview.svelte';
+	import MediaPreview from './MediaPreview.svelte';
 	import DocumentUpload from './DocumentUpload.svelte';
 	import AudioRecorder from './AudioRecorder.svelte';
 	import CameraView from './CameraView.svelte';
@@ -386,10 +386,14 @@
 		}
 	}
 
-	function handleAttachmentSave(data: { file?: File | null; caption?: string | null }) {
-		console.log('Attachment saved:', data);
+	function handleAttachmentSave(data: {
+		file?: File | null;
+		caption?: string | null;
+		mediaType: 'image' | 'video';
+	}) {
+		console.log('Media saved:', data);
 		showAttachmentPreview = false;
-		// TODO: Implement sending the attachment via API
+		// TODO: Implement sending the media via API
 	}
 
 	function handleDocumentSave(data: { file?: File | null; filename: string }) {
@@ -955,7 +959,7 @@
 		</div>
 	</div>
 	{#if showAttachmentPreview}
-		<AttachmentPreview onSave={handleAttachmentSave} onClose={handleAttachmentClose} />
+		<MediaPreview onSave={handleAttachmentSave} onClose={handleAttachmentClose} />
 	{/if}
 	{#if showDocumentUpload}
 		<DocumentUpload onSave={handleDocumentSave} onClose={handleDocumentClose} />
