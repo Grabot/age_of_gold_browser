@@ -3,6 +3,62 @@
 	import { onMount } from 'svelte';
 	import audiobufferToWav from 'audiobuffer-to-wav';
 
+	// Format file size for display
+	function formatFileSize(size: number) {
+		if (!size) return '0 bytes';
+
+		const units = ['bytes', 'KB', 'MB', 'GB'];
+		let unitIndex = 0;
+		let formattedSize = size;
+
+		while (formattedSize >= 1024 && unitIndex < units.length - 1) {
+			formattedSize /= 1024;
+			unitIndex++;
+		}
+
+		return `${formattedSize.toFixed(2)} ${units[unitIndex]}`;
+	}
+
+	function handleDragOver(event: DragEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		isDragging = true;
+	}
+
+	function handleDragLeave(event: DragEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		isDragging = false;
+	}
+
+	function handleDrop(event: DragEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		isDragging = false;
+
+		if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
+			const file = event.dataTransfer.files[0];
+
+			const MAX_SIZE_FOR_PREVIEW = 100 * 1024 * 1024; // 100MB
+			isLargeFile = file.size > MAX_SIZE_FOR_PREVIEW;
+
+			if (isLargeFile) {
+				filename = file.name;
+				selectedFile = file;
+				isUploadedFile = true;
+				isLoading = false;
+				audioUrl = null;
+				return;
+			}
+
+			if (file.type.startsWith('audio/')) {
+				handleFileUpload({ target: { files: [file] } } as unknown as Event);
+			} else {
+				errorToast('Please drop an audio file');
+			}
+		}
+	}
+
 	export let onSave: (data: {
 		audioBlob?: Blob | null;
 		audioUrl?: string | null;
@@ -14,10 +70,15 @@
 	let isPlaying = false;
 	let audioUrl: string | null = null;
 	let audioBlob: Blob | null = null;
+	let isLoading = false;
 	let duration = 0;
 	let timer: ReturnType<typeof setInterval> | null = null;
 	let mediaRecorder: MediaRecorder | null = null;
+	let isLargeFile = false;
+	let filename = '';
+	let selectedFile: File | null = null;
 	let audioChunks: Blob[] = [];
+	let isDragging = false;
 	let isUploadedFile = false;
 	let audioContext: AudioContext | null = null;
 	let analyser: AnalyserNode | null = null;
@@ -61,8 +122,8 @@
 			isRecording = true;
 			startTimer();
 		} catch (error) {
-			errorToast('Could not access microphone: ' + error);
-			console.error('Error accessing microphone:', error);
+			isLoading = false;
+			errorToast('Error loading audio file');
 		}
 	}
 
@@ -163,8 +224,23 @@
 		if (input.files && input.files.length > 0) {
 			const file = input.files[0];
 			console.log('File type:', file.type, 'File size:', file.size);
+
+			const MAX_SIZE_FOR_PREVIEW = 100 * 1024 * 1024; // 100MB
+			isLargeFile = file.size > MAX_SIZE_FOR_PREVIEW;
+
+			if (isLargeFile) {
+				filename = file.name;
+				selectedFile = file;
+				isUploadedFile = true;
+				isLoading = false;
+				audioUrl = null;
+				return;
+			}
+
 			if (file.type.startsWith('audio/')) {
 				try {
+					isLoading = true;
+					selectedFile = file;
 					const audio = new Audio(URL.createObjectURL(file));
 					audio.onloadedmetadata = async () => {
 						duration = audio.duration;
@@ -173,6 +249,7 @@
 						audioUrl = URL.createObjectURL(wavBlob);
 						audioBlob = wavBlob;
 						isUploadedFile = true;
+						isLoading = false;
 					};
 					audio.onerror = async () => {
 						errorToast('Could not load audio file. Re-encoding as WAV...');
@@ -181,6 +258,7 @@
 							audioUrl = URL.createObjectURL(wavBlob);
 							audioBlob = wavBlob;
 							isUploadedFile = true;
+							isLoading = false;
 							const audio2 = new Audio(audioUrl);
 							audio2.onloadedmetadata = () => {
 								duration = audio2.duration;
@@ -189,6 +267,7 @@
 								errorToast('Failed to re-encode audio file.');
 								audioUrl = null;
 								audioBlob = null;
+								isLoading = false;
 								isUploadedFile = false;
 							};
 						} catch (e) {
@@ -207,25 +286,16 @@
 		}
 	}
 
-	function togglePlayback() {
-		if (!audioUrl) return;
-
-		const audio = new Audio(audioUrl);
-
-		if (isPlaying) {
-			audio.pause();
-			isPlaying = false;
-		} else {
-			audio.play();
-			isPlaying = true;
-			audio.onended = () => {
-				isPlaying = false;
-			};
-		}
-	}
-
 	function handleSaveRecording() {
-		if (!audioBlob && audioChunks.length > 0) {
+		if (isLargeFile && selectedFile) {
+			// For large files, create a blob from the selected file
+			const data = {
+				audioBlob: selectedFile,
+				audioUrl: null,
+				duration: duration
+			};
+			onSave(data);
+		} else if (!audioBlob && audioChunks.length > 0) {
 			audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
 		}
 
@@ -268,82 +338,139 @@
 			<h2>Record Audio</h2>
 			<button class="close-btn" on:click={onClose}>×</button>
 		</div>
+		{#if isLoading}
+			<div class="loading-overlay">
+				<div class="loading-spinner"></div>
+				<p>Loading audio file...</p>
+			</div>
+		{/if}
 		<div class="audio-section">
-			{#if !audioUrl}
-				<div class="recording-controls">
-					<div class="record-button-container">
-						{#if isRecording}
-							<button class="record-button stop" on:click={stopRecording}> ■ Stop </button>
-						{:else}
-							<button class="record-button" on:click={startRecording}> ● Record </button>
-						{/if}
-					</div>
-
-					<div class="timer">
-						{Math.floor(duration / 60)}:{duration % 60 < 10 ? '0' + (duration % 60) : duration % 60}
-					</div>
-
-					<div class="visualizer-placeholders">
-						{#if isRecording}
-							<canvas id="audio-visualizer" width="300" height="100"></canvas>
-						{:else}
-							<div class="visualizer-placeholder">
-								Audio visualization will appear here when recording
-							</div>
-						{/if}
-					</div>
-
-					<div class="or-divider">
-						<span>or</span>
-					</div>
-
-					<div class="upload-section">
-						<input
-							type="file"
-							on:change={handleFileUpload}
-							accept="audio/*"
-							class="field-input"
-							style="display: none;"
-							bind:this={fileInput}
-						/>
-						<button class="upload-button" on:click={() => fileInput.click()}>
-							Upload Audio File
-						</button>
-					</div>
-				</div>
-			{:else}
+		{#if isLargeFile}
 				<div class="playback-controls">
-					<div class="audio-player">
-						<audio src={audioUrl} controls class="audio-element"></audio>
-					</div>
-
-					<div class="playback-info">
-						<p>
-							Duration: {Math.floor(duration / 60)}:{duration % 60 < 10
-								? '0' + (duration % 60)
-								: duration % 60}
+					<div class="large-file-notice">
+						<p>📁 {filename}</p>
+						<p class="file-size">
+							File is too large for preview ({selectedFile
+								? formatFileSize(selectedFile.size)
+								: 'unknown size'})
+						</p>
+						<p class="file-info">
+							The file has been selected but cannot be previewed due to its size.
 						</p>
 					</div>
-
 					<div class="playback-actions">
 						<button
 							class="re-record-button"
 							on:click={() => {
 								audioUrl = null;
 								audioBlob = null;
+								filename = '';
+								selectedFile = null;
+								isLargeFile = false;
 								duration = 0;
+								isUploadedFile = false;
 							}}
 						>
-							{isUploadedFile ? '🔙 Go Back' : '🔄 Re-record'}
+							🔙 Go Back
 						</button>
 					</div>
 				</div>
+			{:else}
+				{#if !audioUrl}
+					<div
+						class="recording-controls"
+						on:dragover={handleDragOver}
+						on:drop={handleDrop}
+						class:dragging={isDragging}
+						role="region"
+						aria-label="Audio recording area"
+					>
+						<div class="record-button-container">
+							{#if isRecording}
+								<button class="record-button stop" on:click={stopRecording}> ■ Stop </button>
+							{:else}
+								<button class="record-button" on:click={startRecording}> ● Record </button>
+							{/if}
+						</div>
+
+						<div class="timer">
+							{Math.floor(duration / 60)}:{duration % 60 < 10 ? '0' + (duration % 60) : duration % 60}
+						</div>
+
+						<div
+							class="visualizer-placeholders"
+							on:dragover={handleDragOver}
+							on:drop={handleDrop}
+							class:dragging={isDragging}
+							role="region"
+							aria-label="Audio drop area"
+						>
+							{#if isRecording}
+								<canvas id="audio-visualizer" width="300" height="100"></canvas>
+							{:else}
+								<div class="visualizer-placeholder">
+									Audio visualization will appear here when recording
+								</div>
+							{/if}
+						</div>
+
+						<div class="or-divider">
+							<span>or</span>
+						</div>
+
+						<div class="upload-section">
+							<input
+								type="file"
+								on:change={handleFileUpload}
+								accept="audio/*"
+								class="field-input"
+								style="display: none;"
+								bind:this={fileInput}
+							/>
+							<button
+								class="upload-button"
+								on:click={() => fileInput.click()}
+								on:dragover={handleDragOver}
+								on:drop={handleDrop}
+							>
+								Upload Audio File
+							</button>
+						</div>
+					</div>
+				{:else}
+					<div class="playback-controls">
+						<div class="audio-player">
+							<audio src={audioUrl} controls class="audio-element"></audio>
+						</div>
+
+						<div class="playback-info">
+							<p>
+								Duration: {Math.floor(duration / 60)}:{duration % 60 < 10
+									? '0' + (duration % 60)
+									: duration % 60}
+							</p>
+						</div>
+
+						<div class="playback-actions">
+							<button
+								class="re-record-button"
+								on:click={() => {
+									audioUrl = null;
+									audioBlob = null;
+									duration = 0;
+								}}
+							>
+								{isUploadedFile ? '🔙 Go Back' : '🔄 Re-record'}
+							</button>
+						</div>
+					</div>
+				{/if}
 			{/if}
 		</div>
 		<div class="modal-footer">
 			<div class="modal-actions">
 				<button on:click={onClose}>Cancel</button>
-				{#if audioUrl}
+				{#if audioUrl || isLargeFile}
 					<button on:click={handleSaveRecording}>Send</button>
 				{/if}
 			</div>
@@ -496,6 +623,11 @@
 		color: #7f8c8d;
 	}
 
+	.dragging {
+		border: 2px dashed var(--primary-colour) !important;
+		background: rgba(var(--primary-colour-light), 0.1) !important;
+	}
+
 	.upload-section {
 		width: 100%;
 		display: flex;
@@ -601,5 +733,63 @@
 	.modal-actions button:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
+	}
+
+	.large-file-notice {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
+		padding: 1rem;
+		background: #f8f9fa;
+		border-radius: 4px;
+	}
+
+	.file-size {
+		font-size: 0.9rem;
+		color: #6c757d;
+		margin: 0.5rem 0;
+	}
+
+	.file-info {
+		font-size: 0.8rem;
+		color: #6c757d;
+		margin-top: 0.5rem;
+	}
+
+	.loading-overlay {
+		position: absolute;
+		top: 60px;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(255, 255, 255, 0.8);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		z-index: 10;
+	}
+
+	.loading-spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid #f3f3f3;
+		border-top: 4px solid var(--primary-colour);
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		margin-bottom: 10px;
+	}
+
+	@keyframes spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 </style>

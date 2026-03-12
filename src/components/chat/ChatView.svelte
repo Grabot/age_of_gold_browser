@@ -34,23 +34,23 @@
 		checkUserAvatar,
 		checkGroupAvatar
 	} from '$lib/utils/avatarUtils';
-	import { errorToast } from '$lib/utils/toast';
+	import { errorToast, successToast } from '$lib/utils/toast';
 	import {
 		fetchMessages,
 		readMessages,
 		receivedMessages,
 		sendMessage,
+		sendMessageAttachment,
 		type FetchMessagesResponse
 	} from '$lib/api/messageApi';
+	import { MESSAGE_TYPES } from '$lib/types/messageTypes';
 	import { socketEventStore } from '$lib/stores/socketEventStore';
 	import type { MessageData } from '$lib/socket';
 	import { get } from 'svelte/store';
 	import type { User } from '$lib/types/user';
 	import { retrieveMissingUsers } from '$lib/services/dataRetrievalService';
 	import type { Group } from '$lib/types/groups';
-	import type { ApiResponse } from '$lib/api/apiClient';
 	import type { Friend } from '$lib/types/friend';
-	import Page from '../../routes/+page.svelte';
 	import { notificationStore } from '$lib/stores/notificationStore';
 
 	export let onClose: () => void;
@@ -277,6 +277,8 @@
 			if (messageIds.length !== 0) {
 				latestMessageId = Math.max(...messageIds);
 				console.log('going to send receive indicators');
+				console.log(latestMessageId);
+				// TODO: Only retrieve the messages that are `message_type` 0. The others have data that is not yet viewed (only when clicked)
 				await receivedMessages(accessToken, chatId, messageIds);
 			}
 		}
@@ -320,7 +322,8 @@
 				accessToken,
 				chatId,
 				selectedChatPrivate,
-				newMessage.trim()
+				newMessage.trim(),
+				0
 			);
 			if (!response.success) {
 				errorToast('Failed to send message');
@@ -338,6 +341,66 @@
 			console.log(messageData);
 			messageStore.addMessage(messageData);
 			newMessage = '';
+		}
+	}
+
+	async function sendMediaMessage(file: File | Blob, mediaType: string, caption: string) {
+		const accessToken = get(accessTokenValue);
+		const chatId = selectedChatId || initialSelectedChatId;
+
+		if (!chatId || !currentUserId || !accessToken) {
+			errorToast('Cannot send attachment: chat not selected or not logged in');
+			return;
+		}
+
+		// Determine message type based on media type
+		let messageType: number;
+		switch (mediaType.toLowerCase()) {
+			case 'image':
+				messageType = MESSAGE_TYPES.IMAGE;
+				break;
+			case 'video':
+				messageType = MESSAGE_TYPES.VIDEO;
+				break;
+			case 'document':
+				messageType = MESSAGE_TYPES.DOCUMENT;
+				break;
+			case 'audio':
+				messageType = MESSAGE_TYPES.AUDIO;
+				break;
+			default:
+				messageType = MESSAGE_TYPES.TEXT;
+		}
+
+		try {
+			const response = await sendMessageAttachment(
+				accessToken,
+				chatId,
+				selectedChatPrivate,
+				caption,
+				messageType,
+				file,
+			);
+
+			if (!response.success) {
+				errorToast('Failed to send attachment');
+				return;
+			}
+
+			const messageData: MessageData = {
+				id: response.data as number,
+				chat_id: chatId,
+				sender_id: currentUserId as number,
+				content: caption,
+				created_at: new Date().toISOString(),
+				message_type: messageType
+			};
+
+			messageStore.addMessage(messageData);
+			successToast('Attachment sent successfully');
+		} catch (error) {
+			console.error('Error sending media message:', error);
+			errorToast('Error sending attachment: ' + (error instanceof Error ? error.message : String(error)));
 		}
 	}
 
@@ -393,13 +456,19 @@
 	}) {
 		console.log('Media saved:', data);
 		showAttachmentPreview = false;
-		// TODO: Implement sending the media via API
+		
+		if (data.file) {
+			sendMediaMessage(data.file, data.mediaType, data.caption || '');
+		}
 	}
 
 	function handleDocumentSave(data: { file?: File | null; filename: string }) {
 		console.log('Document saved:', data);
 		showDocumentUpload = false;
-		// TODO: Implement sending the document via API
+		
+		if (data.file) {
+			sendMediaMessage(data.file, 'document', data.filename);
+		}
 	}
 
 	function handleAudioSave(data: {
@@ -409,13 +478,19 @@
 	}) {
 		console.log('Audio saved:', data);
 		showAudioRecorder = false;
-		// TODO: Implement sending the audio via API
+		
+		if (data.audioBlob) {
+			sendMediaMessage(data.audioBlob, 'audio', `Audio recording (${Math.floor(data.duration / 60)}:${data.duration % 60 < 10 ? '0' + (data.duration % 60) : data.duration % 60})`);
+		}
 	}
 
-	function handleCameraSave(data: { imageBlob?: Blob | null; imageUrl?: string | null }) {
+	function handleCameraSave(data: { imageBlob?: Blob | null; imageUrl?: string | null; caption?: string | null }) {
 		console.log('Image saved:', data);
 		showCameraView = false;
-		// TODO: Implement sending the image via API
+		
+		if (data.imageBlob) {
+			sendMediaMessage(data.imageBlob, 'image', data.caption || 'Camera photo');
+		}
 	}
 
 	function handleAttachmentClose() {
@@ -443,7 +518,20 @@
 		if (input.files && input.files.length > 0) {
 			const file = input.files[0];
 			console.log('File selected:', file.name, file.type);
-			// TODO: Implement file upload logic
+			
+			// Determine media type based on file type
+			let mediaType: string;
+			if (file.type.startsWith('image/')) {
+				mediaType = 'image';
+			} else if (file.type.startsWith('video/')) {
+				mediaType = 'video';
+			} else if (file.type.startsWith('audio/')) {
+				mediaType = 'audio';
+			} else {
+				mediaType = 'document';
+			}
+			
+			sendMediaMessage(file, mediaType, file.name);
 		}
 	}
 

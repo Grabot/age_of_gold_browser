@@ -31,6 +31,7 @@ export async function handleIncomingMessage(messageData: MessageData) {
 		// Ensure both IDs are numbers for comparison
 		messageStore.addMessage(messageData);
 		const accessToken = get(accessTokenValue);
+		console.log("receive single message", newMessageId);
 		const responseReceive = await receivedMessage(accessToken, chatId, newMessageId);
 		if (responseReceive.success) {
 			messageStore.setShouldUpdateMessages(chatId, false);

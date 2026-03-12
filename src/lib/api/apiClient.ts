@@ -110,10 +110,12 @@ class ApiConfig {
 
 	readonly messageEndpoints = {
 		sendMessage: 'message/send',
+		sendMessageAttachments: 'message/send/attachment',
 		fetchMessages: 'message/fetch',
 		receivedMessages: 'message/received',
 		receivedMessage: 'message/received/single',
-		readMessages: 'message/read'
+		readMessages: 'message/read',
+		getMessageData: 'message/data'
 	} as const;
 
 	buildUrl(endpoint: string, params?: Record<string, string | boolean>): string {

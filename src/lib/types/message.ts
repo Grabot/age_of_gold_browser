@@ -5,4 +5,5 @@ export interface Message {
 	content: string;
 	created_at: string;
 	message_type: number;
+	data?: string;
 }

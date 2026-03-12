@@ -5,6 +5,7 @@ export interface SendMessageRequest {
 	chat_id: number;
 	content: string;
 	message_type?: number;
+	file?: File | Blob;
 }
 
 export interface FetchMessagesRequest {
@@ -20,12 +21,38 @@ export interface FetchMessagesResponse {
 	};
 }
 
+
+export async function sendMessageAttachment(
+	accessToken: string,
+	chatId: number,
+	private_chat: boolean,
+	content: string,
+	messageType: number,
+	message_data: File | Blob | null = null
+): Promise<ApiResponse> {
+	const formData = new FormData();
+	formData.append('chat_id', chatId.toString());
+	formData.append('content', content);
+	formData.append('private', private_chat.toString());
+	formData.append('message_type', messageType.toString());
+	if (message_data) {
+		formData.append('message_data', message_data);
+	}
+
+	return makeRequest({
+		method: 'POST',
+		endpoint: API.messageEndpoints.sendMessageAttachments,
+		accessToken,
+		body: formData
+	});
+}
+
 export async function sendMessage(
 	accessToken: string,
 	chatId: number,
 	private_chat: boolean,
 	content: string,
-	messageType: number | undefined = undefined
+	messageType: number
 ): Promise<ApiResponse> {
 	return makeRequest({
 		method: 'POST',
@@ -103,5 +130,22 @@ export async function readMessages(
 			last_message_read_id: latestMessageId,
 			type: chat_type
 		}
+	});
+}
+
+export async function getMessageData(
+	accessToken: string,
+	chatId: number,
+	messageId: number
+): Promise<ApiResponse<Blob>> {
+	return makeRequest<Blob>({
+		method: 'POST',
+		endpoint: API.messageEndpoints.getMessageData,
+		accessToken,
+		body: {
+			chat_id: chatId,
+			message_id: messageId
+		},
+		expectBlob: true
 	});
 }

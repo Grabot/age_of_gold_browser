@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 
 export const DB_NAME = 'AgeOfGoldDB';
-export const DB_VERSION = 10; // Incremented for removing HAS_NEW_MESSAGES_STORE
+export const DB_VERSION = 14; // Incremented for adding MESSAGE_BLOB_STORE
 export const USER_STORE = 'users';
 export const FRIEND_STORE = 'friends';
 export const GROUP_STORE = 'groups';
@@ -11,6 +11,8 @@ export const GROUP_AVATAR_STORE = 'groupAvatars';
 export const SHOULD_UPDATE_USER_AVATAR_STORE = 'shouldUpdateUserAvatars';
 export const SHOULD_UPDATE_GROUP_AVATAR_STORE = 'shouldUpdateGroupAvatars';
 export const SHOULD_UPDATE_MESSAGES_STORE = 'shouldUpdateMessages';
+export const MESSAGE_MEDIA_STORE = 'messageMedia';
+export const MESSAGE_BLOB_STORE = 'messageBlobs';
 
 export interface IndexedDBHelperState {
 	isInitialized: boolean;
@@ -39,6 +41,19 @@ interface MessageUpdate {
 	shouldUpdate: boolean;
 }
 
+interface MessageMedia {
+	chatId: number;
+	messageId: number;
+	mediaPath: string;
+}
+
+interface MessageBlob {
+	chatId: number;
+	messageId: number;
+	blob: Blob;
+	timestamp: number; // For cache invalidation
+}
+
 const STORES: StoreSchema[] = [
 	{ name: USER_STORE, keyPath: 'id' },
 	{ name: FRIEND_STORE, keyPath: 'chat_id' },
@@ -48,7 +63,9 @@ const STORES: StoreSchema[] = [
 	{ name: GROUP_AVATAR_STORE, keyPath: 'groupId' },
 	{ name: SHOULD_UPDATE_USER_AVATAR_STORE, keyPath: 'userId' },
 	{ name: SHOULD_UPDATE_GROUP_AVATAR_STORE, keyPath: 'groupId' },
-	{ name: SHOULD_UPDATE_MESSAGES_STORE, keyPath: 'chatId' }
+	{ name: SHOULD_UPDATE_MESSAGES_STORE, keyPath: 'chatId' },
+	{ name: MESSAGE_MEDIA_STORE, keyPath: ['chatId', 'messageId'] },
+	{ name: MESSAGE_BLOB_STORE, keyPath: ['chatId', 'messageId'] }
 ];
 
 const initialState: IndexedDBHelperState = {
@@ -142,7 +159,7 @@ function createIndexedDBHelper() {
 			const database = await ensureDB();
 			const transaction = database.transaction(storeName, 'readwrite');
 			const store = transaction.objectStore(storeName);
-
+			console.log('Saving data to store:', storeName);
 			const request = store.put(data);
 
 			return new Promise((resolve, reject) => {
@@ -360,7 +377,88 @@ function createIndexedDBHelper() {
 		},
 
 		removeShouldUpdateMessages: (chatId: number) => remove(SHOULD_UPDATE_MESSAGES_STORE, chatId),
-		clearShouldUpdateMessages: () => clear(SHOULD_UPDATE_MESSAGES_STORE)
+		clearShouldUpdateMessages: () => clear(SHOULD_UPDATE_MESSAGES_STORE),
+
+		// Message Media functions
+		saveMessageMedia: (chatId: number, messageId: number, mediaPath: string) => 
+			save(MESSAGE_MEDIA_STORE, { chatId, messageId, mediaPath }),
+		getMessageMedia: async (chatId: number, messageId: number) => {
+			const result = await get<MessageMedia>(MESSAGE_MEDIA_STORE, [chatId, messageId]);
+			return result ? result.mediaPath : null;
+		},
+		removeMessageMedia: (chatId: number, messageId: number) => remove(MESSAGE_MEDIA_STORE, [chatId, messageId]),
+		clearMessageMedia: () => clear(MESSAGE_MEDIA_STORE),
+
+		// Message Blob functions (for persistent media caching)
+		saveMessageBlob: async (chatId: number, messageId: number, blob: Blob) => {
+			try {
+				const database = await ensureDB();
+				const transaction = database.transaction(MESSAGE_BLOB_STORE, 'readwrite');
+				const store = transaction.objectStore(MESSAGE_BLOB_STORE);
+
+				const messageBlob: MessageBlob = {
+					chatId,
+					messageId,
+					blob,
+					timestamp: Date.now()
+				};
+
+				const request = store.put(messageBlob);
+
+				return new Promise<void>((resolve, reject) => {
+					request.onsuccess = () => resolve();
+					request.onerror = () => reject(new Error(`Failed to save blob to ${MESSAGE_BLOB_STORE}`));
+				});
+		} catch (error) {
+			console.error(`Error saving blob to ${MESSAGE_BLOB_STORE}:`, error);
+			throw error;
+		}
+		},
+
+		getMessageBlob: async (chatId: number, messageId: number): Promise<Blob | null> => {
+			try {
+				const database = await ensureDB();
+				const transaction = database.transaction(MESSAGE_BLOB_STORE, 'readonly');
+				const store = transaction.objectStore(MESSAGE_BLOB_STORE);
+
+				const request = store.get([chatId, messageId]);
+
+				return new Promise((resolve, reject) => {
+					request.onsuccess = () => {
+						const result = request.result;
+						resolve(result ? result.blob : null);
+					};
+					request.onerror = () => reject(new Error(`Failed to get blob from ${MESSAGE_BLOB_STORE}`));
+				});
+		} catch (error) {
+			console.error(`Error getting blob from ${MESSAGE_BLOB_STORE}:`, error);
+			return null;
+		}
+		},
+
+		removeMessageBlob: (chatId: number, messageId: number) => remove(MESSAGE_BLOB_STORE, [chatId, messageId]),
+		clearMessageBlobs: () => clear(MESSAGE_BLOB_STORE),
+
+		// Helper function to clean up old blobs (optional cache management)
+		cleanupOldBlobs: async (maxAgeDays: number = 30) => {
+			try {
+				const database = await ensureDB();
+				const transaction = database.transaction(MESSAGE_BLOB_STORE, 'readwrite');
+				const store = transaction.objectStore(MESSAGE_BLOB_STORE);
+
+				const allBlobs = await getAll<MessageBlob>(MESSAGE_BLOB_STORE);
+				const now = Date.now();
+				const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+
+				for (const blobEntry of allBlobs) {
+					if (now - blobEntry.timestamp > maxAgeMs) {
+						await remove(MESSAGE_BLOB_STORE, [blobEntry.chatId, blobEntry.messageId]);
+					}
+				}
+			} catch (error) {
+				console.error('Error cleaning up old blobs:', error);
+			}
+		}
 	};
 }
 

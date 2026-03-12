@@ -1,6 +1,22 @@
 <script lang="ts">
 	import { errorToast } from '$lib/utils/toast';
 
+	// Format file size for display
+	function formatFileSize(size: number | undefined) {
+		if (!size) return '0 bytes';
+
+		const units = ['bytes', 'KB', 'MB', 'GB'];
+		let unitIndex = 0;
+		let formattedSize = size;
+
+		while (formattedSize >= 1024 && unitIndex < units.length - 1) {
+			formattedSize /= 1024;
+			unitIndex++;
+		}
+
+		return `${formattedSize.toFixed(2)} ${units[unitIndex]}`;
+	}
+
 	export let onSave: (data: {
 		file?: File | null;
 		caption?: string | null;
@@ -11,67 +27,16 @@
 	let imagePreview: string | null = null;
 	let isUploading = false;
 	let isDragging = false;
-	let caption = '';
+	let caption = '📷';
 	let mediaType: 'image' | 'video' = 'image';
 	let filename = '';
 	let selectedFile: File | null = null;
 	let isLoading = false;
+	let isLargeFile = false;
 
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget && !isUploading) {
 			onClose();
-		}
-	}
-
-	function handleSave() {
-		if (!selectedFile) return;
-
-		const data: { file?: File | null; caption?: string | null; mediaType: 'image' | 'video' } = {
-			file: selectedFile,
-			caption: caption || null,
-			mediaType: mediaType
-		};
-		onSave(data);
-	}
-
-	function handleFileInput(event: Event) {
-		const input = event.target as HTMLInputElement;
-		if (input.files && input.files.length > 0) {
-			const file = input.files[0];
-			isLoading = true;
-
-			if (file.type.startsWith('image/')) {
-				filename = file.name;
-				selectedFile = file;
-				mediaType = 'image';
-				const reader = new FileReader();
-				reader.onload = (e) => {
-					imagePreview = e.target?.result as string;
-					isLoading = false;
-				};
-				reader.onerror = () => {
-					isLoading = false;
-					errorToast('Error loading image file');
-				};
-				reader.readAsDataURL(file);
-			} else if (file.type.startsWith('video/')) {
-				filename = file.name;
-				selectedFile = file;
-				mediaType = 'video';
-				const reader = new FileReader();
-				reader.onload = async (e) => {
-					imagePreview = e.target?.result as string;
-					isLoading = false;
-				};
-				reader.onerror = () => {
-					isLoading = false;
-					errorToast('Error loading video file');
-				};
-				reader.readAsDataURL(file);
-			} else {
-				isLoading = false;
-				errorToast('Please select an image or video file');
-			}
 		}
 	}
 
@@ -85,6 +50,86 @@
 		event.stopPropagation();
 		if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
 			const file = event.dataTransfer.files[0];
+
+			// Check if file is too large (>100MB)
+			const MAX_SIZE_FOR_PREVIEW = 100 * 1024 * 1024; // 100MB
+			isLargeFile = file.size > MAX_SIZE_FOR_PREVIEW;
+
+			if (isLargeFile) {
+				// For large files, just show the filename without preview
+				filename = file.name;
+				selectedFile = file;
+				mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+				isLoading = false;
+				return;
+			}
+
+			isLoading = true;
+
+			if (file.type.startsWith('image/')) {
+				filename = file.name;
+				selectedFile = file;
+				mediaType = 'image';
+				try {
+					imagePreview = URL.createObjectURL(file);
+					isLoading = false;
+				} catch (error) {
+					isLoading = false;
+					errorToast('Error loading image file');
+				}
+			} else if (file.type.startsWith('video/')) {
+				filename = file.name;
+				selectedFile = file;
+				mediaType = 'video';
+				try {
+					imagePreview = URL.createObjectURL(file);
+					isLoading = false;
+				} catch (error) {
+					isLoading = false;
+					errorToast('Error loading video file');
+				}
+			} else {
+				isLoading = false;
+				errorToast('Please select an image or video file');
+			}
+		}
+	}
+
+	function handleSave() {
+		if (!selectedFile) return;
+
+		// Trim whitespace and check if caption is empty
+		if (!caption || !caption.trim()) {
+			errorToast('Caption cannot be empty');
+			return;
+		}
+
+		const data: { file?: File | null; caption?: string | null; mediaType: 'image' | 'video' } = {
+			file: selectedFile,
+			caption: caption.trim(),
+			mediaType: mediaType
+		};
+		onSave(data);
+	}
+
+	function handleFileInput(event: Event) {
+		const input = event.target as HTMLInputElement;
+		if (input.files && input.files.length > 0) {
+			const file = input.files[0];
+
+			// Check if file is too large (>100MB)
+			const MAX_SIZE_FOR_PREVIEW = 100 * 1024 * 1024; // 100MB
+			isLargeFile = file.size > MAX_SIZE_FOR_PREVIEW;
+
+			if (isLargeFile) {
+				// For large files, just show the filename without preview
+				filename = file.name;
+				selectedFile = file;
+				mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+				isLoading = false;
+				return;
+			}
+
 			isLoading = true;
 
 			if (file.type.startsWith('image/')) {
@@ -160,7 +205,17 @@
 							<p>Loading media...</p>
 						</div>
 					{/if}
-					{#if imagePreview}
+					{#if isLargeFile}
+						<div class="large-file-notice">
+							<p>📁 {filename}</p>
+							<p class="file-size">
+								File is too large to preview ({formatFileSize(selectedFile?.size)})
+							</p>
+							<p class="file-info">
+								The file has been selected but cannot be previewed due to its size.
+							</p>
+						</div>
+					{:else if imagePreview}
 						{#if mediaType === 'video'}
 							<video src={imagePreview} controls class="media-element video-element"></video>
 						{:else}
@@ -178,8 +233,7 @@
 				</div>
 
 				<div class="caption-section">
-					<textarea placeholder="Add a caption..." bind:value={caption} class="caption-input"
-					></textarea>
+					<textarea placeholder="Add a caption" bind:value={caption} class="caption-input"></textarea>
 				</div>
 
 				<div
@@ -333,6 +387,31 @@
 		border-style: solid;
 		background: white;
 		position: relative;
+	}
+
+	.large-file-notice {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
+		padding: 1rem;
+		background: #f8f9fa;
+		border-radius: 4px;
+	}
+
+	.file-size {
+		font-size: 0.9rem;
+		color: #6c757d;
+		margin: 0.5rem 0;
+	}
+
+	.file-info {
+		font-size: 0.8rem;
+		color: #6c757d;
+		margin-top: 0.5rem;
 	}
 
 	.loading-overlay {
